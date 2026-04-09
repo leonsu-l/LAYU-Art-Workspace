@@ -1,0 +1,123 @@
+.appShell {
+    position: relative;
+    min-height: 100svh;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 0 0, rgba(34, 211, 238, 0.18), transparent 36%),
+        radial-gradient(circle at 100% 100%, rgba(249, 115, 22, 0.18), transparent 42%),
+        linear-gradient(160deg, #f8fafc 0%, #f5f7fb 45%, #ecfeff 100%);
+}
+
+.gradientOrbTop,
+.gradientOrbBottom {
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 999px;
+    filter: blur(42px);
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.gradientOrbTop {
+    top: -200px;
+    right: -120px;
+    background: #22d3ee;
+    animation: drift-a 11s ease-in-out infinite alternate;
+}
+
+.gradientOrbBottom {
+    left: -180px;
+    bottom: -230px;
+    background: #fb923c;
+    animation: drift-b 13s ease-in-out infinite alternate;
+}
+
+.page {
+    position: relative;
+    z-index: 1;
+    margin: 0 auto;
+    width: min(1200px, 100%);
+    padding: clamp(1.1rem, 2.2vw, 2.2rem);
+}
+
+.hero {
+    margin-bottom: 1rem;
+    border-radius: 1.35rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.78));
+    padding: clamp(1rem, 2vw, 1.6rem);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.09);
+    animation: reveal 0.5s ease-out;
+}
+
+.badge {
+    display: inline-block;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    padding: 0.24rem 0.72rem;
+    font-size: 0.74rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.title {
+    margin-top: 0.55rem;
+    font-size: clamp(1.52rem, 2.8vw, 2.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+}
+
+.subtitle {
+    margin-top: 0.65rem;
+    color: #334155;
+    line-height: 1.58;
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (min-width: 1024px) {
+    .grid {
+        grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    }
+}
+
+@keyframes reveal {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes drift-a {
+    from {
+        transform: translate(0, 0) scale(1);
+    }
+
+    to {
+        transform: translate(-28px, 24px) scale(1.08);
+    }
+}
+
+@keyframes drift-b {
+    from {
+        transform: translate(0, 0) scale(1);
+    }
+
+    to {
+        transform: translate(25px, -18px) scale(1.05);
+    }
+}

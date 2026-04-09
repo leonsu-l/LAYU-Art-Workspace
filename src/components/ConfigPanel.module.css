@@ -1,0 +1,99 @@
+.panel {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background:
+        radial-gradient(circle at 90% 10%, rgba(56, 189, 248, 0.14), transparent 45%),
+        linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.92));
+    box-shadow:
+        0 14px 36px rgba(15, 23, 42, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    animation: fade-up 0.45s ease-out;
+}
+
+.label {
+    margin-bottom: 6px;
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #334155;
+}
+
+.input {
+    width: 100%;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(100, 116, 139, 0.26);
+    background: rgba(255, 255, 255, 0.88);
+    padding: 0.7rem 0.85rem;
+    font-size: 0.94rem;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus {
+    border-color: rgba(14, 116, 144, 0.6);
+    box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.34);
+}
+
+.inlineAction {
+    position: absolute;
+    top: 50%;
+    right: 0.55rem;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 999px;
+    background: rgba(14, 116, 144, 0.12);
+    padding: 0.28rem 0.6rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #0e7490;
+    cursor: pointer;
+}
+
+.inlineAction:hover {
+    background: rgba(14, 116, 144, 0.2);
+}
+
+.primaryButton,
+.ghostButton {
+    border: 0;
+    border-radius: 0.85rem;
+    padding: 0.66rem 1rem;
+    font-size: 0.92rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.primaryButton {
+    background: linear-gradient(130deg, #0e7490, #0f766e);
+    color: #f8fafc;
+    box-shadow: 0 8px 20px rgba(13, 148, 136, 0.28);
+}
+
+.primaryButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 11px 24px rgba(13, 148, 136, 0.36);
+}
+
+.ghostButton {
+    background: rgba(15, 23, 42, 0.07);
+    color: #334155;
+}
+
+.ghostButton:hover {
+    background: rgba(15, 23, 42, 0.12);
+}
+
+@keyframes fade-up {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

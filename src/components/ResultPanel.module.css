@@ -1,0 +1,64 @@
+.panel {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background:
+        radial-gradient(circle at 80% 0, rgba(251, 191, 36, 0.18), transparent 42%),
+        linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.92));
+    box-shadow:
+        0 14px 36px rgba(15, 23, 42, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    animation: fade-up 0.55s ease-out;
+}
+
+.figure {
+    margin: 0;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.image {
+    width: 100%;
+    display: block;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    transition: transform 0.36s ease;
+}
+
+.image:hover {
+    transform: scale(1.02);
+}
+
+.skeleton {
+    height: 280px;
+    border-radius: 1rem;
+    background: linear-gradient(120deg,
+            rgba(226, 232, 240, 0.78) 25%,
+            rgba(248, 250, 252, 0.92) 37%,
+            rgba(226, 232, 240, 0.78) 63%);
+    background-size: 300% 100%;
+    animation: shimmer 1.2s infinite linear;
+}
+
+@keyframes shimmer {
+    from {
+        background-position: 100% 0;
+    }
+
+    to {
+        background-position: 0 0;
+    }
+}
+
+@keyframes fade-up {
+    from {
+        transform: translateY(8px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
