@@ -78,16 +78,37 @@
     line-height: 1.58;
 }
 
+.heroActions {
+    margin-top: 0.85rem;
+}
+
+.galleryLink {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.85rem;
+    background: linear-gradient(130deg, #0e7490, #0f766e);
+    color: #f8fafc;
+    text-decoration: none;
+    padding: 0.52rem 0.86rem;
+    font-size: 0.86rem;
+    font-weight: 650;
+    box-shadow: 0 8px 20px rgba(13, 148, 136, 0.3);
+}
+
+.galleryNotice {
+    margin: 0;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(16, 185, 129, 0.32);
+    background: rgba(236, 253, 245, 0.9);
+    color: #065f46;
+    font-size: 0.86rem;
+    padding: 0.58rem 0.78rem;
+}
+
 .grid {
     display: grid;
     gap: 1rem;
     align-items: start;
-}
-
-@media (min-width: 1024px) {
-    .grid {
-        grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-    }
 }
 
 @keyframes reveal {

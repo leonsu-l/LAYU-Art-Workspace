@@ -11,8 +11,13 @@ import {
     mapHttpStatusToError,
 } from '../../utils/errors'
 import type { ProviderAdapter } from './adapter'
+import {
+    getImageRequestTimeoutMs,
+    getImageRequestTimeoutSeconds,
+} from './requestTimeout'
 
-const REQUEST_TIMEOUT_MS = 45_000
+const REQUEST_TIMEOUT_MS = getImageRequestTimeoutMs()
+const REQUEST_TIMEOUT_SECONDS = getImageRequestTimeoutSeconds()
 
 interface GeminiInlineData {
     data?: string
@@ -119,6 +124,14 @@ export class GeminiOfficialAdapter implements ProviderAdapter {
         } catch (error) {
             if (error && typeof error === 'object' && 'code' in error) {
                 throw error
+            }
+
+            if (controller.signal.aborted) {
+                throw createAppError(
+                    'NETWORK',
+                    `请求超时（${REQUEST_TIMEOUT_SECONDS}秒），请重试或提高超时配置。`,
+                    true,
+                )
             }
 
             throw mapFetchFailureToError(error)

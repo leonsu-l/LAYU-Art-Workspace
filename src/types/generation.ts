@@ -48,6 +48,7 @@ export interface ProviderConfig {
     activeProvider: ProviderType
     profiles: ProviderProfiles
     rememberApiKey: boolean
+    draftCacheEnabled: boolean
 }
 
 export type LegacyProviderType =
@@ -82,6 +83,27 @@ export interface GeneratedImage {
     mimeType: string
     base64Data?: string
     url?: string
+}
+
+export interface GalleryImageRecord {
+    id: string
+    createdAt: string
+    provider: ProviderType
+    model: string
+    prompt: string
+    mimeType: string
+    blob: Blob
+    bytes: number
+}
+
+export interface GalleryStorageStats {
+    totalBytes: number
+    imageCount: number
+}
+
+export interface GallerySaveSummary {
+    savedCount: number
+    skippedCount: number
 }
 
 export interface GenerateImageResult {

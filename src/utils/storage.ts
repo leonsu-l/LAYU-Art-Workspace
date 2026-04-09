@@ -12,6 +12,8 @@ import {
 
 const STORAGE_KEY = 'nanobanana.provider-config'
 const LEGACY_STORAGE_KEY = 'nanobanana.provider-config.v1'
+const DRAFT_STORAGE_KEY = 'nanobanana.provider-config.draft.v2'
+const LEGACY_DRAFT_SESSION_STORAGE_KEY = 'nanobanana.provider-config.draft.v2'
 const SCHEMA_VERSION = 2
 
 const GEMINI_IMAGE_SIZES = new Set(['512', '1K', '2K', '4K'])
@@ -47,6 +49,24 @@ export function loadPersistedConfig(): ProviderConfig | null {
     }
 }
 
+export function loadDraftConfig(): ProviderConfig | null {
+    try {
+        const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY)
+        if (!rawDraft) {
+            return loadLegacySessionDraftConfig()
+        }
+
+        const parsed = JSON.parse(rawDraft) as unknown
+        if (!isPersistedConfigV2(parsed)) {
+            return null
+        }
+
+        return normalizeProviderConfig(parsed.config)
+    } catch {
+        return null
+    }
+}
+
 export function savePersistedConfig(config: ProviderConfig): void {
     const normalized = normalizeProviderConfig(config)
     const payload: PersistedConfigV2 = {
@@ -75,9 +95,64 @@ export function savePersistedConfig(config: ProviderConfig): void {
     localStorage.removeItem(LEGACY_STORAGE_KEY)
 }
 
+export function saveDraftConfig(config: ProviderConfig): void {
+    try {
+        if (!config.draftCacheEnabled) {
+            clearDraftConfig()
+            return
+        }
+
+        const normalized = normalizeProviderConfig(config)
+        const payload: PersistedConfigV2 = {
+            schemaVersion: SCHEMA_VERSION,
+            config: normalized,
+        }
+
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload))
+    } catch {
+        // Ignore draft caching errors to avoid blocking UI input interactions.
+    }
+}
+
 export function clearPersistedConfig(): void {
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(LEGACY_STORAGE_KEY)
+}
+
+export function clearDraftConfig(): void {
+    try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY)
+        sessionStorage.removeItem(LEGACY_DRAFT_SESSION_STORAGE_KEY)
+    } catch {
+        // Ignore cleanup failures for draft cache.
+    }
+}
+
+function loadLegacySessionDraftConfig(): ProviderConfig | null {
+    try {
+        const legacyRawDraft = sessionStorage.getItem(LEGACY_DRAFT_SESSION_STORAGE_KEY)
+        if (!legacyRawDraft) {
+            return null
+        }
+
+        const parsed = JSON.parse(legacyRawDraft) as unknown
+        if (!isPersistedConfigV2(parsed)) {
+            return null
+        }
+
+        const normalized = normalizeProviderConfig(parsed.config)
+        localStorage.setItem(
+            DRAFT_STORAGE_KEY,
+            JSON.stringify({
+                schemaVersion: SCHEMA_VERSION,
+                config: normalized,
+            } satisfies PersistedConfigV2),
+        )
+        sessionStorage.removeItem(LEGACY_DRAFT_SESSION_STORAGE_KEY)
+        return normalized
+    } catch {
+        return null
+    }
 }
 
 function migrateLegacyConfig(legacyConfig: LegacyProviderConfigV1): ProviderConfig {
@@ -117,6 +192,10 @@ function normalizeProviderConfig(config: ProviderConfig): ProviderConfig {
     return {
         activeProvider,
         rememberApiKey: Boolean(config.rememberApiKey),
+        draftCacheEnabled:
+            typeof config.draftCacheEnabled === 'boolean'
+                ? config.draftCacheEnabled
+                : defaults.draftCacheEnabled,
         profiles: {
             'openai-compatible': {
                 ...defaults.profiles['openai-compatible'],

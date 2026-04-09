@@ -22,6 +22,7 @@ interface ConfigPanelProps {
     onProviderChange: (provider: ProviderType) => void
     onProfileChange: (patch: Partial<{ baseUrl: string; model: string; apiKey: string }>) => void
     onRememberApiKeyChange: (rememberApiKey: boolean) => void
+    onDraftCacheEnabledChange: (draftCacheEnabled: boolean) => void
     onOpenAIParamsChange: (patch: Partial<OpenAIImageParams>) => void
     onGeminiParamsChange: (patch: Partial<GeminiImageParams>) => void
     onSaveConfig: () => void
@@ -47,6 +48,7 @@ export function ConfigPanel(props: ConfigPanelProps) {
         onProviderChange,
         onProfileChange,
         onRememberApiKeyChange,
+        onDraftCacheEnabledChange,
         onOpenAIParamsChange,
         onGeminiParamsChange,
         onSaveConfig,
@@ -106,7 +108,7 @@ export function ConfigPanel(props: ConfigPanelProps) {
 
                     </span>
                 </div>
-                <p className="text-sm text-slate-600">支持供应商、模型、密钥本地持久化。</p>
+                <p className="text-sm text-slate-600">输入内容可按开关自动缓存到 localStorage，刷新后可恢复；点击保存可写入长期本地配置。</p>
             </header>
 
             <div className="space-y-4">
@@ -178,6 +180,16 @@ export function ConfigPanel(props: ConfigPanelProps) {
                         onChange={(event) => onRememberApiKeyChange(event.target.checked)}
                     />
                     保存密钥到本地（localStorage）
+                </label>
+
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        checked={config.draftCacheEnabled}
+                        onChange={(event) => onDraftCacheEnabledChange(event.target.checked)}
+                    />
+                    启用输入草稿缓存（localStorage）
                 </label>
 
                 {isOpenAI ? (

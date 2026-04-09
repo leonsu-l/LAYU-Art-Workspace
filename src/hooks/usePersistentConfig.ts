@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
     AppError,
     GeminiImageParams,
@@ -9,8 +9,11 @@ import type {
 import { createAppError } from '../utils/errors'
 import { createDefaultProviderConfig } from '../utils/configDefaults'
 import {
+    clearDraftConfig,
     clearPersistedConfig,
+    loadDraftConfig,
     loadPersistedConfig,
+    saveDraftConfig,
     savePersistedConfig,
 } from '../utils/storage'
 import { normalizeText } from '../utils/validation'
@@ -22,6 +25,14 @@ export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = createDefaultProviderConf
 export function usePersistentConfig() {
     const [config, setConfig] = useState<ProviderConfig>(() => {
         const persisted = loadPersistedConfig()
+        const shouldHydrateDraft = persisted?.draftCacheEnabled ?? true
+
+        if (shouldHydrateDraft) {
+            const draft = loadDraftConfig()
+            if (draft) {
+                return draft
+            }
+        }
 
         if (persisted) {
             return persisted
@@ -31,6 +42,15 @@ export function usePersistentConfig() {
     })
     const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
     const isHydrated = true
+
+    useEffect(() => {
+        if (config.draftCacheEnabled) {
+            saveDraftConfig(config)
+            return
+        }
+
+        clearDraftConfig()
+    }, [config])
 
     const setActiveProvider = useCallback((provider: ProviderType) => {
         setConfig((previous) => ({
@@ -43,6 +63,13 @@ export function usePersistentConfig() {
         setConfig((previous) => ({
             ...previous,
             rememberApiKey,
+        }))
+    }, [])
+
+    const updateDraftCacheEnabled = useCallback((draftCacheEnabled: boolean) => {
+        setConfig((previous) => ({
+            ...previous,
+            draftCacheEnabled,
         }))
     }, [])
 
@@ -132,6 +159,7 @@ export function usePersistentConfig() {
 
     const clearConfig = useCallback(() => {
         clearPersistedConfig()
+        clearDraftConfig()
         setConfig(createDefaultProviderConfig())
         setLastSavedAt(null)
     }, [])
@@ -149,6 +177,7 @@ export function usePersistentConfig() {
         lastSavedAt,
         setActiveProvider,
         updateRememberApiKey,
+        updateDraftCacheEnabled,
         updateProviderProfile,
         updateOpenAIParams,
         updateGeminiParams,
@@ -165,6 +194,7 @@ function normalizeProviderConfigForSave(config: ProviderConfig): ProviderConfig 
 
     return {
         ...config,
+        draftCacheEnabled: Boolean(config.draftCacheEnabled),
         profiles: {
             'openai-compatible': {
                 ...normalizedOpenAI,

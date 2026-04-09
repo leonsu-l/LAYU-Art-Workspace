@@ -8,6 +8,9 @@
 - 所有协议均支持自定义 Base URL（不再存在不可修改的固定官方地址）
 - 用户可配置并持久化保存：供应商、模型、API Key、Base URL 与协议专属生图参数
 - 支持根据当前协议实时预览请求地址（endpoint）
+- 生成成功后自动保存图片到本地 Gallery（IndexedDB）
+- Gallery 支持总占用统计、图片预览弹窗、图片下载
+- 生成中刷新/关闭标签页会触发离页提示，避免图片结果丢失
 - 样式体系采用 Tailwind CSS + CSS Modules（模块样式与布局样式分层）
 
 ## 快速开始
@@ -15,6 +18,12 @@
 ```bash
 npm install
 npm run dev
+```
+
+可选：在 `.env.local` 配置图片请求超时（毫秒），默认 `180000`（180 秒）。
+
+```bash
+VITE_IMAGE_REQUEST_TIMEOUT_MS=180000
 ```
 
 生产构建：
@@ -32,6 +41,7 @@ npm run preview
 - 连接配置面板：供应商、模型、密钥、Base URL、持久化行为
 - 提示词工作台：输入 prompt 并发起生成
 - 结果面板：loading、错误态、图片结果展示
+- Gallery 页面：本地图片列表、总占用、悬浮预览/下载按钮
 
 ### 分层约束
 
@@ -57,9 +67,16 @@ npm run preview
 ## 持久化策略
 
 - 使用 `localStorage` 保存配置
+- 输入草稿缓存使用 `localStorage`，并可通过页面开关启用/关闭
+- 生成图片使用 `IndexedDB` 保存到本地 Gallery
 - 可选保存 API Key
 - 首次保存 API Key 时会弹窗提示风险确认
 - 可通过页面按钮清空本地配置
+
+## 离页保护
+
+- 当请求进行中且尚未收到图片时，页面会通过 `window.onbeforeunload` 进行离页拦截。
+- 若此时刷新或关闭标签页，浏览器会提示离开风险（具体提示文案可能被浏览器替换为默认文本）。
 
 ## 安全与风险说明
 

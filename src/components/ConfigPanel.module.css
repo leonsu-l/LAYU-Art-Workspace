@@ -14,7 +14,6 @@
     display: block;
     font-size: 0.74rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #334155;
 }
@@ -105,6 +104,7 @@
 .paramsGrid {
     margin-top: 0.6rem;
     display: grid;
+    letter-spacing: 0.08em;
     grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: 0.6rem;
 }

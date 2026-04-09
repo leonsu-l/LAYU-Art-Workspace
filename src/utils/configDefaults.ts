@@ -50,6 +50,7 @@ export function createDefaultProviderConfig(): ProviderConfig {
             },
         },
         rememberApiKey: true,
+        draftCacheEnabled: true,
     }
 }
 
