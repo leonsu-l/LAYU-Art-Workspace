@@ -79,6 +79,45 @@ export async function getGalleryStorageStats(): Promise<GalleryStorageStats> {
     }
 }
 
+export async function deleteGalleryImage(id: string): Promise<void> {
+    if (!id) {
+        return
+    }
+
+    await withObjectStore('readwrite', async (store) => {
+        await requestToPromise(store.delete(id))
+    })
+}
+
+export async function deleteGalleryImages(ids: string[]): Promise<number> {
+    const uniqueIds = Array.from(new Set(ids.filter(Boolean)))
+    if (uniqueIds.length === 0) {
+        return 0
+    }
+
+    const db = await openGalleryDb()
+
+    return new Promise<number>((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite')
+        const store = transaction.objectStore(STORE_NAME)
+        let deletedCount = 0
+
+        for (const id of uniqueIds) {
+            const request = store.delete(id)
+            request.onsuccess = () => {
+                deletedCount += 1
+            }
+            request.onerror = () => {
+                // Continue deleting remaining records.
+            }
+        }
+
+        transaction.oncomplete = () => resolve(deletedCount)
+        transaction.onerror = () => reject(transaction.error ?? new Error('Failed to delete gallery images.'))
+        transaction.onabort = () => reject(transaction.error ?? new Error('Gallery delete transaction aborted.'))
+    })
+}
+
 export function formatBytes(bytes: number): string {
     if (!Number.isFinite(bytes) || bytes <= 0) {
         return '0 B'

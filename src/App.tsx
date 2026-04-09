@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfigPanel } from './components/ConfigPanel'
 import { PromptPanel } from './components/PromptPanel'
@@ -10,6 +10,8 @@ import { buildRequestPreview } from './services/imageGenerationService'
 import { addGeneratedResultToGallery } from './utils/galleryDb'
 import styles from './App.module.css'
 import type { AppError, ProviderType } from './types/generation'
+
+const PROMPT_STORAGE_KEY = 'nanobanana.prompt.last'
 
 const providerNameMap: Record<ProviderType, string> = {
   'openai-compatible': 'OpenAI-Compatible',
@@ -37,10 +39,14 @@ function App() {
   const { isGenerating, result, error, generateImage, clearResult } = useImageGeneration()
   useBeforeUnloadGuard(isGenerating, '还未收到图片，若现在离开页面图片会丢失')
 
-  const [prompt, setPrompt] = useState('',)
+  const [prompt, setPrompt] = useState(() => loadPromptFromStorage())
   const [saveError, setSaveError] = useState<AppError | null>(null)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [galleryNotice, setGalleryNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    savePromptToStorage(prompt)
+  }, [prompt])
 
   const providerText = useMemo(() => providerNameMap[activeProvider], [activeProvider])
   const requestPreview = useMemo(() => {
@@ -149,6 +155,22 @@ function App() {
       </main>
     </div>
   )
+}
+
+function loadPromptFromStorage(): string {
+  try {
+    return localStorage.getItem(PROMPT_STORAGE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function savePromptToStorage(value: string): void {
+  try {
+    localStorage.setItem(PROMPT_STORAGE_KEY, value)
+  } catch {
+    // Ignore storage failures so prompt editing remains non-blocking.
+  }
 }
 
 export default App

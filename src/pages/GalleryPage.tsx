@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { GalleryImageRecord, GalleryStorageStats } from '../types/generation'
 import {
+    deleteGalleryImage,
+    deleteGalleryImages,
     downloadGalleryImage,
     formatBytes,
     listGalleryImages,
@@ -17,6 +19,8 @@ export function GalleryPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [previewRecord, setPreviewRecord] = useState<GalleryImageRecord | null>(null)
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [actionNotice, setActionNotice] = useState<string | null>(null)
 
     const previewUrl = useBlobUrl(previewRecord?.blob ?? null)
 
@@ -32,6 +36,22 @@ export function GalleryPage() {
             setStats({
                 totalBytes,
                 imageCount: loadedImages.length,
+            })
+            setSelectedIds((previous) => {
+                if (previous.size === 0) {
+                    return previous
+                }
+
+                const availableIds = new Set(loadedImages.map((item) => item.id))
+                const next = new Set<string>()
+
+                previous.forEach((id) => {
+                    if (availableIds.has(id)) {
+                        next.add(id)
+                    }
+                })
+
+                return next
             })
         } catch (error) {
             const details = error instanceof Error ? error.message : 'Unknown error'
@@ -66,6 +86,74 @@ export function GalleryPage() {
         () => `${stats.imageCount} 张图片 · ${formatBytes(stats.totalBytes)}`,
         [stats.imageCount, stats.totalBytes],
     )
+    const selectedCount = selectedIds.size
+    const isAllSelected = images.length > 0 && selectedCount === images.length
+
+    function toggleSelect(recordId: string) {
+        setSelectedIds((previous) => {
+            const next = new Set(previous)
+            if (next.has(recordId)) {
+                next.delete(recordId)
+            } else {
+                next.add(recordId)
+            }
+            return next
+        })
+    }
+
+    function toggleSelectAll(checked: boolean) {
+        if (!checked) {
+            setSelectedIds(new Set())
+            return
+        }
+
+        setSelectedIds(new Set(images.map((item) => item.id)))
+    }
+
+    async function handleDeleteOne(record: GalleryImageRecord) {
+        const shouldDelete = window.confirm('确认删除这张图片吗？')
+        if (!shouldDelete) {
+            return
+        }
+
+        try {
+            await deleteGalleryImage(record.id)
+            if (previewRecord?.id === record.id) {
+                setPreviewRecord(null)
+            }
+            await refreshGallery()
+            setActionNotice('图片已删除。')
+        } catch (error) {
+            const details = error instanceof Error ? error.message : 'Unknown error'
+            setActionNotice(`删除失败：${details}`)
+        }
+    }
+
+    async function handleDeleteSelected() {
+        if (selectedCount === 0) {
+            return
+        }
+
+        const shouldDelete = window.confirm(`确认删除已选中的 ${selectedCount} 张图片吗？`)
+        if (!shouldDelete) {
+            return
+        }
+
+        try {
+            const deletedCount = await deleteGalleryImages(Array.from(selectedIds))
+
+            if (previewRecord && selectedIds.has(previewRecord.id)) {
+                setPreviewRecord(null)
+            }
+
+            setSelectedIds(new Set())
+            await refreshGallery()
+            setActionNotice(`已删除 ${deletedCount} 张图片。`)
+        } catch (error) {
+            const details = error instanceof Error ? error.message : 'Unknown error'
+            setActionNotice(`批量删除失败：${details}`)
+        }
+    }
 
     return (
         <div className={styles.pageShell}>
@@ -107,16 +195,43 @@ export function GalleryPage() {
                         {images.length === 0 ? (
                             <p className={styles.emptyText}>还没有图片。先回主页生成图片后再来查看。</p>
                         ) : (
-                            <div className={styles.grid}>
-                                {images.map((record) => (
-                                    <GalleryCard
-                                        key={record.id}
-                                        record={record}
-                                        onPreview={() => setPreviewRecord(record)}
-                                        onDownload={() => downloadGalleryImage(record)}
-                                    />
-                                ))}
-                            </div>
+                            <>
+                                <div className={styles.batchBar}>
+                                    <label className={styles.batchSelectLabel}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isAllSelected}
+                                            onChange={(event) => toggleSelectAll(event.target.checked)}
+                                        />
+                                        全选
+                                    </label>
+                                    <span className={styles.batchSummary}>已选 {selectedCount} 张</span>
+                                    <button
+                                        type="button"
+                                        className={styles.batchDeleteButton}
+                                        onClick={() => void handleDeleteSelected()}
+                                        disabled={selectedCount === 0}
+                                    >
+                                        批量删除
+                                    </button>
+                                </div>
+
+                                {actionNotice ? <p className={styles.actionNotice}>{actionNotice}</p> : null}
+
+                                <div className={styles.grid}>
+                                    {images.map((record) => (
+                                        <GalleryCard
+                                            key={record.id}
+                                            record={record}
+                                            selected={selectedIds.has(record.id)}
+                                            onToggleSelect={() => toggleSelect(record.id)}
+                                            onPreview={() => setPreviewRecord(record)}
+                                            onDownload={() => downloadGalleryImage(record)}
+                                            onDelete={() => void handleDeleteOne(record)}
+                                        />
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </section>
                 ) : null}
@@ -141,13 +256,22 @@ export function GalleryPage() {
                         aria-label="图片预览"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <button
-                            type="button"
-                            className={styles.modalClose}
-                            onClick={() => setPreviewRecord(null)}
-                        >
-                            关闭
-                        </button>
+                        <div className={styles.modalActions}>
+                            <button
+                                type="button"
+                                className={styles.modalActionButton}
+                                onClick={() => downloadGalleryImage(previewRecord)}
+                            >
+                                下载
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.modalClose}
+                                onClick={() => setPreviewRecord(null)}
+                            >
+                                关闭
+                            </button>
+                        </div>
                         <img
                             src={previewUrl}
                             alt="Gallery preview"
@@ -162,12 +286,15 @@ export function GalleryPage() {
 
 interface GalleryCardProps {
     record: GalleryImageRecord
+    selected: boolean
+    onToggleSelect: () => void
     onPreview: () => void
     onDownload: () => void
+    onDelete: () => void
 }
 
 function GalleryCard(props: GalleryCardProps) {
-    const { record, onPreview, onDownload } = props
+    const { record, selected, onToggleSelect, onPreview, onDownload, onDelete } = props
     const thumbnailUrl = useBlobUrl(record.blob)
 
     if (!thumbnailUrl) {
@@ -175,14 +302,21 @@ function GalleryCard(props: GalleryCardProps) {
     }
 
     return (
-        <article className={styles.card}>
+        <article className={`${styles.card} ${selected ? styles.cardSelected : ''}`}>
             <img src={thumbnailUrl} alt="Gallery item" className={styles.cardImage} loading="lazy" />
+            <label className={styles.cardSelectLabel}>
+                <input type="checkbox" checked={selected} onChange={onToggleSelect} />
+                选择
+            </label>
             <div className={styles.overlayActions}>
                 <button type="button" className={styles.actionButton} onClick={onPreview}>
                     预览
                 </button>
                 <button type="button" className={styles.actionButton} onClick={onDownload}>
                     下载
+                </button>
+                <button type="button" className={styles.actionDeleteButton} onClick={onDelete}>
+                    删除
                 </button>
             </div>
             <div className={styles.cardMeta}>
