@@ -1,13 +1,62 @@
 export const providerOptions = [
-    'gemini-official',
     'openai-compatible',
-    'custom-openai-compatible',
+    'gemini-compatible',
 ] as const
 
 export type ProviderType = (typeof providerOptions)[number]
 
+export type OpenAIQuality = 'standard' | 'hd'
+
+export type GeminiThinkingLevel = 'minimal' | 'high'
+
+export type GeminiImageSize = '512' | '1K' | '2K' | '4K'
+
+export interface OpenAIImageParams {
+    size: string
+    aspectRatio: string
+    quality: OpenAIQuality
+    n: number
+}
+
+export interface GeminiImageParams {
+    imageSize: GeminiImageSize
+    aspectRatio: string
+    imageOnly: boolean
+    thinkingLevel: GeminiThinkingLevel
+}
+
+export interface OpenAIProviderProfile {
+    baseUrl: string
+    model: string
+    apiKey: string
+    params: OpenAIImageParams
+}
+
+export interface GeminiProviderProfile {
+    baseUrl: string
+    model: string
+    apiKey: string
+    params: GeminiImageParams
+}
+
+export interface ProviderProfiles {
+    'openai-compatible': OpenAIProviderProfile
+    'gemini-compatible': GeminiProviderProfile
+}
+
 export interface ProviderConfig {
-    provider: ProviderType
+    activeProvider: ProviderType
+    profiles: ProviderProfiles
+    rememberApiKey: boolean
+}
+
+export type LegacyProviderType =
+    | 'gemini-official'
+    | 'openai-compatible'
+    | 'custom-openai-compatible'
+
+export interface LegacyProviderConfigV1 {
+    provider: LegacyProviderType
     model: string
     apiKey: string
     baseUrl: string
@@ -16,6 +65,11 @@ export interface ProviderConfig {
 
 export interface PersistedConfigV1 {
     schemaVersion: 1
+    config: LegacyProviderConfigV1
+}
+
+export interface PersistedConfigV2 {
+    schemaVersion: 2
     config: ProviderConfig
 }
 
@@ -59,4 +113,12 @@ export interface AppError {
 export interface ValidationResult {
     valid: boolean
     error?: AppError
+}
+
+export interface RequestPreview {
+    provider: ProviderType
+    endpoint: string
+    method: 'POST'
+    headersPreview: Record<string, string>
+    bodyPreview: Record<string, unknown>
 }

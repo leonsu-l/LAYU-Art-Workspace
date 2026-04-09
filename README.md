@@ -4,9 +4,10 @@
 
 首版能力：
 
-- 支持 Gemini 官方图片链路（默认模型 `gemini-3.1-flash-image-preview`）
-- 支持 OpenAI-Compatible 和自定义 OpenAI-Compatible Base URL
-- 用户可配置并持久化保存：供应商、模型、API Key、Base URL
+- 支持 OpenAI-Compatible 与 Gemini-Compatible 两种协议适配
+- 所有协议均支持自定义 Base URL（不再存在不可修改的固定官方地址）
+- 用户可配置并持久化保存：供应商、模型、API Key、Base URL 与协议专属生图参数
+- 支持根据当前协议实时预览请求地址（endpoint）
 - 样式体系采用 Tailwind CSS + CSS Modules（模块样式与布局样式分层）
 
 ## 快速开始
@@ -42,15 +43,16 @@ npm run preview
 
 依赖方向固定：`components -> hooks -> services`。
 
-## 供应商配置规则
+## 协议配置规则
 
-- `gemini-official`
-  - 使用 Gemini 官方 REST 接口
-  - Base URL 在首版中固定，不从 UI 覆盖
 - `openai-compatible`
-  - 按 OpenAI-Compatible 协议请求图片端点
-- `custom-openai-compatible`
-  - 用户自定义 Base URL，自动补全 `/v1/images/generations`
+  - Endpoint 自动补全为 `/v1/images/generations`
+  - 支持参数：`size`、`aspect_ratio`、`quality`、`n`
+- `gemini-compatible`
+  - Endpoint 自动补全为 `/models/{model}:generateContent?key=...`
+  - 支持参数：`image_size`、`aspect_ratio`、`imageOnly`、`thinkingLevel`
+
+两种协议的配置（Base URL、模型、密钥、参数）相互独立，切换协议不会互相覆盖。
 
 ## 持久化策略
 

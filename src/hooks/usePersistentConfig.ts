@@ -1,6 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
-import type { AppError, ProviderConfig } from '../types/generation'
+import type {
+    AppError,
+    GeminiImageParams,
+    OpenAIImageParams,
+    ProviderConfig,
+    ProviderType,
+} from '../types/generation'
 import { createAppError } from '../utils/errors'
+import { createDefaultProviderConfig } from '../utils/configDefaults'
 import {
     clearPersistedConfig,
     loadPersistedConfig,
@@ -10,44 +17,92 @@ import { normalizeText } from '../utils/validation'
 
 const RISK_ACK_KEY = 'nanobanana.api-key-risk-ack'
 
-export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = {
-    provider: 'gemini-official',
-    model: 'gemini-3.1-flash-image-preview',
-    apiKey: '',
-    baseUrl: 'https://api.openai.com',
-    rememberApiKey: true,
-}
+export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = createDefaultProviderConfig()
 
 export function usePersistentConfig() {
     const [config, setConfig] = useState<ProviderConfig>(() => {
         const persisted = loadPersistedConfig()
 
-        if (!persisted) {
-            return DEFAULT_PROVIDER_CONFIG
+        if (persisted) {
+            return persisted
         }
 
-        return {
-            ...DEFAULT_PROVIDER_CONFIG,
-            ...persisted,
-        }
+        return createDefaultProviderConfig()
     })
     const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
     const isHydrated = true
 
-    const updateConfig = useCallback((patch: Partial<ProviderConfig>) => {
+    const setActiveProvider = useCallback((provider: ProviderType) => {
         setConfig((previous) => ({
             ...previous,
-            ...patch,
+            activeProvider: provider,
+        }))
+    }, [])
+
+    const updateRememberApiKey = useCallback((rememberApiKey: boolean) => {
+        setConfig((previous) => ({
+            ...previous,
+            rememberApiKey,
+        }))
+    }, [])
+
+    const updateProviderProfile = useCallback(
+        (
+            provider: ProviderType,
+            patch: Partial<{
+                baseUrl: string
+                model: string
+                apiKey: string
+            }>,
+        ) => {
+            setConfig((previous) => ({
+                ...previous,
+                profiles: {
+                    ...previous.profiles,
+                    [provider]: {
+                        ...previous.profiles[provider],
+                        ...patch,
+                    },
+                },
+            }))
+        },
+        [],
+    )
+
+    const updateOpenAIParams = useCallback((patch: Partial<OpenAIImageParams>) => {
+        setConfig((previous) => ({
+            ...previous,
+            profiles: {
+                ...previous.profiles,
+                'openai-compatible': {
+                    ...previous.profiles['openai-compatible'],
+                    params: {
+                        ...previous.profiles['openai-compatible'].params,
+                        ...patch,
+                    },
+                },
+            },
+        }))
+    }, [])
+
+    const updateGeminiParams = useCallback((patch: Partial<GeminiImageParams>) => {
+        setConfig((previous) => ({
+            ...previous,
+            profiles: {
+                ...previous.profiles,
+                'gemini-compatible': {
+                    ...previous.profiles['gemini-compatible'],
+                    params: {
+                        ...previous.profiles['gemini-compatible'].params,
+                        ...patch,
+                    },
+                },
+            },
         }))
     }, [])
 
     const saveConfig = useCallback((): AppError | null => {
-        const normalizedConfig: ProviderConfig = {
-            ...config,
-            model: normalizeText(config.model),
-            apiKey: normalizeText(config.apiKey),
-            baseUrl: normalizeText(config.baseUrl),
-        }
+        const normalizedConfig = normalizeProviderConfigForSave(config)
 
         if (normalizedConfig.rememberApiKey) {
             const hasAcknowledged = sessionStorage.getItem(RISK_ACK_KEY) === '1'
@@ -77,19 +132,62 @@ export function usePersistentConfig() {
 
     const clearConfig = useCallback(() => {
         clearPersistedConfig()
-        setConfig(DEFAULT_PROVIDER_CONFIG)
+        setConfig(createDefaultProviderConfig())
         setLastSavedAt(null)
     }, [])
 
-    const hasApiKey = useMemo(() => config.apiKey.trim().length > 0, [config.apiKey])
+    const activeProvider = config.activeProvider
+    const activeProfile = config.profiles[activeProvider]
+    const hasApiKey = useMemo(() => activeProfile.apiKey.trim().length > 0, [activeProfile.apiKey])
 
     return {
         config,
+        activeProvider,
+        activeProfile,
         isHydrated,
         hasApiKey,
         lastSavedAt,
-        updateConfig,
+        setActiveProvider,
+        updateRememberApiKey,
+        updateProviderProfile,
+        updateOpenAIParams,
+        updateGeminiParams,
         saveConfig,
         clearConfig,
+    }
+}
+
+function normalizeProviderConfigForSave(config: ProviderConfig): ProviderConfig {
+    const normalizedOpenAI = config.profiles['openai-compatible']
+    const normalizedGemini = config.profiles['gemini-compatible']
+
+    const openAINRaw = Number(normalizedOpenAI.params.n)
+
+    return {
+        ...config,
+        profiles: {
+            'openai-compatible': {
+                ...normalizedOpenAI,
+                model: normalizeText(normalizedOpenAI.model),
+                apiKey: normalizeText(normalizedOpenAI.apiKey),
+                baseUrl: normalizeText(normalizedOpenAI.baseUrl),
+                params: {
+                    ...normalizedOpenAI.params,
+                    size: normalizeText(normalizedOpenAI.params.size),
+                    aspectRatio: normalizeText(normalizedOpenAI.params.aspectRatio),
+                    n: Number.isFinite(openAINRaw) ? Math.max(1, Math.min(10, Math.round(openAINRaw))) : 1,
+                },
+            },
+            'gemini-compatible': {
+                ...normalizedGemini,
+                model: normalizeText(normalizedGemini.model),
+                apiKey: normalizeText(normalizedGemini.apiKey),
+                baseUrl: normalizeText(normalizedGemini.baseUrl),
+                params: {
+                    ...normalizedGemini.params,
+                    aspectRatio: normalizeText(normalizedGemini.params.aspectRatio),
+                },
+            },
+        },
     }
 }

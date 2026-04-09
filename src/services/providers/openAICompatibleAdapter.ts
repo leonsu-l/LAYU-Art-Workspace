@@ -2,7 +2,8 @@ import type {
     GenerateImageRequest,
     GenerateImageResult,
     GeneratedImage,
-    ProviderType,
+    ProviderConfig,
+    RequestPreview,
 } from '../../types/generation'
 import {
     createAppError,
@@ -25,15 +26,34 @@ interface OpenAIImageResponse {
 }
 
 export class OpenAICompatibleAdapter implements ProviderAdapter {
-    readonly provider: ProviderType
+    readonly provider = 'openai-compatible' as const
 
-    constructor(provider: ProviderType) {
-        this.provider = provider
+    buildRequestPreview(config: ProviderConfig): RequestPreview {
+        const profile = config.profiles[this.provider]
+        const endpoint = buildImageEndpoint(profile.baseUrl)
+
+        return {
+            provider: this.provider,
+            endpoint,
+            method: 'POST',
+            headersPreview: {
+                'Content-Type': 'application/json',
+                Authorization: profile.apiKey ? 'Bearer ***' : 'Bearer [API_KEY]',
+            },
+            bodyPreview: {
+                model: profile.model,
+                size: profile.params.size,
+                aspect_ratio: profile.params.aspectRatio,
+                quality: profile.params.quality,
+                n: profile.params.n,
+                response_format: 'b64_json',
+            },
+        }
     }
 
     async generateImage(request: GenerateImageRequest): Promise<GenerateImageResult> {
-        const { config, prompt } = request
-        const endpoint = buildImageEndpoint(config.baseUrl)
+        const profile = request.config.profiles[this.provider]
+        const endpoint = buildImageEndpoint(profile.baseUrl)
 
         const controller = new AbortController()
         const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
@@ -43,12 +63,15 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${config.apiKey.trim()}`,
+                    Authorization: `Bearer ${profile.apiKey.trim()}`,
                 },
                 body: JSON.stringify({
-                    model: config.model.trim(),
-                    prompt: prompt.trim(),
-                    size: '1024x1024',
+                    model: profile.model.trim(),
+                    prompt: request.prompt.trim(),
+                    size: profile.params.size,
+                    aspect_ratio: profile.params.aspectRatio,
+                    quality: profile.params.quality,
+                    n: profile.params.n,
                     response_format: 'b64_json',
                 }),
                 signal: controller.signal,
@@ -80,7 +103,7 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
 
             return {
                 provider: this.provider,
-                model: config.model,
+                model: profile.model,
                 text: text || undefined,
                 images,
                 createdAt: new Date().toISOString(),
@@ -122,7 +145,7 @@ function parseOpenAIImages(payload: OpenAIImageResponse): GeneratedImage[] {
 }
 
 function buildImageEndpoint(baseUrl: string): string {
-    const normalized = baseUrl.trim().replace(/\/+$/, '')
+    const normalized = baseUrl.trim().replace(/\/+$/, '').replace(/\/$/, '')
 
     if (!normalized) {
         throw createAppError('VALIDATION', 'Base URL 不能为空。', false)
@@ -134,10 +157,6 @@ function buildImageEndpoint(baseUrl: string): string {
 
     if (normalized.endsWith('/v1')) {
         return `${normalized}/images/generations`
-    }
-
-    if (normalized.endsWith('/#')) {
-        return normalized.replace('/#', '')
     }
 
     return `${normalized}/v1/images/generations`

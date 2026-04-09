@@ -4,22 +4,28 @@ import { PromptPanel } from './components/PromptPanel'
 import { ResultPanel } from './components/ResultPanel'
 import { useImageGeneration } from './hooks/useImageGeneration'
 import { usePersistentConfig } from './hooks/usePersistentConfig'
+import { buildRequestPreview } from './services/imageGenerationService'
 import styles from './App.module.css'
 import type { AppError, ProviderType } from './types/generation'
 
 const providerNameMap: Record<ProviderType, string> = {
-  'gemini-official': 'Gemini 官方接口',
   'openai-compatible': 'OpenAI-Compatible',
-  'custom-openai-compatible': '自定义供应商',
+  'gemini-compatible': 'Gemini-Compatible',
 }
 
 function App() {
   const {
     config,
+    activeProvider,
+    activeProfile,
     isHydrated,
     hasApiKey,
     lastSavedAt,
-    updateConfig,
+    setActiveProvider,
+    updateRememberApiKey,
+    updateProviderProfile,
+    updateOpenAIParams,
+    updateGeminiParams,
     saveConfig,
     clearConfig,
   } = usePersistentConfig()
@@ -30,7 +36,14 @@ function App() {
   const [saveError, setSaveError] = useState<AppError | null>(null)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
 
-  const providerText = useMemo(() => providerNameMap[config.provider], [config.provider])
+  const providerText = useMemo(() => providerNameMap[activeProvider], [activeProvider])
+  const requestPreview = useMemo(() => {
+    try {
+      return buildRequestPreview(config)
+    } catch {
+      return null
+    }
+  }, [config])
 
   function handleSaveConfig() {
     const maybeError = saveConfig()
@@ -63,21 +76,28 @@ function App() {
       <main className={styles.page}>
         <header className={styles.hero}>
           <span className={styles.badge}>NanoBanana Frontend Console</span>
-          <h1 className={styles.title}>Gemini Image Playground</h1>
+          <h1 className={styles.title}>Image API Playground</h1>
           <p className={styles.subtitle}>
-            当前供应商：{providerText}。首版启用文本生图链路，已为参考图编辑与多轮会话预留服务层扩展位。
+            当前兼容协议：{providerText}。所有请求地址均可自定义，并支持生成参数按协议独立持久化。
           </p>
         </header>
 
         <section className={styles.grid}>
           <ConfigPanel
             config={config}
+            activeProvider={activeProvider}
+            activeProfile={activeProfile}
             hasApiKey={hasApiKey}
             isHydrated={isHydrated}
             lastSavedAt={lastSavedAt}
+            requestPreview={requestPreview}
             saveError={saveError}
             saveNotice={saveNotice}
-            onConfigChange={updateConfig}
+            onProviderChange={setActiveProvider}
+            onProfileChange={(patch) => updateProviderProfile(activeProvider, patch)}
+            onRememberApiKeyChange={updateRememberApiKey}
+            onOpenAIParamsChange={updateOpenAIParams}
+            onGeminiParamsChange={updateGeminiParams}
             onSaveConfig={handleSaveConfig}
             onClearConfig={handleClearConfig}
           />

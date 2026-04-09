@@ -2,6 +2,8 @@ import type {
     GenerateImageRequest,
     GenerateImageResult,
     GeneratedImage,
+    ProviderConfig,
+    RequestPreview,
 } from '../../types/generation'
 import {
     createAppError,
@@ -10,7 +12,6 @@ import {
 } from '../../utils/errors'
 import type { ProviderAdapter } from './adapter'
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const REQUEST_TIMEOUT_MS = 45_000
 
 interface GeminiInlineData {
@@ -37,14 +38,36 @@ interface GeminiApiResponse {
 }
 
 export class GeminiOfficialAdapter implements ProviderAdapter {
-    readonly provider = 'gemini-official' as const
+    readonly provider = 'gemini-compatible' as const
+
+    buildRequestPreview(config: ProviderConfig): RequestPreview {
+        const profile = config.profiles[this.provider]
+        const endpoint = buildGeminiEndpoint(
+            profile.baseUrl,
+            profile.model,
+            profile.apiKey ? '***' : '[API_KEY]',
+        )
+
+        return {
+            provider: this.provider,
+            endpoint,
+            method: 'POST',
+            headersPreview: {
+                'Content-Type': 'application/json',
+            },
+            bodyPreview: {
+                model: profile.model,
+                responseModalities: profile.params.imageOnly ? ['IMAGE'] : ['TEXT', 'IMAGE'],
+                image_size: profile.params.imageSize,
+                aspect_ratio: profile.params.aspectRatio,
+                thinkingLevel: profile.params.thinkingLevel,
+            },
+        }
+    }
 
     async generateImage(request: GenerateImageRequest): Promise<GenerateImageResult> {
-        const { config, prompt } = request
-        const model = encodeURIComponent(config.model.trim())
-        const apiKey = encodeURIComponent(config.apiKey.trim())
-
-        const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`
+        const profile = request.config.profiles[this.provider]
+        const endpoint = buildGeminiEndpoint(profile.baseUrl, profile.model, profile.apiKey)
 
         const controller = new AbortController()
         const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
@@ -55,17 +78,7 @@ export class GeminiOfficialAdapter implements ProviderAdapter {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            role: 'user',
-                            parts: [{ text: prompt.trim() }],
-                        },
-                    ],
-                    generationConfig: {
-                        responseModalities: ['TEXT', 'IMAGE'],
-                    },
-                }),
+                body: JSON.stringify(buildGeminiRequestBody(profile, request.prompt)),
                 signal: controller.signal,
             })
 
@@ -98,7 +111,7 @@ export class GeminiOfficialAdapter implements ProviderAdapter {
 
             return {
                 provider: this.provider,
-                model: config.model,
+                model: profile.model,
                 text: text || undefined,
                 images,
                 createdAt: new Date().toISOString(),
@@ -113,6 +126,66 @@ export class GeminiOfficialAdapter implements ProviderAdapter {
             window.clearTimeout(timeoutId)
         }
     }
+}
+
+function buildGeminiRequestBody(
+    profile: ProviderConfig['profiles']['gemini-compatible'],
+    prompt: string,
+) {
+    const generationConfig: Record<string, unknown> = {
+        responseModalities: profile.params.imageOnly ? ['IMAGE'] : ['TEXT', 'IMAGE'],
+        imageConfig: {
+            imageSize: profile.params.imageSize,
+            aspectRatio: profile.params.aspectRatio,
+        },
+        thinkingConfig: {
+            thinkingLevel: profile.params.thinkingLevel,
+        },
+    }
+
+    return {
+        contents: [
+            {
+                role: 'user',
+                parts: [{ text: prompt.trim() }],
+            },
+        ],
+        generationConfig,
+    }
+}
+
+function buildGeminiEndpoint(baseUrl: string, model: string, apiKey: string): string {
+    const normalizedBase = normalizeBaseUrl(baseUrl)
+    const encodedModel = encodeURIComponent(model.trim())
+    const encodedKey = encodeURIComponent(apiKey.trim())
+
+    if (!normalizedBase) {
+        throw createAppError('VALIDATION', 'Gemini Base URL 不能为空。', false)
+    }
+
+    if (!encodedModel) {
+        throw createAppError('VALIDATION', 'Gemini 模型不能为空。', false)
+    }
+
+    if (!encodedKey) {
+        throw createAppError('VALIDATION', 'Gemini API Key 不能为空。', false)
+    }
+
+    if (normalizedBase.includes(':generateContent')) {
+        return appendQueryParam(normalizedBase, 'key', encodedKey)
+    }
+
+    const endpoint = `${normalizedBase}/models/${encodedModel}:generateContent`
+    return appendQueryParam(endpoint, 'key', encodedKey)
+}
+
+function normalizeBaseUrl(baseUrl: string): string {
+    return baseUrl.trim().replace(/\/+$/, '')
+}
+
+function appendQueryParam(url: string, key: string, value: string): string {
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}${key}=${value}`
 }
 
 function parseGeminiImages(parts: GeminiPart[]): GeneratedImage[] {
