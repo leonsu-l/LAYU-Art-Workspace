@@ -34,6 +34,8 @@ const providerLabelMap: Record<ProviderType, string> = {
     'gemini-compatible': 'Gemini-Compatible',
 }
 
+const aspectRatioOptions = ['1:1', '3:4', '4:3', '16:9', '9:16']
+
 export function ConfigPanel(props: ConfigPanelProps) {
     const {
         config,
@@ -209,13 +211,18 @@ export function ConfigPanel(props: ConfigPanelProps) {
 
                             <label className="block">
                                 <span className={styles.label}>比例（aspect_ratio）</span>
-                                <input
+                                <select
                                     className={styles.input}
                                     value={openAIProfile.params.aspectRatio}
                                     onChange={(event) => onOpenAIParamsChange({ aspectRatio: event.target.value })}
-                                    placeholder="1:1"
                                     disabled={!isHydrated}
-                                />
+                                >
+                                    {aspectRatioOptions.map((ratio) => (
+                                        <option key={ratio} value={ratio}>
+                                            {ratio}
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
 
                             <label className="block">
@@ -274,13 +281,18 @@ export function ConfigPanel(props: ConfigPanelProps) {
 
                             <label className="block">
                                 <span className={styles.label}>比例（aspect_ratio）</span>
-                                <input
+                                <select
                                     className={styles.input}
                                     value={geminiProfile.params.aspectRatio}
                                     onChange={(event) => onGeminiParamsChange({ aspectRatio: event.target.value })}
-                                    placeholder="1:1"
                                     disabled={!isHydrated}
-                                />
+                                >
+                                    {aspectRatioOptions.map((ratio) => (
+                                        <option key={ratio} value={ratio}>
+                                            {ratio}
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
 
                             <label className="block">
