@@ -10,6 +10,29 @@ import {
 } from '../utils/galleryDb'
 import styles from './GalleryPage.module.css'
 
+const pendingBlobUrlRevokes = new Map<string, number>()
+
+function cancelPendingBlobUrlRevoke(objectUrl: string): void {
+  const timeoutId = pendingBlobUrlRevokes.get(objectUrl)
+  if (typeof timeoutId !== 'number') {
+    return
+  }
+
+  window.clearTimeout(timeoutId)
+  pendingBlobUrlRevokes.delete(objectUrl)
+}
+
+function scheduleBlobUrlRevoke(objectUrl: string): void {
+  cancelPendingBlobUrlRevoke(objectUrl)
+
+  const timeoutId = window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl)
+    pendingBlobUrlRevokes.delete(objectUrl)
+  }, 0)
+
+  pendingBlobUrlRevokes.set(objectUrl, timeoutId)
+}
+
 export function GalleryPage() {
   const [images, setImages] = useState<GalleryImageRecord[]>([])
   const [stats, setStats] = useState<GalleryStorageStats>({
@@ -338,10 +361,14 @@ function useBlobUrl(blob: Blob | null): string | null {
   }, [blob])
 
   useEffect(() => {
+    if (!objectUrl) {
+      return
+    }
+
+    cancelPendingBlobUrlRevoke(objectUrl)
+
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
+      scheduleBlobUrlRevoke(objectUrl)
     }
   }, [objectUrl])
 

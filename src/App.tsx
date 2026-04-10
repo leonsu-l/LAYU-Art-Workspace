@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfigPanel } from './components/ConfigPanel'
 import { PromptPanel } from './components/PromptPanel'
@@ -7,15 +7,21 @@ import { useBeforeUnloadGuard } from './hooks/useBeforeUnloadGuard'
 import { useImageGeneration } from './hooks/useImageGeneration'
 import { usePersistentConfig } from './hooks/usePersistentConfig'
 import { buildRequestPreview } from './services/imageGenerationService'
-import { addGeneratedResultToGallery } from './utils/galleryDb'
+import { addGeneratedResultToGallery, formatBytes, getGalleryStorageStats } from './utils/galleryDb'
+import { getTrackedLocalStorageUsage, PROMPT_STORAGE_KEY } from './utils/storage'
 import styles from './App.module.css'
-import type { AppError, ProviderType } from './types/generation'
-
-const PROMPT_STORAGE_KEY = 'nanobanana.prompt.last'
+import type { ProviderType } from './types/generation'
 
 const providerNameMap: Record<ProviderType, string> = {
   'openai-compatible': 'OpenAI-Compatible',
   'gemini-compatible': 'Gemini-Compatible',
+}
+
+interface SiteCacheSummary {
+  totalBytes: number
+  localBytes: number
+  galleryBytes: number
+  galleryImageCount: number
 }
 
 function App() {
@@ -25,28 +31,60 @@ function App() {
     activeProfile,
     isHydrated,
     hasApiKey,
-    lastSavedAt,
+    apiKeyRiskNotice,
+    dismissApiKeyRiskNotice,
     setActiveProvider,
-    updateRememberApiKey,
-    updateDraftCacheEnabled,
     updateProviderProfile,
     updateOpenAIParams,
     updateGeminiParams,
-    saveConfig,
-    clearConfig,
   } = usePersistentConfig()
 
   const { isGenerating, result, error, generateImage, clearResult } = useImageGeneration()
   useBeforeUnloadGuard(isGenerating, '还未收到图片，若现在离开页面图片会丢失')
 
   const [prompt, setPrompt] = useState(() => loadPromptFromStorage())
-  const [saveError, setSaveError] = useState<AppError | null>(null)
-  const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [galleryNotice, setGalleryNotice] = useState<string | null>(null)
+  const [cacheSummary, setCacheSummary] = useState<SiteCacheSummary>({
+    totalBytes: 0,
+    localBytes: 0,
+    galleryBytes: 0,
+    galleryImageCount: 0,
+  })
+
+  const refreshCacheSummary = useCallback(async () => {
+    const localUsage = getTrackedLocalStorageUsage()
+
+    try {
+      const galleryStats = await getGalleryStorageStats()
+      setCacheSummary({
+        totalBytes: localUsage.totalBytes + galleryStats.totalBytes,
+        localBytes: localUsage.totalBytes,
+        galleryBytes: galleryStats.totalBytes,
+        galleryImageCount: galleryStats.imageCount,
+      })
+    } catch {
+      setCacheSummary({
+        totalBytes: localUsage.totalBytes,
+        localBytes: localUsage.totalBytes,
+        galleryBytes: 0,
+        galleryImageCount: 0,
+      })
+    }
+  }, [])
 
   useEffect(() => {
     savePromptToStorage(prompt)
   }, [prompt])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void refreshCacheSummary()
+    }, 240)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [config, prompt, refreshCacheSummary])
 
   const providerText = useMemo(() => providerNameMap[activeProvider], [activeProvider])
   const requestPreview = useMemo(() => {
@@ -56,25 +94,6 @@ function App() {
       return null
     }
   }, [config])
-
-  function handleSaveConfig() {
-    const maybeError = saveConfig()
-
-    if (maybeError) {
-      setSaveError(maybeError)
-      setSaveNotice(null)
-      return
-    }
-
-    setSaveError(null)
-    setSaveNotice('配置已保存到本地浏览器。')
-  }
-
-  function handleClearConfig() {
-    clearConfig()
-    setSaveError(null)
-    setSaveNotice('本地配置已清空。')
-  }
 
   async function handleGenerate() {
     setGalleryNotice(null)
@@ -89,12 +108,15 @@ function App() {
       if (summary.savedCount > 0) {
         const skippedNotice = summary.skippedCount > 0 ? `（${summary.skippedCount} 张未保存）` : ''
         setGalleryNotice(`已自动保存 ${summary.savedCount} 张图片到本地 Gallery ${skippedNotice}`)
+        void refreshCacheSummary()
         return
       }
 
       setGalleryNotice('生成成功，但未识别到可保存图片。')
+      void refreshCacheSummary()
     } catch {
       setGalleryNotice('图片已生成，但保存到本地 Gallery 失败。')
+      void refreshCacheSummary()
     }
   }
 
@@ -108,7 +130,15 @@ function App() {
           <span className={styles.badge}>NanoBanana Frontend Console</span>
           <h1 className={styles.title}>Image API Playground</h1>
           <p className={styles.subtitle}>
-            当前兼容协议：{providerText}。所有请求地址均可自定义，并支持生成参数按协议独立持久化。
+            当前兼容协议：{providerText}。所有请求地址均可自定义，配置与提示词会自动缓存到浏览器。
+          </p>
+          <p className={styles.cacheSummary}>
+            站点缓存：
+            <strong>{formatBytes(cacheSummary.totalBytes)}</strong>
+            <span className={styles.cacheDetail}>
+              配置与 Prompt <strong>{formatBytes(cacheSummary.localBytes)}</strong> · Gallery <strong>{formatBytes(cacheSummary.galleryBytes)}</strong>
+              （{cacheSummary.galleryImageCount} 张）
+            </span>
           </p>
           <div className={styles.heroActions}>
             <Link to="/gallery" className={styles.galleryLink}>
@@ -124,18 +154,13 @@ function App() {
             activeProfile={activeProfile}
             hasApiKey={hasApiKey}
             isHydrated={isHydrated}
-            lastSavedAt={lastSavedAt}
+            apiKeyRiskNotice={apiKeyRiskNotice}
             requestPreview={requestPreview}
-            saveError={saveError}
-            saveNotice={saveNotice}
             onProviderChange={setActiveProvider}
             onProfileChange={(patch) => updateProviderProfile(activeProvider, patch)}
-            onRememberApiKeyChange={updateRememberApiKey}
-            onDraftCacheEnabledChange={updateDraftCacheEnabled}
+            onDismissApiKeyRiskNotice={dismissApiKeyRiskNotice}
             onOpenAIParamsChange={updateOpenAIParams}
             onGeminiParamsChange={updateGeminiParams}
-            onSaveConfig={handleSaveConfig}
-            onClearConfig={handleClearConfig}
           />
 
           <div className="space-y-4">

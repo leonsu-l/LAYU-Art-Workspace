@@ -47,8 +47,6 @@ export interface ProviderProfiles {
 export interface ProviderConfig {
     activeProvider: ProviderType
     profiles: ProviderProfiles
-    rememberApiKey: boolean
-    draftCacheEnabled: boolean
 }
 
 export type LegacyProviderType =

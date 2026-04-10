@@ -78,6 +78,30 @@
     line-height: 1.58;
 }
 
+.cacheSummary {
+    margin: 0.72rem 0 0;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(14, 116, 144, 0.22);
+    background: rgba(236, 254, 255, 0.72);
+    color: #164e63;
+    padding: 0.42rem 0.65rem;
+    font-size: 0.85rem;
+}
+
+.cacheSummary strong {
+    font-size: 0.94rem;
+    color: #0f172a;
+}
+
+.cacheDetail {
+    color: #475569;
+    font-size: 0.8rem;
+}
+
 .heroActions {
     margin-top: 0.85rem;
 }

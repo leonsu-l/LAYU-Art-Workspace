@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import styles from './ConfigPanel.module.css'
 import type {
-  AppError,
   GeminiImageParams,
   OpenAIImageParams,
   ProviderConfig,
@@ -15,18 +14,13 @@ interface ConfigPanelProps {
   activeProfile: ProviderConfig['profiles'][ProviderType]
   hasApiKey: boolean
   isHydrated: boolean
-  lastSavedAt: string | null
+  apiKeyRiskNotice: string | null
   requestPreview: RequestPreview | null
-  saveError: AppError | null
-  saveNotice: string | null
   onProviderChange: (provider: ProviderType) => void
   onProfileChange: (patch: Partial<{ baseUrl: string; model: string; apiKey: string }>) => void
-  onRememberApiKeyChange: (rememberApiKey: boolean) => void
-  onDraftCacheEnabledChange: (draftCacheEnabled: boolean) => void
+  onDismissApiKeyRiskNotice: () => void
   onOpenAIParamsChange: (patch: Partial<OpenAIImageParams>) => void
   onGeminiParamsChange: (patch: Partial<GeminiImageParams>) => void
-  onSaveConfig: () => void
-  onClearConfig: () => void
 }
 
 const providerLabelMap: Record<ProviderType, string> = {
@@ -43,18 +37,13 @@ export function ConfigPanel(props: ConfigPanelProps) {
     activeProfile,
     hasApiKey,
     isHydrated,
-    lastSavedAt,
+    apiKeyRiskNotice,
     requestPreview,
-    saveError,
-    saveNotice,
     onProviderChange,
     onProfileChange,
-    onRememberApiKeyChange,
-    onDraftCacheEnabledChange,
+    onDismissApiKeyRiskNotice,
     onOpenAIParamsChange,
     onGeminiParamsChange,
-    onSaveConfig,
-    onClearConfig,
   } = props
 
   const [showApiKey, setShowApiKey] = useState(false)
@@ -63,26 +52,6 @@ export function ConfigPanel(props: ConfigPanelProps) {
 
   const openAIProfile = config.profiles['openai-compatible']
   const geminiProfile = config.profiles['gemini-compatible']
-
-  const saveStatus = useMemo(() => {
-    if (saveError) {
-      return saveError.message
-    }
-
-    if (saveNotice) {
-      return saveNotice
-    }
-
-    if (!lastSavedAt) {
-      return '尚未保存配置'
-    }
-
-    const formatted = new Date(lastSavedAt).toLocaleString('zh-CN', {
-      hour12: false,
-    })
-
-    return `已保存：${formatted}`
-  }, [lastSavedAt, saveError, saveNotice])
 
   async function handleCopyEndpoint() {
     if (!requestPreview) {
@@ -110,8 +79,17 @@ export function ConfigPanel(props: ConfigPanelProps) {
 
           </span>
         </div>
-        <p className="text-sm text-slate-600">输入内容可按开关自动缓存到 localStorage，刷新后可恢复；点击保存可写入长期本地配置。</p>
+        <p className="text-sm text-slate-600">输入内容会自动缓存到浏览器，刷新后可恢复，无需手动保存。</p>
       </header>
+
+      {apiKeyRiskNotice ? (
+        <div className={styles.riskNotice} role="status" aria-live="polite">
+          <p>{apiKeyRiskNotice}</p>
+          <button type="button" className={styles.riskNoticeClose} onClick={onDismissApiKeyRiskNotice}>
+            我知道了
+          </button>
+        </div>
+      ) : null}
 
       <div className="space-y-4">
         <label className="block">
@@ -172,26 +150,6 @@ export function ConfigPanel(props: ConfigPanelProps) {
               {showApiKey ? '隐藏' : '显示'}
             </button>
           </div>
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
-            checked={config.rememberApiKey}
-            onChange={(event) => onRememberApiKeyChange(event.target.checked)}
-          />
-          保存密钥到本地（localStorage）
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
-            checked={config.draftCacheEnabled}
-            onChange={(event) => onDraftCacheEnabledChange(event.target.checked)}
-          />
-          启用输入草稿缓存（localStorage）
         </label>
 
         {isOpenAI ? (
@@ -344,23 +302,6 @@ export function ConfigPanel(props: ConfigPanelProps) {
           {copyNotice ? <p className="mt-2 text-xs text-emerald-700">{copyNotice}</p> : null}
         </section>
       </div>
-
-      <footer className="mt-6 space-y-3">
-        <div className="flex gap-2">
-          <button type="button" className={styles.primaryButton} onClick={onSaveConfig}>
-            保存配置
-          </button>
-          <button type="button" className={styles.ghostButton} onClick={onClearConfig}>
-            清空本地
-          </button>
-        </div>
-        <p
-          className={`text-xs ${saveError ? 'text-rose-700' : saveNotice ? 'text-emerald-700' : 'text-slate-500'
-            }`}
-        >
-          {saveStatus}
-        </p>
-      </footer>
     </aside>
   )
 }

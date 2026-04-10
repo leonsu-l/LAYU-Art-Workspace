@@ -55,6 +55,37 @@
     background: rgba(14, 116, 144, 0.2);
 }
 
+.riskNotice {
+    margin-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    background: rgba(255, 251, 235, 0.92);
+    color: #92400e;
+    padding: 0.58rem 0.68rem;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.riskNoticeClose {
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.16);
+    color: #92400e;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 0.22rem 0.62rem;
+    cursor: pointer;
+}
+
+.riskNoticeClose:hover {
+    background: rgba(245, 158, 11, 0.26);
+}
+
 .primaryButton,
 .ghostButton {
     border: 0;
