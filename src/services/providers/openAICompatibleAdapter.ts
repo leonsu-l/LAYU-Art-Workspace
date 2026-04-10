@@ -7,8 +7,11 @@ import type {
 } from '../../types/generation'
 import {
   createAppError,
+  extractBackendErrorInfo,
   mapFetchFailureToError,
   mapHttpStatusToError,
+  parseResponsePayload,
+  summarizePayload,
 } from '../../utils/errors'
 import type { ProviderAdapter } from './adapter'
 import {
@@ -82,22 +85,44 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
         signal: controller.signal,
       })
 
-      const payload = (await response.json()) as OpenAIImageResponse
-
       if (!response.ok) {
+        const errorPayload = await parseResponsePayload(response)
+        const backendError = extractBackendErrorInfo(errorPayload)
+
         throw mapHttpStatusToError(
           response.status,
           'OpenAI-Compatible 请求失败，请确认 Base URL 与鉴权方式。',
-          payload.error?.message,
+          {
+            statusText: response.statusText,
+            method: 'POST',
+            backendMessage: backendError.message,
+            backendDetails: backendError.details ?? summarizePayload(errorPayload),
+          },
+        )
+      }
+
+      let payload: OpenAIImageResponse
+      try {
+        payload = (await response.json()) as OpenAIImageResponse
+      } catch (error) {
+        throw createAppError(
+          'BAD_RESPONSE',
+          '供应商返回成功但响应不是合法 JSON。',
+          false,
+          response.status,
+          error instanceof Error ? error.message : undefined,
         )
       }
 
       const images = parseOpenAIImages(payload)
       if (images.length === 0) {
+        const backendError = extractBackendErrorInfo(payload)
         throw createAppError(
           'BAD_RESPONSE',
-          '供应商返回成功但未包含图片字段。',
+          backendError.message ?? '供应商返回成功但未包含图片字段。',
           false,
+          response.status,
+          backendError.details ?? summarizePayload(payload),
         )
       }
 

@@ -7,8 +7,11 @@ import type {
 } from '../../types/generation'
 import {
     createAppError,
+    extractBackendErrorInfo,
     mapFetchFailureToError,
     mapHttpStatusToError,
+    parseResponsePayload,
+    summarizePayload,
 } from '../../utils/errors'
 import type { ProviderAdapter } from './adapter'
 import {
@@ -87,14 +90,32 @@ export class GeminiOfficialAdapter implements ProviderAdapter {
                 signal: controller.signal,
             })
 
-            const payload = (await response.json()) as GeminiApiResponse
-
             if (!response.ok) {
-                const details = payload.error?.message
+                const errorPayload = await parseResponsePayload(response)
+                const backendError = extractBackendErrorInfo(errorPayload)
+
                 throw mapHttpStatusToError(
                     response.status,
                     'Gemini 请求失败，请检查配置后重试。',
-                    details,
+                    {
+                        statusText: response.statusText,
+                        method: 'POST',
+                        backendMessage: backendError.message,
+                        backendDetails: backendError.details ?? summarizePayload(errorPayload),
+                    },
+                )
+            }
+
+            let payload: GeminiApiResponse
+            try {
+                payload = (await response.json()) as GeminiApiResponse
+            } catch (error) {
+                throw createAppError(
+                    'BAD_RESPONSE',
+                    'Gemini 返回成功但响应不是合法 JSON。',
+                    false,
+                    response.status,
+                    error instanceof Error ? error.message : undefined,
                 )
             }
 
@@ -102,10 +123,13 @@ export class GeminiOfficialAdapter implements ProviderAdapter {
             const images = parseGeminiImages(parts)
 
             if (images.length === 0) {
+                const backendError = extractBackendErrorInfo(payload)
                 throw createAppError(
                     'BAD_RESPONSE',
-                    'Gemini 返回成功但未包含图片数据。',
+                    backendError.message ?? 'Gemini 返回成功但未包含图片数据。',
                     false,
+                    response.status,
+                    backendError.details ?? summarizePayload(payload),
                 )
             }
 
