@@ -12,6 +12,8 @@ export function useImageGeneration() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [result, setResult] = useState<GenerateImageResult | null>(null)
   const [error, setError] = useState<AppError | null>(null)
+  const [expectedImageCount, setExpectedImageCount] = useState(1)
+  const [expectedAspectRatio, setExpectedAspectRatio] = useState('1:1')
 
   const generateImage = useCallback(async (prompt: string, config: ProviderConfig) => {
     const promptValidation = validatePrompt(prompt)
@@ -26,6 +28,8 @@ export function useImageGeneration() {
       return null
     }
 
+    setExpectedImageCount(resolveExpectedImageCount(config))
+    setExpectedAspectRatio(resolveExpectedAspectRatio(config))
     setIsGenerating(true)
     setError(null)
 
@@ -51,13 +55,42 @@ export function useImageGeneration() {
   const clearResult = useCallback(() => {
     setResult(null)
     setError(null)
+    setExpectedImageCount(1)
+    setExpectedAspectRatio('1:1')
   }, [])
 
   return {
     isGenerating,
     result,
     error,
+    expectedImageCount,
+    expectedAspectRatio,
     generateImage,
     clearResult,
   }
+}
+
+function resolveExpectedImageCount(config: ProviderConfig): number {
+  if (config.activeProvider !== 'openai-compatible') {
+    return 1
+  }
+
+  const rawCount = Number(config.profiles['openai-compatible'].params.n)
+  if (!Number.isFinite(rawCount)) {
+    return 1
+  }
+
+  return Math.max(1, Math.min(10, Math.round(rawCount)))
+}
+
+function resolveExpectedAspectRatio(config: ProviderConfig): string {
+  const ratio = config.activeProvider === 'openai-compatible'
+    ? config.profiles['openai-compatible'].params.aspectRatio
+    : config.profiles['gemini-compatible'].params.aspectRatio
+
+  if (!/^\d{1,2}:\d{1,2}$/.test(ratio.trim())) {
+    return '1:1'
+  }
+
+  return ratio.trim()
 }

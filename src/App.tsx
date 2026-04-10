@@ -39,7 +39,15 @@ function App() {
     updateGeminiParams,
   } = usePersistentConfig()
 
-  const { isGenerating, result, error, generateImage, clearResult } = useImageGeneration()
+  const {
+    isGenerating,
+    result,
+    error,
+    expectedImageCount,
+    expectedAspectRatio,
+    generateImage,
+    clearResult,
+  } = useImageGeneration()
   useBeforeUnloadGuard(isGenerating, '还未收到图片，若现在离开页面图片会丢失')
 
   const [prompt, setPrompt] = useState(() => loadPromptFromStorage())
@@ -133,7 +141,7 @@ function App() {
             当前兼容协议：{providerText}。所有请求地址均可自定义，配置与提示词会自动缓存到浏览器。
           </p>
           <p className={styles.cacheSummary}>
-            站点缓存：
+            站点缓存:
             <strong>{formatBytes(cacheSummary.totalBytes)}</strong>
             <span className={styles.cacheDetail}>
               配置与 Prompt <strong>{formatBytes(cacheSummary.localBytes)}</strong> · Gallery <strong>{formatBytes(cacheSummary.galleryBytes)}</strong>
@@ -174,7 +182,13 @@ function App() {
               onClearResult={clearResult}
             />
 
-            <ResultPanel isGenerating={isGenerating} result={result} error={error} />
+            <ResultPanel
+              isGenerating={isGenerating}
+              result={result}
+              error={error}
+              expectedImageCount={expectedImageCount}
+              expectedAspectRatio={expectedAspectRatio}
+            />
           </div>
         </section>
       </main>
