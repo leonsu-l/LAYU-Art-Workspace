@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { GalleryImageRecord, GalleryStorageStats } from '../types/generation'
 import {
@@ -10,42 +10,33 @@ import {
 } from '../utils/galleryDb'
 import styles from './GalleryPage.module.css'
 
-const pendingBlobUrlRevokes = new Map<string, number>()
-
-function cancelPendingBlobUrlRevoke(objectUrl: string): void {
-  const timeoutId = pendingBlobUrlRevokes.get(objectUrl)
-  if (typeof timeoutId !== 'number') {
-    return
-  }
-
-  window.clearTimeout(timeoutId)
-  pendingBlobUrlRevokes.delete(objectUrl)
+interface GalleryViewRecord extends GalleryImageRecord {
+  objectUrl: string
 }
 
-function scheduleBlobUrlRevoke(objectUrl: string): void {
-  cancelPendingBlobUrlRevoke(objectUrl)
-
-  const timeoutId = window.setTimeout(() => {
-    URL.revokeObjectURL(objectUrl)
-    pendingBlobUrlRevokes.delete(objectUrl)
-  }, 0)
-
-  pendingBlobUrlRevokes.set(objectUrl, timeoutId)
+function revokeObjectUrls(records: GalleryViewRecord[]): void {
+  for (const record of records) {
+    URL.revokeObjectURL(record.objectUrl)
+  }
 }
 
 export function GalleryPage() {
-  const [images, setImages] = useState<GalleryImageRecord[]>([])
+  const [images, setImages] = useState<GalleryViewRecord[]>([])
   const [stats, setStats] = useState<GalleryStorageStats>({
     totalBytes: 0,
     imageCount: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [previewRecord, setPreviewRecord] = useState<GalleryImageRecord | null>(null)
+  const [previewRecordId, setPreviewRecordId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [actionNotice, setActionNotice] = useState<string | null>(null)
+  const latestImagesRef = useRef<GalleryViewRecord[]>([])
 
-  const previewUrl = useBlobUrl(previewRecord?.blob ?? null)
+  const previewRecord = useMemo(
+    () => images.find((item) => item.id === previewRecordId) ?? null,
+    [images, previewRecordId],
+  )
 
   const refreshGallery = useCallback(async () => {
     setIsLoading(true)
@@ -54,11 +45,26 @@ export function GalleryPage() {
     try {
       const loadedImages = await listGalleryImages()
       const totalBytes = loadedImages.reduce((sum, item) => sum + item.bytes, 0)
+      const loadedViewRecords: GalleryViewRecord[] = loadedImages.map((item) => ({
+        ...item,
+        objectUrl: URL.createObjectURL(item.blob),
+      }))
+      const availableIds = new Set(loadedImages.map((item) => item.id))
 
-      setImages(loadedImages)
+      setImages((previous) => {
+        revokeObjectUrls(previous)
+        return loadedViewRecords
+      })
       setStats({
         totalBytes,
         imageCount: loadedImages.length,
+      })
+      setPreviewRecordId((previous) => {
+        if (!previous) {
+          return previous
+        }
+
+        return availableIds.has(previous) ? previous : null
       })
       setSelectedIds((previous) => {
         if (previous.size === 0) {
@@ -89,13 +95,13 @@ export function GalleryPage() {
   }, [refreshGallery])
 
   useEffect(() => {
-    if (!previewRecord) {
+    if (!previewRecordId) {
       return
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setPreviewRecord(null)
+        setPreviewRecordId(null)
       }
     }
 
@@ -103,7 +109,17 @@ export function GalleryPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [previewRecord])
+  }, [previewRecordId])
+
+  useEffect(() => {
+    latestImagesRef.current = images
+  }, [images])
+
+  useEffect(() => {
+    return () => {
+      revokeObjectUrls(latestImagesRef.current)
+    }
+  }, [])
 
   const gallerySummary = useMemo(
     () => `${stats.imageCount} 张图片 · ${formatBytes(stats.totalBytes)}`,
@@ -141,8 +157,8 @@ export function GalleryPage() {
 
     try {
       await deleteGalleryImage(record.id)
-      if (previewRecord?.id === record.id) {
-        setPreviewRecord(null)
+      if (previewRecordId === record.id) {
+        setPreviewRecordId(null)
       }
       await refreshGallery()
       setActionNotice('图片已删除。')
@@ -165,8 +181,8 @@ export function GalleryPage() {
     try {
       const deletedCount = await deleteGalleryImages(Array.from(selectedIds))
 
-      if (previewRecord && selectedIds.has(previewRecord.id)) {
-        setPreviewRecord(null)
+      if (previewRecordId && selectedIds.has(previewRecordId)) {
+        setPreviewRecordId(null)
       }
 
       setSelectedIds(new Set())
@@ -248,7 +264,7 @@ export function GalleryPage() {
                       record={record}
                       selected={selectedIds.has(record.id)}
                       onToggleSelect={() => toggleSelect(record.id)}
-                      onPreview={() => setPreviewRecord(record)}
+                      onPreview={() => setPreviewRecordId(record.id)}
                       onDownload={() => downloadGalleryImage(record)}
                       onDelete={() => void handleDeleteOne(record)}
                     />
@@ -260,15 +276,15 @@ export function GalleryPage() {
         ) : null}
       </main>
 
-      {previewRecord && previewUrl ? (
+      {previewRecord ? (
         <div
           className={styles.modalMask}
           role="button"
           tabIndex={0}
-          onClick={() => setPreviewRecord(null)}
+          onClick={() => setPreviewRecordId(null)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
-              setPreviewRecord(null)
+              setPreviewRecordId(null)
             }
           }}
         >
@@ -290,13 +306,13 @@ export function GalleryPage() {
               <button
                 type="button"
                 className={styles.modalClose}
-                onClick={() => setPreviewRecord(null)}
+                onClick={() => setPreviewRecordId(null)}
               >
                 关闭
               </button>
             </div>
             <img
-              src={previewUrl}
+              src={previewRecord.objectUrl}
               alt="Gallery preview"
               className={styles.modalImage}
             />
@@ -308,7 +324,7 @@ export function GalleryPage() {
 }
 
 interface GalleryCardProps {
-  record: GalleryImageRecord
+  record: GalleryViewRecord
   selected: boolean
   onToggleSelect: () => void
   onPreview: () => void
@@ -318,15 +334,10 @@ interface GalleryCardProps {
 
 function GalleryCard(props: GalleryCardProps) {
   const { record, selected, onToggleSelect, onPreview, onDownload, onDelete } = props
-  const thumbnailUrl = useBlobUrl(record.blob)
-
-  if (!thumbnailUrl) {
-    return null
-  }
 
   return (
     <article className={`${styles.card} ${selected ? styles.cardSelected : ''}`}>
-      <img src={thumbnailUrl} alt="Gallery item" className={styles.cardImage} loading="lazy" />
+      <img src={record.objectUrl} alt="Gallery item" className={styles.cardImage} loading="lazy" />
       <label className={styles.cardSelectLabel}>
         <input type="checkbox" checked={selected} onChange={onToggleSelect} />
         选择
@@ -349,28 +360,4 @@ function GalleryCard(props: GalleryCardProps) {
       </div>
     </article>
   )
-}
-
-function useBlobUrl(blob: Blob | null): string | null {
-  const objectUrl = useMemo(() => {
-    if (!blob) {
-      return null
-    }
-
-    return URL.createObjectURL(blob)
-  }, [blob])
-
-  useEffect(() => {
-    if (!objectUrl) {
-      return
-    }
-
-    cancelPendingBlobUrlRevoke(objectUrl)
-
-    return () => {
-      scheduleBlobUrlRevoke(objectUrl)
-    }
-  }, [objectUrl])
-
-  return objectUrl
 }
