@@ -4,8 +4,9 @@ import type {
     PersistedConfigV2,
     ProviderConfig,
     ProviderType,
-} from '../types/generation'
-import { createDefaultProviderConfig, mapLegacyProviderToCurrent } from './configDefaults'
+} from '../types/generation.ts'
+import { createDefaultProviderConfig, mapLegacyProviderToCurrent } from './configDefaults.ts'
+import { normalizeGeminiParams, normalizeOpenAIParams } from './imageModels.ts'
 
 export const STORAGE_KEY = 'nanobanana.provider-config'
 const LEGACY_STORAGE_KEY = 'nanobanana.provider-config.v1'
@@ -13,10 +14,6 @@ const DRAFT_STORAGE_KEY = 'nanobanana.provider-config.draft.v2'
 const LEGACY_DRAFT_SESSION_STORAGE_KEY = 'nanobanana.provider-config.draft.v2'
 export const PROMPT_STORAGE_KEY = 'nanobanana.prompt.last'
 const SCHEMA_VERSION = 2
-
-const GEMINI_IMAGE_SIZES = new Set(['512', '1K', '2K', '4K'])
-const GEMINI_THINKING_LEVELS = new Set(['minimal', 'high'])
-const OPENAI_QUALITIES = new Set(['standard', 'hd'])
 
 const TRACKED_LOCAL_STORAGE_KEYS = [
     STORAGE_KEY,
@@ -41,7 +38,7 @@ export function loadPersistedConfig(): ProviderConfig | null {
         if (rawV2) {
             const parsed = JSON.parse(rawV2) as unknown
             if (isPersistedConfigV2(parsed)) {
-                return normalizeProviderConfig(parsed.config)
+                return normalizeProviderConfig(parsed.config, true)
             }
         }
 
@@ -123,7 +120,7 @@ function loadLegacyDraftConfig(): ProviderConfig | null {
         if (rawDraft) {
             const parsed = JSON.parse(rawDraft) as unknown
             if (isPersistedConfigV2(parsed)) {
-                return normalizeProviderConfig(parsed.config)
+                return normalizeProviderConfig(parsed.config, true)
             }
         }
 
@@ -137,7 +134,7 @@ function loadLegacyDraftConfig(): ProviderConfig | null {
             return null
         }
 
-        return normalizeProviderConfig(parsed.config)
+        return normalizeProviderConfig(parsed.config, true)
     } catch {
         return null
     }
@@ -160,10 +157,10 @@ function migrateLegacyConfig(legacyConfig: LegacyProviderConfigV1): ProviderConf
                 apiKey: legacyConfig.apiKey || '',
             },
         },
-    })
+    }, true)
 }
 
-function normalizeProviderConfig(config: ProviderConfig): ProviderConfig {
+function normalizeProviderConfig(config: ProviderConfig, migrateRetiredModels = false): ProviderConfig {
     const defaults = createDefaultProviderConfig()
     const activeProvider: ProviderType =
         config.activeProvider === 'gemini-compatible' ? 'gemini-compatible' : 'openai-compatible'
@@ -171,10 +168,15 @@ function normalizeProviderConfig(config: ProviderConfig): ProviderConfig {
     const openaiProfile = config.profiles?.['openai-compatible']
     const geminiProfile = config.profiles?.['gemini-compatible']
 
-    const openaiNRaw = Number(openaiProfile?.params?.n)
-    const openaiN = Number.isFinite(openaiNRaw)
-        ? Math.max(1, Math.min(10, Math.round(openaiNRaw)))
-        : defaults.profiles['openai-compatible'].params.n
+    const openaiModel = typeof openaiProfile?.model === 'string'
+        ? openaiProfile.model : defaults.profiles['openai-compatible'].model
+    let geminiModel = typeof geminiProfile?.model === 'string'
+        ? geminiProfile.model : defaults.profiles['gemini-compatible'].model
+    // Official preview IDs have retired; leave third-party aliases untouched.
+    if (migrateRetiredModels && geminiProfile?.baseUrl?.trim().startsWith('https://generativelanguage.googleapis.com/') &&
+        ['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview'].includes(geminiModel)) {
+        geminiModel = geminiModel.replace(/-preview$/, '')
+    }
 
     return {
         activeProvider,
@@ -182,52 +184,14 @@ function normalizeProviderConfig(config: ProviderConfig): ProviderConfig {
             'openai-compatible': {
                 ...defaults.profiles['openai-compatible'],
                 ...openaiProfile,
-                params: {
-                    ...defaults.profiles['openai-compatible'].params,
-                    ...openaiProfile?.params,
-                    size:
-                        typeof openaiProfile?.params?.size === 'string' && openaiProfile.params.size.trim()
-                            ? openaiProfile.params.size
-                            : defaults.profiles['openai-compatible'].params.size,
-                    aspectRatio:
-                        typeof openaiProfile?.params?.aspectRatio === 'string' &&
-                            openaiProfile.params.aspectRatio.trim()
-                            ? openaiProfile.params.aspectRatio
-                            : defaults.profiles['openai-compatible'].params.aspectRatio,
-                    quality:
-                        typeof openaiProfile?.params?.quality === 'string' &&
-                            OPENAI_QUALITIES.has(openaiProfile.params.quality)
-                            ? openaiProfile.params.quality
-                            : defaults.profiles['openai-compatible'].params.quality,
-                    n: openaiN,
-                },
+                model: openaiModel,
+                params: normalizeOpenAIParams(openaiModel, openaiProfile?.params ?? {}),
             },
             'gemini-compatible': {
                 ...defaults.profiles['gemini-compatible'],
                 ...geminiProfile,
-                params: {
-                    ...defaults.profiles['gemini-compatible'].params,
-                    ...geminiProfile?.params,
-                    imageSize:
-                        typeof geminiProfile?.params?.imageSize === 'string' &&
-                            GEMINI_IMAGE_SIZES.has(geminiProfile.params.imageSize)
-                            ? geminiProfile.params.imageSize
-                            : defaults.profiles['gemini-compatible'].params.imageSize,
-                    aspectRatio:
-                        typeof geminiProfile?.params?.aspectRatio === 'string' &&
-                            geminiProfile.params.aspectRatio.trim()
-                            ? geminiProfile.params.aspectRatio
-                            : defaults.profiles['gemini-compatible'].params.aspectRatio,
-                    imageOnly:
-                        typeof geminiProfile?.params?.imageOnly === 'boolean'
-                            ? geminiProfile.params.imageOnly
-                            : defaults.profiles['gemini-compatible'].params.imageOnly,
-                    thinkingLevel:
-                        typeof geminiProfile?.params?.thinkingLevel === 'string' &&
-                            GEMINI_THINKING_LEVELS.has(geminiProfile.params.thinkingLevel)
-                            ? geminiProfile.params.thinkingLevel
-                            : defaults.profiles['gemini-compatible'].params.thinkingLevel,
-                },
+                model: geminiModel,
+                params: normalizeGeminiParams(geminiModel, geminiProfile?.params ?? {}),
             },
         },
     }

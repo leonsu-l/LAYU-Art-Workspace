@@ -1,49 +1,80 @@
+import { useRef } from 'react'
+import { Icon } from './Icon'
+import { ReferenceImageUpload } from './ReferenceImageUpload'
+import type { ReferenceImage } from '../types/generation'
+import type { ReferenceImageLimits } from '../utils/referenceImages'
+import { promptIdeas } from '../utils/promptIdeas'
 import styles from './PromptPanel.module.css'
 
 interface PromptPanelProps {
   prompt: string
-  isGenerating: boolean
+  isSubmitting: boolean
+  canSubmit: boolean
+  hasDiscovered: boolean
+  hasApiKey: boolean
   onPromptChange: (value: string) => void
   onGenerate: () => void
-  onClearResult: () => void
+  referenceImages: ReferenceImage[]
+  referenceLimits: ReferenceImageLimits
+  referenceImageError: string | null
+  isReadingImages: boolean
+  onReferenceImagesChange: (images: ReferenceImage[]) => void
+  onReadingImagesChange: (loading: boolean) => void
 }
 
-export function PromptPanel(props: PromptPanelProps) {
-  const { prompt, isGenerating, onPromptChange, onGenerate, onClearResult } = props
+export function PromptPanel({ prompt, isSubmitting, canSubmit, hasDiscovered, hasApiKey, onPromptChange, onGenerate,
+  referenceImages, referenceLimits, referenceImageError, isReadingImages, onReferenceImagesChange, onReadingImagesChange }: PromptPanelProps) {
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const count = prompt.trim().length
+  const canGenerate = canSubmit && !isSubmitting && !isReadingImages && !referenceImageError && count > 0 && count <= 4000
 
   return (
-    <section className={`${styles.panel} rounded-3xl p-5 md:p-6`}>
-      <header className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">提示词工作台</h2>
-          <p className="mt-1 text-sm text-slate-600">首版支持文本生图，已预留后续图片编辑与多轮会话扩展位。</p>
-        </div>
-        <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">
-          {prompt.trim().length}/4000
-        </span>
+    <section className={styles.panel} aria-labelledby="prompt-heading">
+      <header className={styles.header}>
+        <div className={styles.heading}><Icon name="sparkles" size={19} /><h2 id="prompt-heading">描述你的画面</h2></div>
+        <span className={styles.eyebrow}>PROMPT</span>
       </header>
-
-      <textarea
-        className={styles.textarea}
-        placeholder="例如：A cinematic wide-angle photo of a futuristic tea house floating above terraced fields at sunrise..."
-        value={prompt}
-        onChange={(event) => onPromptChange(event.target.value)}
-        rows={6}
-      />
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={styles.primaryButton}
-          onClick={onGenerate}
-          disabled={isGenerating || !prompt.trim()}
-        >
-          {isGenerating ? '生成中...' : '生成图片'}
-        </button>
-        <button type="button" className={styles.ghostButton} onClick={onClearResult}>
-          清空结果
-        </button>
+      <div className={styles.editor}>
+        <label htmlFor="image-prompt" className={styles.srOnly}>图片提示词</label>
+        <textarea
+          ref={inputRef}
+          id="image-prompt"
+          className={styles.textarea}
+          placeholder={'一场不合常理的想象，也可以是一个好开头。\n试着描述主体、场景、光线和你喜欢的风格…'}
+          value={prompt}
+          onChange={(event) => onPromptChange(event.target.value)}
+          onKeyDown={(event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) {
+              event.preventDefault()
+              if (canGenerate) onGenerate()
+            }
+          }}
+          aria-describedby="prompt-count"
+          aria-invalid={count > 4000}
+          maxLength={4000}
+          rows={4}
+        />
+        <span id="prompt-count" className={`${styles.counter} ${count > 4000 ? styles.overLimit : ''}`}>{count.toLocaleString()} <span>/ 4,000</span></span>
       </div>
+      <div className={styles.ideas}>
+        <span>试试灵感</span>
+        {promptIdeas.map((idea) => (
+          <button key={idea.label} type="button" disabled={isSubmitting} onClick={() => { onPromptChange(idea.prompt); inputRef.current?.focus() }}>
+            <Icon name="plus" size={12} />{idea.label}
+          </button>
+        ))}
+      </div>
+      <ReferenceImageUpload images={referenceImages} limits={referenceLimits} selectionError={referenceImageError} disabled={isSubmitting} onChange={onReferenceImagesChange} onLoadingChange={onReadingImagesChange} />
+      <footer className={styles.footer}>
+        <div className={styles.hint}>
+          {hasApiKey ? <><Icon name="check" size={13} />提示词自动保存</> : <><Icon name="settings" size={14} /><a href="#connection-settings">先填入你的 API Key</a></>}
+        </div>
+        <button type="button" className={styles.primaryButton} onClick={onGenerate} disabled={!canGenerate}>
+          <Icon name={isSubmitting ? 'loader' : 'sparkles'} size={16} className={isSubmitting ? styles.spinner : ''} />
+          {isSubmitting ? '正在提交' : isReadingImages ? '正在读取图片' : !hasDiscovered ? '正在恢复任务' : !canSubmit ? '等待连接 / 确认' : '创建生成任务'}
+          <kbd title="Ctrl / ⌘ + Enter">↵</kbd>
+        </button>
+      </footer>
     </section>
   )
 }

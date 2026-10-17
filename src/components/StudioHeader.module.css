@@ -1,0 +1,20 @@
+.header { background: var(--surface); border-bottom: 1px solid var(--line); }
+.inner { max-width: 1440px; min-height: 82px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+.mark { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--banana); color: var(--ink); }
+.wordmark { font-family: var(--font-display); font-size: 23px; line-height: 1.1; font-weight: 500; letter-spacing: -.9px; }
+.wordmark > span { font-weight: 700; }
+.wordmark small { display: block; font-family: var(--font-mono); font-size: 9px; font-weight: 400; letter-spacing: 3px; margin-top: 5px; color: var(--muted); }
+.nav { display: flex; align-items: center; gap: 8px; }
+.navLink { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; transition: background .2s, color .2s; }
+.navLink:hover { color: var(--accent); background: var(--bg); }
+.navLink.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.localNote { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.localNote > span { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+@media (max-width: 1000px) { .localNote { display: none; } .inner { padding-inline: 28px; } }
+@media (max-width: 600px) {
+  .inner { min-height: 112px; padding: 16px 18px 10px; gap: 14px; flex-wrap: wrap; }
+  .brand { gap: 8px; } .mark { width: 36px; height: 36px; border-radius: 11px; } .wordmark { font-size: 21px; }
+  .wordmark small { display: inline; font-size: 8px; margin-left: 9px; letter-spacing: 2px; }
+  .nav { width: 100%; gap: 6px; } .navLink { flex: 1; justify-content: center; padding: 9px 10px; font-size: 12px; }
+}

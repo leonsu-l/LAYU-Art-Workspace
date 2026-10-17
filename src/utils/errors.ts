@@ -1,4 +1,4 @@
-import type { AppError, AppErrorCode } from '../types/generation'
+import type { AppError, AppErrorCode } from '../types/generation.ts'
 
 const MAX_ERROR_TEXT_LENGTH = 1000
 const MAX_PAYLOAD_PREVIEW_LENGTH = 1500

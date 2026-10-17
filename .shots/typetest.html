@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Space+Mono:wght@400;700&family=DM+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600&display=swap">
+<style>
+  :root{
+    --ink-0:#14100C; --ink-1:#1C1712; --ink-2:#241D17;
+    --line:#332A22; --paper:#F4EDE2; --paper-dim:#CBBFAC; --ash:#948878; --amber:#EFB03C;
+    --mono:'DM Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink-0);color:var(--paper);font-family:system-ui,'PingFang SC','Microsoft YaHei',sans-serif}
+  .block{padding:38px 48px;border-bottom:1px solid var(--line)}
+  .tag{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--amber);text-transform:uppercase}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--ash);margin:0 0 14px;text-transform:uppercase}
+  /* A: light large CJK sans, tracked */
+  .a h1{font-size:72px;line-height:1.08;font-weight:200;letter-spacing:.04em;margin:0;color:var(--paper)}
+  /* B: CJK serif + fraunces */
+  .b h1{font-family:'Fraunces','Noto Serif SC','Songti SC',serif;font-size:70px;line-height:1.1;font-weight:400;letter-spacing:.01em;margin:0}
+  .b h1 em{font-style:normal;color:var(--amber)}
+  /* C: heavy tight CJK sans */
+  .c h1{font-size:66px;line-height:1.06;font-weight:800;letter-spacing:-.02em;margin:0}
+  /* D: Fraunces latin hero + cjk sub */
+  .d{display:flex;align-items:flex-end;gap:28px}
+  .d .en{font-family:'Fraunces',serif;font-size:88px;line-height:.9;font-weight:300;font-variation-settings:'SOFT' 60,'WONK' 1;letter-spacing:-.02em}
+  .d .cn{font-size:26px;font-weight:300;letter-spacing:.14em;color:var(--paper-dim);padding-bottom:10px}
+  .meta{display:flex;gap:26px;margin-top:22px;font-family:var(--mono);font-size:12px;color:var(--ash);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+  .meta b{color:var(--paper-dim);font-weight:400}
+  .strip{display:flex;gap:14px;padding:16px 0 0}
+  .frame{width:150px;aspect-ratio:4/3;border:1px solid var(--line);background:var(--ink-1);position:relative;border-radius:2px}
+  .frame.sel{outline:2px solid var(--amber);outline-offset:3px}
+  .num{position:absolute;left:5px;bottom:-19px;font-family:var(--mono);font-size:11px;color:var(--ash)}
+  .rail{height:14px;background:
+     repeating-linear-gradient(90deg,#0000 0 10px,var(--line) 10px 22px,#0000 22px 32px);
+     opacity:.9}
+  .korean{color:var(--ink-2)}
+  .serifcn{font-family:'Noto Serif SC','Songti SC',SimSun,serif}
+  .sizes{display:flex;gap:34px;align-items:baseline;font-family:var(--mono);font-size:12px;color:var(--ash)}
+</style>
+</head>
+<body>
+  <div class="block a">
+    <p class="eyebrow">A · Light tracked CJK sans</p>
+    <h1>今天，想造点什么？</h1>
+    <div class="meta"><span>ROLL <b>001</b></span><span>MODEL <b>gpt-image-2.5</b></span><span>FILM <b>36 EXP</b></span></div>
+  </div>
+  <div class="block b">
+    <p class="eyebrow">B · CJK serif + Fraunces</p>
+    <h1>今天，想造点什么？<em> The darkroom.</em></h1>
+    <div class="strip"><div class="frame sel"></div><div class="frame"></div><div class="frame"></div><div class="frame"></div></div>
+    <div class="sizes"><span>01</span><span>02</span><span>03</span><span>04</span></div>
+  </div>
+  <div class="block c">
+    <p class="eyebrow">C · Heavy tight CJK sans</p>
+    <h1>今天，想造点什么？</h1>
+  </div>
+  <div class="block d">
+    <p class="eyebrow">D · Fraunces latin lockup</p>
+    <div class="d"><span class="en">nanobanana</span><span class="cn">今天，想造点什么？</span></div>
+  </div>
+  <div class="block">
+    <p class="eyebrow">Palette + rail</p>
+    <div style="display:flex;gap:10px">
+      <span style="width:80px;height:44px;background:#14100C;border:1px solid #332A22"></span>
+      <span style="width:80px;height:44px;background:#1C1712;border:1px solid #332A22"></span>
+      <span style="width:80px;height:44px;background:#241D17;border:1px solid #332A22"></span>
+      <span style="width:80px;height:44px;background:#F4EDE2"></span>
+      <span style="width:80px;height:44px;background:#CBBFAC"></span>
+      <span style="width:80px;height:44px;background:#948878"></span>
+      <span style="width:80px;height:44px;background:#EFB03C"></span>
+      <span style="width:80px;height:44px;background:#E2705A"></span>
+      <span style="width:80px;height:44px;background:#8FA97E"></span>
+    </div>
+    <div class="rail" style="margin-top:20px"></div>
+  </div>
+</body>
+</html>

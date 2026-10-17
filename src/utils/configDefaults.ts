@@ -3,31 +3,34 @@ import type {
   ProviderConfig,
   ProviderProfiles,
   ProviderType,
-} from '../types/generation'
+} from '../types/generation.ts'
 
 export const DEFAULT_PROVIDER: ProviderType = 'openai-compatible'
 
 export const DEFAULT_PROVIDER_PROFILES: ProviderProfiles = {
   'openai-compatible': {
     baseUrl: 'https://api.openai.com',
-    model: 'gpt-image-1',
+    model: 'gpt-image-2.5-flare',
     apiKey: '',
     params: {
       size: '1024x1024',
-      aspectRatio: '1:1',
-      quality: 'standard',
+      quality: 'auto',
       n: 1,
+      background: 'auto',
+      outputFormat: 'png',
+      outputCompression: 100,
+      moderation: 'auto',
     },
   },
   'gemini-compatible': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    model: 'gemini-3.1-flash-image-preview',
+    model: 'gemini-nano-banana-2.1',
     apiKey: '',
     params: {
       imageSize: '1K',
       aspectRatio: '1:1',
       imageOnly: false,
-      thinkingLevel: 'minimal',
+      thinkingLevel: 'auto',
     },
   },
 }

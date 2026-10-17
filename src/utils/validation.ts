@@ -1,139 +1,65 @@
-import type { ProviderConfig, ValidationResult } from '../types/generation'
-import { createAppError } from './errors'
+import type { ProviderConfig, ValidationResult } from '../types/generation.ts'
+import { createAppError } from './errors.ts'
+import {
+  getGeminiModel,
+  getOpenAIModel,
+  isOpenAISizeSupported,
+  OPENAI_BACKGROUNDS,
+  OPENAI_OUTPUT_FORMATS,
+} from './imageModels.ts'
 
 const MAX_PROMPT_LENGTH = 4000
-const OPENAI_SIZE_PATTERN = /^\d{2,5}x\d{2,5}$/i
-const ASPECT_RATIO_PATTERN = /^\d{1,2}:\d{1,2}$/
-const GEMINI_IMAGE_SIZES = new Set(['512', '1K', '2K', '4K'])
-const GEMINI_THINKING_LEVELS = new Set(['minimal', 'high'])
-const OPENAI_QUALITIES = new Set(['standard', 'hd'])
+
+function invalid(message: string): ValidationResult {
+  return { valid: false, error: createAppError('VALIDATION', message, false) }
+}
 
 export function validatePrompt(prompt: string): ValidationResult {
   const normalized = prompt.trim()
-
-  if (!normalized) {
-    return {
-      valid: false,
-      error: createAppError('VALIDATION', '请输入用于生成图片的提示词。', false),
-    }
-  }
-
-  if (normalized.length > MAX_PROMPT_LENGTH) {
-    return {
-      valid: false,
-      error: createAppError(
-        'VALIDATION',
-        `提示词长度不能超过 ${MAX_PROMPT_LENGTH} 个字符。`,
-        false,
-      ),
-    }
-  }
-
+  if (!normalized) return invalid('请输入用于生成图片的提示词。')
+  if (normalized.length > MAX_PROMPT_LENGTH) return invalid(`提示词长度不能超过 ${MAX_PROMPT_LENGTH} 个字符。`)
   return { valid: true }
 }
 
 export function validateProviderConfig(config: ProviderConfig): ValidationResult {
   const profile = config.profiles[config.activeProvider]
-
-  if (!profile) {
-    return {
-      valid: false,
-      error: createAppError('VALIDATION', '当前供应商配置不存在。', false),
-    }
-  }
-
-  if (!profile.model.trim()) {
-    return {
-      valid: false,
-      error: createAppError('VALIDATION', '模型不能为空。', false),
-    }
-  }
-
-  if (!profile.apiKey.trim()) {
-    return {
-      valid: false,
-      error: createAppError('VALIDATION', 'API Key 不能为空。', false),
-    }
-  }
-
-  if (!profile.baseUrl.trim()) {
-    return {
-      valid: false,
-      error: createAppError('VALIDATION', '当前供应商需要填写 Base URL。', false),
-    }
-  }
-
-  if (!isValidHttpUrl(profile.baseUrl)) {
-    return {
-      valid: false,
-      error: createAppError('VALIDATION', 'Base URL 必须是合法的 http(s) 地址。', false),
-    }
-  }
+  if (!profile) return invalid('当前供应商配置不存在。')
+  if (!profile.model.trim()) return invalid('模型不能为空。')
+  if (!profile.apiKey.trim()) return invalid('API Key 不能为空。')
+  if (!profile.baseUrl.trim()) return invalid('当前供应商需要填写 Base URL。')
+  if (!isValidHttpUrl(profile.baseUrl)) return invalid('Base URL 必须是合法的 http(s) 地址。')
 
   if (config.activeProvider === 'openai-compatible') {
-    const openAIProfile = config.profiles['openai-compatible']
-
-    if (!OPENAI_SIZE_PATTERN.test(openAIProfile.params.size.trim())) {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'OpenAI 分辨率必须是 WxH 格式，例如 1024x1024。', false),
-      }
+    const { model, params } = config.profiles['openai-compatible']
+    const capabilities = getOpenAIModel(model)
+    if (!isOpenAISizeSupported(model, params.size)) {
+      return invalid(capabilities.flexibleSize
+        ? '尺寸须为 auto 或 WxH：宽高为 16 的倍数，长边不超过 3840，比例介于 1:3–3:1，总像素为 655360–8294400。'
+        : '当前模型尺寸仅支持 auto、1024x1024、1536x1024、1024x1536。')
     }
-
-    if (!ASPECT_RATIO_PATTERN.test(openAIProfile.params.aspectRatio.trim())) {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'OpenAI 比例必须是 X:Y 格式，例如 16:9。', false),
-      }
+    if (!capabilities.qualities.includes(params.quality)) return invalid('当前模型不支持所选图片质量。')
+    if (!Number.isInteger(params.n) || params.n < 1 || params.n > 10) return invalid('OpenAI 数量 n 必须为 1 到 10 的整数。')
+    if (!OPENAI_OUTPUT_FORMATS.includes(params.outputFormat)) return invalid('图片格式仅支持 png、jpeg 或 webp。')
+    if (!OPENAI_BACKGROUNDS.includes(params.background)) return invalid('背景参数无效。')
+    if (params.background === 'transparent' && (!capabilities.transparentBackground || params.outputFormat === 'jpeg')) {
+      return invalid('透明背景需要支持该功能的模型，并选择 PNG 或 WebP 格式。')
     }
-
-    if (!OPENAI_QUALITIES.has(openAIProfile.params.quality)) {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'OpenAI 质量参数无效，请使用 standard 或 hd。', false),
-      }
+    if (!Number.isInteger(params.outputCompression) || params.outputCompression < 0 || params.outputCompression > 100) {
+      return invalid('输出压缩质量必须为 0 到 100 的整数。')
     }
-
-    if (!Number.isInteger(openAIProfile.params.n) || openAIProfile.params.n < 1 || openAIProfile.params.n > 10) {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'OpenAI 数量 n 必须为 1 到 10 的整数。', false),
-      }
+    if (params.moderation !== 'auto' && params.moderation !== 'low') return invalid('内容审核仅支持 auto 或 low。')
+  } else {
+    const { model, params } = config.profiles['gemini-compatible']
+    const capabilities = getGeminiModel(model)
+    if (capabilities.imageSizes.length ? !capabilities.imageSizes.includes(params.imageSize) : params.imageSize !== '1K') {
+      return invalid('当前 Gemini 模型不支持所选分辨率。')
     }
+    if (params.aspectRatio !== 'auto' && !capabilities.aspectRatios.includes(params.aspectRatio)) {
+      return invalid('当前 Gemini 模型不支持所选图片比例。')
+    }
+    if (!capabilities.thinkingLevels.includes(params.thinkingLevel)) return invalid('当前 Gemini 模型不支持所选思考深度，请使用自动。')
+    if (typeof params.imageOnly !== 'boolean') return invalid('Gemini imageOnly 必须为布尔值。')
   }
-
-  if (config.activeProvider === 'gemini-compatible') {
-    const geminiProfile = config.profiles['gemini-compatible']
-
-    if (!GEMINI_IMAGE_SIZES.has(geminiProfile.params.imageSize)) {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'Gemini 分辨率仅支持 512、1K、2K、4K。', false),
-      }
-    }
-
-    if (!ASPECT_RATIO_PATTERN.test(geminiProfile.params.aspectRatio.trim())) {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'Gemini 比例必须是 X:Y 格式，例如 16:9。', false),
-      }
-    }
-
-    if (!GEMINI_THINKING_LEVELS.has(geminiProfile.params.thinkingLevel)) {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'Gemini thinkingLevel 仅支持 minimal 或 high。', false),
-      }
-    }
-
-    if (typeof geminiProfile.params.imageOnly !== 'boolean') {
-      return {
-        valid: false,
-        error: createAppError('VALIDATION', 'Gemini imageOnly 必须为布尔值。', false),
-      }
-    }
-  }
-
   return { valid: true }
 }
 

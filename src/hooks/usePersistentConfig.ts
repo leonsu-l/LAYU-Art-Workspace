@@ -8,6 +8,7 @@ import type {
 import { createDefaultProviderConfig } from '../utils/configDefaults'
 import { loadPersistedConfig, savePersistedConfig } from '../utils/storage'
 import { normalizeText } from '../utils/validation'
+import { normalizeGeminiParams, normalizeOpenAIParams } from '../utils/imageModels'
 
 const RISK_ACK_KEY = 'nanobanana.api-key-risk-ack'
 const API_KEY_RISK_NOTICE = 'API Key 会自动缓存到浏览器本地存储，请仅在可信设备使用。'
@@ -72,16 +73,23 @@ export function usePersistentConfig() {
                 maybeRevealApiKeyRiskNotice(patch.apiKey)
             }
 
-            setConfig((previous) => ({
-                ...previous,
-                profiles: {
-                    ...previous.profiles,
-                    [provider]: {
-                        ...previous.profiles[provider],
-                        ...patch,
-                    },
-                },
-            }))
+            setConfig((previous) => {
+                const next = { ...previous, profiles: { ...previous.profiles } }
+                if (provider === 'openai-compatible') {
+                    const profile = { ...previous.profiles[provider], ...patch }
+                    next.profiles[provider] = {
+                        ...profile,
+                        params: patch.model === undefined ? profile.params : normalizeOpenAIParams(profile.model, profile.params),
+                    }
+                } else {
+                    const profile = { ...previous.profiles[provider], ...patch }
+                    next.profiles[provider] = {
+                        ...profile,
+                        params: patch.model === undefined ? profile.params : normalizeGeminiParams(profile.model, profile.params),
+                    }
+                }
+                return next
+            })
         },
         [maybeRevealApiKeyRiskNotice],
     )
@@ -96,6 +104,9 @@ export function usePersistentConfig() {
                     params: {
                         ...previous.profiles['openai-compatible'].params,
                         ...patch,
+                        // JPEG cannot carry alpha; keep the visible setting consistent with the request.
+                        ...(patch.outputFormat === 'jpeg' && previous.profiles['openai-compatible'].params.background === 'transparent'
+                            ? { background: 'auto' as const } : {}),
                     },
                 },
             },
@@ -141,8 +152,6 @@ function normalizeProviderConfigForSave(config: ProviderConfig): ProviderConfig 
     const normalizedOpenAI = config.profiles['openai-compatible']
     const normalizedGemini = config.profiles['gemini-compatible']
 
-    const openAINRaw = Number(normalizedOpenAI.params.n)
-
     return {
         ...config,
         profiles: {
@@ -151,22 +160,14 @@ function normalizeProviderConfigForSave(config: ProviderConfig): ProviderConfig 
                 model: normalizeText(normalizedOpenAI.model),
                 apiKey: normalizeText(normalizedOpenAI.apiKey),
                 baseUrl: normalizeText(normalizedOpenAI.baseUrl),
-                params: {
-                    ...normalizedOpenAI.params,
-                    size: normalizeText(normalizedOpenAI.params.size),
-                    aspectRatio: normalizeText(normalizedOpenAI.params.aspectRatio),
-                    n: Number.isFinite(openAINRaw) ? Math.max(1, Math.min(10, Math.round(openAINRaw))) : 1,
-                },
+                params: normalizeOpenAIParams(normalizedOpenAI.model, normalizedOpenAI.params),
             },
             'gemini-compatible': {
                 ...normalizedGemini,
                 model: normalizeText(normalizedGemini.model),
                 apiKey: normalizeText(normalizedGemini.apiKey),
                 baseUrl: normalizeText(normalizedGemini.baseUrl),
-                params: {
-                    ...normalizedGemini.params,
-                    aspectRatio: normalizeText(normalizedGemini.params.aspectRatio),
-                },
+                params: normalizeGeminiParams(normalizedGemini.model, normalizedGemini.params),
             },
         },
     }

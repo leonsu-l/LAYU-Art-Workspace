@@ -5,17 +5,24 @@ export const providerOptions = [
 
 export type ProviderType = (typeof providerOptions)[number]
 
-export type OpenAIQuality = 'standard' | 'hd'
+export type OpenAIQuality = 'auto' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
-export type GeminiThinkingLevel = 'minimal' | 'high'
+export type OpenAIOutputFormat = 'png' | 'jpeg' | 'webp'
+
+export type OpenAIBackground = 'auto' | 'opaque' | 'transparent'
+
+export type GeminiThinkingLevel = 'auto' | 'minimal' | 'medium' | 'high'
 
 export type GeminiImageSize = '512' | '1K' | '2K' | '4K'
 
 export interface OpenAIImageParams {
     size: string
-    aspectRatio: string
     quality: OpenAIQuality
     n: number
+    background: OpenAIBackground
+    outputFormat: OpenAIOutputFormat
+    outputCompression: number
+    moderation: 'auto' | 'low'
 }
 
 export interface GeminiImageParams {
@@ -72,9 +79,16 @@ export interface PersistedConfigV2 {
     config: ProviderConfig
 }
 
+export interface ReferenceImage {
+    name: string
+    mimeType: 'image/png' | 'image/jpeg' | 'image/webp'
+    base64Data: string
+}
+
 export interface GenerateImageRequest {
     prompt: string
     config: ProviderConfig
+    referenceImages?: ReferenceImage[]
 }
 
 export interface GeneratedImage {
@@ -133,6 +147,33 @@ export interface AppError {
 export interface ValidationResult {
     valid: boolean
     error?: AppError
+}
+
+export type GenerationTaskStatus = 'queued' | 'running' | 'succeeded' | 'failed'
+
+export interface GenerationTask {
+    id: string
+    status: GenerationTaskStatus
+    createdAt: string
+    updatedAt: string
+    provider: ProviderType
+    model: string
+    prompt: string
+    expectedImageCount: number
+    expectedAspectRatio: string
+    requestedSize?: string
+    referenceImageCount?: number
+    result?: GenerateImageResult
+    error?: AppError
+}
+
+export interface TaskDeletionSummary {
+    deletedTaskCount: number
+    deletedImageCount: number
+}
+
+export interface ServerGalleryImage extends Omit<GalleryImageRecord, 'blob'> {
+    url: string
 }
 
 export interface RequestPreview {

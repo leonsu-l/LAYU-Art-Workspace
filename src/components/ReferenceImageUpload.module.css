@@ -1,0 +1,23 @@
+.upload { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.title { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; }
+.title > span { color: var(--muted); font-size: 10px; font-weight: 400; }
+.usage { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.dropZone { margin-top: 12px; border: 1px dashed var(--line); border-radius: 12px; background: var(--bg); transition: border-color .15s, background .15s; }
+.dropZone:hover:not([data-disabled='true']), .dropZone.dragging { border-color: var(--accent); background: var(--accent-soft); }
+.dropZone.dragging { box-shadow: inset 0 0 0 1px var(--accent); }
+.dropButton { display: flex; width: 100%; min-height: 126px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: inherit; background: transparent; color: var(--muted); padding: 18px 14px; cursor: pointer; }
+.dropButton > svg { color: var(--accent); }
+.dropButton > strong { color: var(--ink); font-size: 12px; font-weight: 600; }
+.dropButton > span { font-size: 10px; line-height: 1.6; }
+.dropButton:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.dropButton:disabled, .remove:disabled { opacity: .5; cursor: not-allowed; }
+.hint { color: var(--muted); font-size: 10px; line-height: 1.7; margin: 9px 0 0; }
+.previews { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0; margin: 12px 0 0; list-style: none; }
+.preview { position: relative; overflow: hidden; min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); }
+.preview img { display: block; width: 100%; height: 112px; object-fit: contain; }
+.caption { display: grid; gap: 3px; padding: 7px; color: var(--muted); font-size: 10px; }
+.caption > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.remove { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--surface); }
+.error { color: var(--danger); font-size: 11px; line-height: 1.6; margin: 9px 0 0; }
+@media (max-width: 600px) { .previews { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dropButton { min-height: 132px; } .remove { width: 32px; height: 32px; } }
