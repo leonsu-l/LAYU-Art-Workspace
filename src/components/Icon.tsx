@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react'
 
-type IconName = 'sparkles' | 'grid' | 'arrow-up-right' | 'arrow-right' | 'chevron-down' | 'settings' | 'image' | 'download' | 'trash' | 'close' | 'check' | 'copy' | 'eye' | 'eye-off' | 'plus' | 'arrow-left' | 'folder' | 'loader' | 'shield' | 'sliders' | 'banana'
+type IconName = 'sparkles' | 'grid' | 'arrow-up-right' | 'arrow-right' | 'chevron-down' | 'settings' | 'image' | 'download' | 'trash' | 'close' | 'check' | 'copy' | 'eye' | 'eye-off' | 'plus' | 'arrow-left' | 'folder' | 'loader' | 'shield' | 'sliders' | 'banana' | 'film'
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName
@@ -29,6 +29,7 @@ const paths: Record<IconName, React.ReactNode> = {
   shield: <><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z" /><path d="m8 12 3 3 5-6" /></>,
   sliders: <><path d="M4 7h7m4 0h5M4 17h3m4 0h9" /><circle cx="13" cy="7" r="2" /><circle cx="9" cy="17" r="2" /></>,
   banana: <><path d="M18 3c2 8-3 15-12 14C11 23 23 17 21 7l-1-4Z" /><path d="M18 3c0 6-5 10-12 10l-2 2 2 2M17 5l-1-2" /></>,
+  film: <><rect x="2.5" y="4.5" width="19" height="15" rx="2" /><path d="M7 4.5v15M17 4.5v15" /><path d="M4.5 8.5h.01M4.5 12h.01M4.5 15.5h.01M19.5 8.5h.01M19.5 12h.01M19.5 15.5h.01" /></>,
 }
 
 export function Icon({ name, size = 20, ...props }: IconProps) {

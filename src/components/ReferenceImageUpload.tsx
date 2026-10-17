@@ -103,8 +103,11 @@ export function ReferenceImageUpload({ images, limits, selectionError, disabled,
   return (
     <div className={styles.upload} aria-labelledby={`${id}-title`}>
       <div className={styles.header}>
-        <span id={`${id}-title`} className={styles.title}><Icon name="image" size={15} />参考图 <span>可选 · {images.length}/{limits.maxImages}</span></span>
-        <span className={styles.usage}>{(totalBytes / 1024 / 1024).toFixed(1)} / {formatReferenceLimit(limits.maxTotalBytes)}</span>
+        <span id={`${id}-title`} className={styles.title}>
+          <Icon name="image" size={14} />参考图
+          <span className={`${styles.count} tnum`}>可选 · {images.length}/{limits.maxImages}</span>
+        </span>
+        <span className={`${styles.usage} tnum`}>{(totalBytes / 1024 / 1024).toFixed(1)} / {formatReferenceLimit(limits.maxTotalBytes)}</span>
       </div>
       <div
         className={`${styles.dropZone} ${dragging && !blocked ? styles.dragging : ''}`}
@@ -131,7 +134,7 @@ export function ReferenceImageUpload({ images, limits, selectionError, disabled,
       >
         <button type="button" className={styles.dropButton} disabled={blocked || images.length >= limits.maxImages}
           aria-describedby={`${id}-limits`} onClick={() => input.current?.click()}>
-          <Icon name={loading ? 'loader' : 'image'} size={25} />
+          <Icon name={loading ? 'loader' : 'image'} size={22} className={loading ? styles.spinner : ''} />
           <strong>{loading ? '正在读取图片…' : dragging ? '松开即可添加图片' : '将图片拖到这里'}</strong>
           <span>{images.length >= limits.maxImages ? '已达当前模型张数上限，可先移除图片' : '或点击选择文件，支持一次添加多张'}</span>
         </button>
@@ -143,21 +146,27 @@ export function ReferenceImageUpload({ images, limits, selectionError, disabled,
           void addFiles(files)
         }} />
       <p id={`${id}-limits`} className={styles.hint}>PNG / JPEG / WebP，最多 {limits.maxImages} 张，每张 ≤ {formatReferenceLimit(limits.maxImageBytes)}，合计 ≤ {formatReferenceLimit(limits.maxTotalBytes)}。不上传为文生图，上传后结合提示词生成。</p>
-      <p className={styles.hint}>{limits.note}</p>
+      <details className={styles.notes}>
+        <summary>参考图限制与处理方式</summary>
+        <p className={styles.note}>{limits.note}</p>
+        <p className={styles.note}>图片仅在创建任务时发送到后端和所选供应商，不缓存到浏览器。刷新后如需重试未确认的提交，请按原顺序重新选择相同图片。</p>
+      </details>
       {displayError ? <p className={styles.error} role="alert">{displayError}</p> : null}
       {images.length ? (
         <ol className={styles.previews}>
           {images.map((image, index) => (
             <li key={`${index}-${image.name}`} className={styles.preview}>
               <img src={`data:${image.mimeType};base64,${image.base64Data}`} alt={`参考图 ${index + 1}：${image.name}`} draggable={false} />
-              <div className={styles.caption}><span title={image.name}>{index + 1}. {image.name}</span><span>{Math.ceil(referenceImageBytes(image) / 1024)} KiB</span></div>
+              <div className={styles.caption}>
+                <span className={styles.frameNo}>{String(index + 1).padStart(2, '0')}</span>
+                <span className={styles.fileName} title={`${image.name} · ${Math.ceil(referenceImageBytes(image) / 1024)} KiB`}>{image.name}</span>
+              </div>
               <button type="button" className={styles.remove} aria-label={`移除参考图 ${index + 1}：${image.name}`} disabled={blocked}
-                onClick={() => { onChange(images.filter((_, current) => current !== index)); setError(null) }}><Icon name="close" size={14} /></button>
+                onClick={() => { onChange(images.filter((_, current) => current !== index)); setError(null) }}><Icon name="close" size={13} /></button>
             </li>
           ))}
         </ol>
       ) : null}
-      <p className={styles.hint}>图片仅在创建任务时发送到后端和所选供应商，不缓存到浏览器。刷新后如需重试未确认的提交，请按原顺序重新选择相同图片。</p>
       {loading ? <span className={styles.hint} role="status">正在检查参考图，请稍候再创建任务。</span> : null}
     </div>
   )

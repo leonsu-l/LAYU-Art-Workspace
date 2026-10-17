@@ -31,9 +31,13 @@ export function PromptPanel({ prompt, isSubmitting, canSubmit, hasDiscovered, ha
   return (
     <section className={styles.panel} aria-labelledby="prompt-heading">
       <header className={styles.header}>
-        <div className={styles.heading}><Icon name="sparkles" size={19} /><h2 id="prompt-heading">描述你的画面</h2></div>
+        <div>
+          <h2 id="prompt-heading" className={styles.heading}>曝光台</h2>
+          <p className={styles.sub}>描述主体、光线与风格 · Ctrl / ⌘ + ↵ 直接曝光</p>
+        </div>
         <span className={styles.eyebrow}>PROMPT</span>
       </header>
+
       <div className={styles.editor}>
         <label htmlFor="image-prompt" className={styles.srOnly}>图片提示词</label>
         <textarea
@@ -54,25 +58,32 @@ export function PromptPanel({ prompt, isSubmitting, canSubmit, hasDiscovered, ha
           maxLength={4000}
           rows={4}
         />
-        <span id="prompt-count" className={`${styles.counter} ${count > 4000 ? styles.overLimit : ''}`}>{count.toLocaleString()} <span>/ 4,000</span></span>
+        <span id="prompt-count" className={`${styles.counter} tnum ${count > 4000 ? styles.overLimit : ''}`}>
+          {count.toLocaleString()}
+          <span> / 4,000</span>
+        </span>
       </div>
+
       <div className={styles.ideas}>
-        <span>试试灵感</span>
+        <span className={styles.ideasLabel}>试试灵感</span>
         {promptIdeas.map((idea) => (
-          <button key={idea.label} type="button" disabled={isSubmitting} onClick={() => { onPromptChange(idea.prompt); inputRef.current?.focus() }}>
-            <Icon name="plus" size={12} />{idea.label}
+          <button key={idea.label} type="button" className={styles.chip} disabled={isSubmitting} onClick={() => { onPromptChange(idea.prompt); inputRef.current?.focus() }}>
+            <Icon name="plus" size={11} />{idea.label}
           </button>
         ))}
       </div>
+
       <ReferenceImageUpload images={referenceImages} limits={referenceLimits} selectionError={referenceImageError} disabled={isSubmitting} onChange={onReferenceImagesChange} onLoadingChange={onReadingImagesChange} />
+
       <footer className={styles.footer}>
-        <div className={styles.hint}>
-          {hasApiKey ? <><Icon name="check" size={13} />提示词自动保存</> : <><Icon name="settings" size={14} /><a href="#connection-settings">先填入你的 API Key</a></>}
-        </div>
+        <p className={styles.hint}>
+          {hasApiKey
+            ? <><Icon name="check" size={13} />提示词自动保存</>
+            : <><Icon name="settings" size={14} /><a href="#connection-settings">先填入你的 API Key</a></>}
+        </p>
         <button type="button" className={styles.primaryButton} onClick={onGenerate} disabled={!canGenerate}>
           <Icon name={isSubmitting ? 'loader' : 'sparkles'} size={16} className={isSubmitting ? styles.spinner : ''} />
-          {isSubmitting ? '正在提交' : isReadingImages ? '正在读取图片' : !hasDiscovered ? '正在恢复任务' : !canSubmit ? '等待连接 / 确认' : '创建生成任务'}
-          <kbd title="Ctrl / ⌘ + Enter">↵</kbd>
+          {isSubmitting ? '正在提交' : isReadingImages ? '正在读取图片' : !hasDiscovered ? '正在恢复任务' : !canSubmit ? '等待连接 / 确认' : '开始生成'}
         </button>
       </footer>
     </section>
