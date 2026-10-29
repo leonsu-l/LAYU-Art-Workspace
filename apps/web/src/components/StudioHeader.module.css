@@ -1,0 +1,284 @@
+/* MD3 top app bar: a surface that stays put while the canvas scrolls under it. */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--md-sys-color-surface-container) 88%, transparent);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  transition:
+    background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+}
+
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+  .header {
+    background: var(--md-sys-color-surface-container);
+  }
+}
+
+/* ---- skip link ---------------------------------------------------------- */
+.skip {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  z-index: 3;
+  padding: 10px 20px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  font: var(--md-sys-typescale-label-large);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -150%) scale(0.9);
+  pointer-events: none;
+  transition:
+    opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-spring);
+}
+
+.skip:focus-visible {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+  pointer-events: auto;
+}
+
+/* ---- bar ---------------------------------------------------------------- */
+.inner {
+  max-width: var(--md-sys-layout-max-width);
+  height: var(--md-sys-layout-top-bar-height);
+  margin: 0 auto;
+  padding: 0 var(--md-sys-spacing-gutter);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ---- brand -------------------------------------------------------------- */
+.brand {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 16px 4px 4px;
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  transition: background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+
+.brand:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  transition:
+    transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring),
+    background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+}
+
+.brand:hover .mark {
+  transform: rotate(-8deg) scale(1.06);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.brand:active .mark {
+  transform: rotate(-3deg) scale(0.96);
+  transition-duration: var(--md-sys-motion-duration-short2);
+  transition-timing-function: var(--md-sys-motion-easing-standard-accelerate);
+}
+
+.wordmark {
+  display: grid;
+  gap: 1px;
+  font: var(--md-sys-typescale-title-small);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+  line-height: 1.2;
+}
+
+.wordmark small {
+  font: var(--md-sys-typescale-label-small);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---- navigation: MD3 segmented pills ------------------------------------ */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline: auto;
+  padding: 3px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.navLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font: var(--md-sys-typescale-label-large);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: none;
+  white-space: nowrap;
+  isolation: isolate;
+  transition: color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+
+/* The active pill grows out of the centre on the spring curve: it arrives
+   with a touch of overshoot, which the eye reads as the selection landing. */
+.navLink::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--md-sys-color-secondary-container);
+  opacity: 0;
+  transform: scale(0.72);
+  transition:
+    opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-spring);
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+
+.navLink:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+.navLink:hover::after {
+  opacity: var(--md-sys-state-hover-opacity);
+}
+
+.navLink:active::after {
+  opacity: var(--md-sys-state-pressed-opacity);
+}
+
+.navLink svg {
+  transition: transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring-soft);
+}
+
+.navLink:hover svg {
+  transform: translateY(-1px) scale(1.08);
+}
+
+.navLink.active {
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.navLink.active::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.navLink.active::after {
+  opacity: 0;
+}
+
+/* ---- local-storage badge ------------------------------------------------ */
+.localNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px 7px 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  font: var(--md-sys-typescale-label-medium);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
+  transition:
+    border-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+}
+
+.dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-tertiary);
+  animation: header-alive 2.8s var(--md-sys-motion-easing-emphasized) infinite;
+}
+
+@keyframes header-alive {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(169 209 143 / 0.5);
+  }
+  60% {
+    box-shadow: 0 0 0 6px rgb(169 209 143 / 0);
+  }
+}
+
+/* ---- responsive --------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .localNote {
+    padding: 7px 12px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 720px) {
+  .inner {
+    gap: 8px;
+  }
+
+  .nav {
+    margin-inline: auto;
+  }
+
+  .navLink {
+    padding: 0 12px;
+  }
+
+  .wordmark small {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  .navLink span {
+    display: none;
+  }
+
+  .navLink {
+    padding: 0 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}

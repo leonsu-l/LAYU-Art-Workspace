@@ -1,0 +1,17 @@
+{
+  "name": "@nanobanana/shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./types/*": "./src/types/*.ts",
+    "./utils/*": "./src/utils/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API: 独立调试后端",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/api",
+      "runtimeArgs": ["--env-file-if-exists=.env"],
+      "program": "${workspaceFolder}/apps/api/src/index.ts",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Web: 调试前端（先运行 dev:web）",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:5173",
+      "webRoot": "${workspaceFolder}/apps/web"
+    }
+  ]
+}

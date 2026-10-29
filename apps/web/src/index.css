@@ -1,0 +1,533 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   NanoBanana Studio — Material Design 3 (dark scheme)
+
+   Layer 1 · reference palette  → raw tones, no semantics
+   Layer 2 · system tokens      → colour roles, type scale, shape, motion
+   Layer 3 · base + utilities   → typography classes, state layers, entrances
+
+   Motion note: every state change in this app rides a non-linear curve.
+   Linear easing is reserved for indeterminate progress and nothing else.
+   ========================================================================== */
+
+/* ---------------------------- 1 · REFERENCE PALETTE ---------------------- */
+:root {
+  /* Primary — the safelight gold */
+  --md-ref-primary-10: #241a00;
+  --md-ref-primary-20: #3f2e00;
+  --md-ref-primary-30: #5b4300;
+  --md-ref-primary-35: #6a4e00;
+  --md-ref-primary-40: #7a5900;
+  --md-ref-primary-50: #9a7100;
+  --md-ref-primary-80: #f2bf48;
+  --md-ref-primary-90: #ffdf9c;
+  --md-ref-primary-95: #ffefd2;
+  --md-ref-primary-99: #fffcf5;
+
+  /* Secondary — muted brass, for supporting chrome */
+  --md-ref-secondary-10: #241a00;
+  --md-ref-secondary-20: #3c2e0b;
+  --md-ref-secondary-30: #54451e;
+  --md-ref-secondary-40: #6d5c33;
+  --md-ref-secondary-80: #d9c48c;
+  --md-ref-secondary-90: #f6e0b2;
+  --md-ref-secondary-95: #ffefd2;
+
+  /* Tertiary — sage: "stored / ready", the calm counterpoint to gold */
+  --md-ref-tertiary-10: #0a1f02;
+  --md-ref-tertiary-20: #163009;
+  --md-ref-tertiary-30: #2e4a24;
+  --md-ref-tertiary-40: #446539;
+  --md-ref-tertiary-80: #a9d18f;
+  --md-ref-tertiary-90: #c5edaa;
+  --md-ref-tertiary-95: #dcffc6;
+
+  /* Error */
+  --md-ref-error-10: #410002;
+  --md-ref-error-20: #690005;
+  --md-ref-error-30: #93000a;
+  --md-ref-error-40: #ba1a1a;
+  --md-ref-error-80: #ffb4ab;
+  --md-ref-error-90: #ffdad6;
+  --md-ref-error-95: #ffedea;
+
+  /* Neutral — warm graphite, not blue-grey */
+  --md-ref-neutral-4: #0f0e0b;
+  --md-ref-neutral-6: #141310;
+  --md-ref-neutral-10: #1d1b17;
+  --md-ref-neutral-12: #232019;
+  --md-ref-neutral-17: #2e2b23;
+  --md-ref-neutral-20: #33302a;
+  --md-ref-neutral-22: #38342e;
+  --md-ref-neutral-24: #3d3931;
+  --md-ref-neutral-30: #48443b;
+  --md-ref-neutral-40: #5f5a4f;
+  --md-ref-neutral-50: #7a7466;
+  --md-ref-neutral-60: #958e7f;
+  --md-ref-neutral-80: #cdc3b2;
+  --md-ref-neutral-90: #e9decd;
+  --md-ref-neutral-95: #f8eedc;
+  --md-ref-neutral-98: #fef8e9;
+
+  /* Neutral variant */
+  --md-ref-neutral-variant-30: #4d4639;
+  --md-ref-neutral-variant-50: #7a7363;
+  --md-ref-neutral-variant-60: #998f7d;
+  --md-ref-neutral-variant-70: #b5ab98;
+  --md-ref-neutral-variant-80: #cfc5ae;
+  --md-ref-neutral-variant-90: #e8dfc4;
+
+/* ------------------------- 2 · SYSTEM · COLOUR ROLES ------------------ */
+  --md-sys-color-primary: var(--md-ref-primary-80);
+  --md-sys-color-on-primary: var(--md-ref-primary-20);
+  --md-sys-color-primary-container: var(--md-ref-primary-30);
+  --md-sys-color-on-primary-container: var(--md-ref-primary-90);
+
+  --md-sys-color-secondary: var(--md-ref-secondary-80);
+  --md-sys-color-on-secondary: var(--md-ref-secondary-20);
+  --md-sys-color-secondary-container: var(--md-ref-secondary-30);
+  --md-sys-color-on-secondary-container: var(--md-ref-secondary-90);
+
+  --md-sys-color-tertiary: var(--md-ref-tertiary-80);
+  --md-sys-color-on-tertiary: var(--md-ref-tertiary-20);
+  --md-sys-color-tertiary-container: var(--md-ref-tertiary-30);
+  --md-sys-color-on-tertiary-container: var(--md-ref-tertiary-90);
+
+  --md-sys-color-error: var(--md-ref-error-80);
+  --md-sys-color-on-error: var(--md-ref-error-20);
+  --md-sys-color-error-container: var(--md-ref-error-30);
+  --md-sys-color-on-error-container: var(--md-ref-error-90);
+
+  --md-sys-color-surface-dim: var(--md-ref-neutral-6);
+  --md-sys-color-surface: var(--md-ref-neutral-6);
+  --md-sys-color-surface-bright: var(--md-ref-neutral-24);
+  --md-sys-color-surface-container-lowest: var(--md-ref-neutral-4);
+  --md-sys-color-surface-container-low: var(--md-ref-neutral-10);
+  --md-sys-color-surface-container: var(--md-ref-neutral-12);
+  --md-sys-color-surface-container-high: var(--md-ref-neutral-17);
+  --md-sys-color-surface-container-highest: var(--md-ref-neutral-22);
+  --md-sys-color-on-surface: var(--md-ref-neutral-90);
+  --md-sys-color-on-surface-variant: var(--md-ref-neutral-variant-80);
+  --md-sys-color-outline: var(--md-ref-neutral-variant-60);
+  --md-sys-color-outline-variant: var(--md-ref-neutral-variant-30);
+  --md-sys-color-surface-tint: var(--md-sys-color-primary);
+  --md-sys-color-inverse-surface: var(--md-ref-neutral-90);
+  --md-sys-color-inverse-on-surface: var(--md-ref-neutral-20);
+  --md-sys-color-inverse-primary: var(--md-ref-primary-40);
+  --md-sys-color-scrim: #000;
+  --md-sys-color-shadow: #000;
+
+  /* ------------------------- 2 · SYSTEM · TYPE SCALE -------------------- */
+  --md-ref-typeface-brand: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --md-ref-typeface-plain: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --md-ref-typeface-mono: 'Roboto Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', monospace;
+
+  --md-sys-typescale-display-large: 400 57px / 64px var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-large-tracking: -0.25px;
+  --md-sys-typescale-display-medium: 400 45px / 52px var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-medium-tracking: 0px;
+  --md-sys-typescale-display-small: 400 36px / 44px var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-small-tracking: 0px;
+
+  --md-sys-typescale-headline-large: 400 32px / 40px var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-large-tracking: 0px;
+  --md-sys-typescale-headline-medium: 400 28px / 36px var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-medium-tracking: 0px;
+  --md-sys-typescale-headline-small: 400 24px / 32px var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-small-tracking: 0px;
+
+  --md-sys-typescale-title-large: 400 22px / 28px var(--md-ref-typeface-brand);
+  --md-sys-typescale-title-large-tracking: 0px;
+  --md-sys-typescale-title-medium: 500 16px / 24px var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-medium-tracking: 0.15px;
+  --md-sys-typescale-title-small: 500 14px / 20px var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-small-tracking: 0.1px;
+
+  --md-sys-typescale-body-large: 400 16px / 24px var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-large-tracking: 0.5px;
+  --md-sys-typescale-body-medium: 400 14px / 20px var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-medium-tracking: 0.25px;
+  --md-sys-typescale-body-small: 400 12px / 16px var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-small-tracking: 0.4px;
+
+  --md-sys-typescale-label-large: 500 14px / 20px var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-large-tracking: 0.1px;
+  --md-sys-typescale-label-medium: 500 12px / 16px var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-medium-tracking: 0.5px;
+  --md-sys-typescale-label-small: 500 11px / 16px var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-small-tracking: 0.5px;
+
+  /* ------------------------- 2 · SYSTEM · SHAPE ------------------------- */
+  --md-sys-shape-corner-none: 0;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-large-increased: 20px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-extra-large-increased: 32px;
+  --md-sys-shape-corner-extra-extra-large: 48px;
+  --md-sys-shape-corner-full: 999px;
+
+  /* ------------------------- 2 · SYSTEM · ELEVATION --------------------- */
+  --md-sys-elevation-level0: 0 0 0 0 transparent;
+  --md-sys-elevation-level1: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+  --md-sys-elevation-level2: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+  --md-sys-elevation-level3: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+  --md-sys-elevation-level4: 0 2px 3px 0 rgb(0 0 0 / 0.3), 0 6px 10px 4px rgb(0 0 0 / 0.15);
+  --md-sys-elevation-level5: 0 4px 4px 0 rgb(0 0 0 / 0.3), 0 8px 12px 6px rgb(0 0 0 / 0.15);
+
+/* ------------------------- 2 · SYSTEM · MOTION ------------------------ */
+  /* Non-linear by default. The emphasized pair carries whole-surface changes;
+     the spring pair carries direct manipulation (press, select, pop-in). */
+  --md-sys-motion-easing-linear: linear;
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --md-sys-motion-easing-spring-soft: cubic-bezier(0.22, 1.28, 0.36, 1);
+
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium3: 350ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long1: 450ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-duration-long3: 550ms;
+  --md-sys-motion-duration-long4: 600ms;
+  --md-sys-motion-duration-extra-long1: 700ms;
+  --md-sys-motion-duration-extra-long2: 800ms;
+
+  /* ------------------------- 2 · SYSTEM · STATE ------------------------- */
+  --md-sys-state-hover-opacity: 0.08;
+  --md-sys-state-focus-opacity: 0.12;
+  --md-sys-state-pressed-opacity: 0.12;
+  --md-sys-state-dragged-opacity: 0.16;
+
+  /* ------------------------- 2 · SYSTEM · LAYOUT ------------------------ */
+  --md-sys-spacing-gutter: clamp(16px, 3.2vw, 40px);
+  --md-sys-layout-max-width: 1460px;
+  --md-sys-layout-top-bar-height: 64px;
+
+}
+
+/* ------------------------------- BASE ------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: dark;
+  font: var(--md-sys-typescale-body-medium);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  color: var(--md-sys-color-on-surface);
+  background-color: var(--md-sys-color-surface);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background-color: var(--md-sys-color-surface);
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100svh;
+}
+
+body {
+  min-width: 320px;
+  /* One safelight falling into the room from above. Fixed, so scrolling
+     moves the content through the light instead of dragging the light along. */
+  background-image:
+    radial-gradient(120% 70% at 50% -18%, rgb(242 191 72 / 0.07) 0%, transparent 58%),
+    radial-gradient(80% 50% at 100% 0%, rgb(217 196 140 / 0.04) 0%, transparent 62%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font: var(--md-sys-typescale-title-medium);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+  color: var(--md-sys-color-on-surface);
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  touch-action: manipulation;
+}
+
+button:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: var(--md-sys-color-primary);
+}
+
+svg {
+  flex-shrink: 0;
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+/* MD3 focus indicator: 3px primary ring, offset from the component edge. */
+:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--md-sys-color-primary);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--md-ref-typeface-mono);
+}
+
+/* --------------------------- TYPE-SCALE UTILITIES ------------------------ */
+.md-display-large { font: var(--md-sys-typescale-display-large); letter-spacing: var(--md-sys-typescale-display-large-tracking); }
+.md-display-medium { font: var(--md-sys-typescale-display-medium); letter-spacing: var(--md-sys-typescale-display-medium-tracking); }
+.md-display-small { font: var(--md-sys-typescale-display-small); letter-spacing: var(--md-sys-typescale-display-small-tracking); }
+.md-headline-large { font: var(--md-sys-typescale-headline-large); letter-spacing: var(--md-sys-typescale-headline-large-tracking); }
+.md-headline-medium { font: var(--md-sys-typescale-headline-medium); letter-spacing: var(--md-sys-typescale-headline-medium-tracking); }
+.md-headline-small { font: var(--md-sys-typescale-headline-small); letter-spacing: var(--md-sys-typescale-headline-small-tracking); }
+.md-title-large { font: var(--md-sys-typescale-title-large); letter-spacing: var(--md-sys-typescale-title-large-tracking); }
+.md-title-medium { font: var(--md-sys-typescale-title-medium); letter-spacing: var(--md-sys-typescale-title-medium-tracking); }
+.md-title-small { font: var(--md-sys-typescale-title-small); letter-spacing: var(--md-sys-typescale-title-small-tracking); }
+.md-body-large { font: var(--md-sys-typescale-body-large); letter-spacing: var(--md-sys-typescale-body-large-tracking); }
+.md-body-medium { font: var(--md-sys-typescale-body-medium); letter-spacing: var(--md-sys-typescale-body-medium-tracking); }
+.md-body-small { font: var(--md-sys-typescale-body-small); letter-spacing: var(--md-sys-typescale-body-small-tracking); }
+.md-label-large { font: var(--md-sys-typescale-label-large); letter-spacing: var(--md-sys-typescale-label-large-tracking); }
+.md-label-medium { font: var(--md-sys-typescale-label-medium); letter-spacing: var(--md-sys-typescale-label-medium-tracking); }
+.md-label-small { font: var(--md-sys-typescale-label-small); letter-spacing: var(--md-sys-typescale-label-small-tracking); }
+
+/* Tabular figures for frame numbers, byte counts and counters. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* --------------------------- MOTION · KEYFRAMES -------------------------- */
+/* A layered entrance: opacity leads, a short transform follows, blur resolves
+   last. Three properties on one emphasized-decelerate curve read as material
+   arriving in depth rather than as a box sliding in. */
+@keyframes md-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes md-enter-soft {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes md-enter-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes md-shimmer {
+  from { background-position: 160% 50%; }
+  to { background-position: -60% 50%; }
+}
+
+@keyframes md-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Indeterminate progress: the only place linear motion is allowed. */
+@keyframes md-indeterminate {
+  0% { transform: translateX(-100%) scaleX(0.35); }
+  45% { transform: translateX(20%) scaleX(0.9); }
+  100% { transform: translateX(220%) scaleX(0.35); }
+}
+
+@keyframes md-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(242 191 72 / 0.45); }
+  70% { box-shadow: 0 0 0 8px rgb(242 191 72 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(242 191 72 / 0); }
+}
+
+@keyframes md-breathe {
+  0%, 100% { opacity: 0.4; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+/* ------------------------- MOTION · UTILITIES ---------------------------- */
+/* Stagger without JavaScript: set --md-enter-delay on each child. */
+.md-enter {
+  animation: md-enter var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-decelerate) both;
+  animation-delay: var(--md-enter-delay, 0ms);
+}
+
+.md-enter-soft {
+  animation: md-enter-soft var(--md-sys-motion-duration-medium4) var(--md-sys-motion-easing-emphasized-decelerate) both;
+  animation-delay: var(--md-enter-delay, 0ms);
+}
+
+/* Generic state layer: an on-colour wash that fades in on interaction and
+   inherits the parent radius. Requires a positioned ancestor. */
+.md-state-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+
+.md-state-layer:hover::before { opacity: var(--md-sys-state-hover-opacity); }
+.md-state-layer:focus-visible::before { opacity: var(--md-sys-state-focus-opacity); }
+.md-state-layer:active::before { opacity: var(--md-sys-state-pressed-opacity); }
+
+/* Expressive press: compresses quickly down the accelerate curve, springs
+   back on the eased side. Asymmetric on purpose — that asymmetry is what
+   reads as weight. */
+.md-pressable {
+  transition:
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring-soft),
+    background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+}
+
+.md-pressable:active:not(:disabled) {
+  transform: scale(0.965);
+  transition-duration: var(--md-sys-motion-duration-short2);
+  transition-timing-function: var(--md-sys-motion-easing-standard-accelerate);
+}
+
+/* ------------------------------- SCROLLBARS ------------------------------ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border: 3px solid transparent;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-outline);
+  background-clip: content-box;
+}
+
+/* --------------------------- VIEW TRANSITIONS ---------------------------- */
+/* Route change = exit accelerating, enter decelerating. Different curves and
+   different durations, so the two surfaces overlap instead of cross-fading
+   flatly. Long hands are deliberate: the incoming page gets the time. */
+::view-transition-old(root) {
+  animation: md-enter-fade var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-emphasized-accelerate) reverse both;
+}
+
+::view-transition-new(root) {
+  animation: md-enter-fade var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+/* --------------------------- REDUCED MOTION ------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

@@ -1,0 +1,26 @@
+{
+  "name": "@nanobanana/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env src/index.ts",
+    "debug": "node --inspect=127.0.0.1:9229 --env-file-if-exists=.env src/index.ts",
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "npm run typecheck",
+    "test": "node --test --experimental-test-isolation=none tests/tasks.test.ts tests/contracts/providers.test.ts",
+    "test:contracts": "node --test --experimental-test-isolation=none tests/contracts/providers.test.ts",
+    "lint": "eslint src tests"
+  },
+  "dependencies": {
+    "@nanobanana/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "typescript": "~6.0.2"
+  }
+}
