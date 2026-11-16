@@ -2,14 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "API: 独立调试后端",
-      "type": "node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}/apps/api",
-      "runtimeArgs": ["--env-file-if-exists=.env"],
-      "program": "${workspaceFolder}/apps/api/src/index.ts",
-      "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"]
+      "name": "API: Java 调试（先运行 debug:api）",
+      "type": "java",
+      "request": "attach",
+      "hostName": "127.0.0.1",
+      "port": 5005
     },
     {
       "name": "Web: 调试前端（先运行 dev:web）",

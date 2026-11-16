@@ -1,6 +1,6 @@
 import type { GeminiProviderProfile, OpenAIProviderProfile, ReferenceImage } from '../types/generation.ts'
 import { createAppError } from './errors.ts'
-import { getGeminiModel, normalizeGeminiParams, normalizeOpenAIParams } from './imageModels.ts'
+import { normalizeGeminiParams, normalizeOpenAIParams } from './imageModels.ts'
 
 export function buildOpenAIImageEndpoint(baseUrl: string, editing = false): string {
   const normalized = baseUrl.trim().replace(/\/+$/, '')
@@ -61,7 +61,6 @@ export function buildGeminiEndpoint(baseUrl: string, model: string, apiKey: stri
 }
 
 export function buildGeminiRequestBody(profile: GeminiProviderProfile, prompt: string, referenceImages: readonly ReferenceImage[] = []) {
-  const capabilities = getGeminiModel(profile.model)
   const params = normalizeGeminiParams(profile.model, profile.params)
   return {
     contents: [
@@ -76,7 +75,7 @@ export function buildGeminiRequestBody(profile: GeminiProviderProfile, prompt: s
     generationConfig: {
       responseModalities: params.imageOnly ? ['IMAGE'] : ['TEXT', 'IMAGE'],
       imageConfig: {
-        ...(capabilities.imageSizes.length ? { imageSize: params.imageSize } : {}),
+        ...(params.imageSize === 'auto' ? {} : { imageSize: params.imageSize }),
         ...(params.aspectRatio === 'auto' ? {} : { aspectRatio: params.aspectRatio }),
       },
       ...(params.thinkingLevel === 'auto' ? {} : {

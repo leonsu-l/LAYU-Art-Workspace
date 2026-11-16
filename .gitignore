@@ -13,6 +13,11 @@ dist-ssr
 *.local
 .env
 /apps/api/data/
+/apps/api/data-java/
+/apps/api/target/
+*.h2.db
+*.mv.db
+*.trace.db
 # Ignore the legacy location as well to prevent accidental commits of private data.
 server-data/
 

@@ -1,95 +1,67 @@
 # NanoBanana Console
 
-React + TypeScript 图片生成工作台，配有一个轻量 Node.js 后端。支持 OpenAI-Compatible、Gemini-Compatible 和自定义 Base URL。
+面向小型工作室的图片生成工作台。前端保留 React + TypeScript / M3 界面，后端已重构为 **Java 21 + Spring Boot 3.5 + PostgreSQL**。图片保存在持久化本地卷，供应商请求由后端执行。
 
-**前端只提交任务与查询结果；供应商请求、等待图片、下载与保存全部由后端执行。** 后端确认接收后，刷新、关闭页面或切换到图库都不会取消任务。重新打开页面会恢复任务历史与结果。
+## 功能
 
-## 项目结构
+- 文本与参考图生成、持久任务队列、刷新后恢复、结果预览下载、私有图库与批量删除。
+- 用户名/密码/邀请码注册；普通用户与管理员权限、账号禁用、强制改密。
+- 顶层选择「站点默认渠道 / 自定义渠道」，下方再选择 OpenAI / Gemini 协议。
+- 管理员维护共享渠道和启用模型；每个用户维护自己的私有渠道。密钥仅服务端加密保存，不回显。
+- 通过渠道 API 获取模型目录，保留失败缓存并支持手填 ID；不写死“最新模型”，不自动升级或替换模型。
+- 管理员维护参数预填模板，用户可修改参数；按用户、渠道、模型保存最近参数。
+- 管理员设置共享日额度、单人/全站并发和排队上限；失败任务一次性返还站内额度。私有渠道不占共享额度。
 
-采用 **npm workspaces 单仓库、前后端独立应用**：
+任务、提示词和图片只有创建者可见；管理员统计不包含这些内容或私有密钥。邀请码无限次、无有效期、可撤销，注册者始终为普通用户。
 
-```text
-apps/
-  web/                 # React + Vite：前端源码、静态资源、配置与测试
-    src/
-    public/
-    tests/
-    .env.example
-    package.json
-  api/                 # Node.js：HTTP API、任务队列、供应商与持久化
-    src/
-    contracts/         # API 所有的纯契约、参数、校验和协议构造包
-      src/
-      package.json     # 包名仍为 @nanobanana/shared
-    tests/
-      contracts/       # API 管理的跨端协议一致性测试
-    data/              # 历史任务与图片，完整迁移至此，不提交
-    .env.example
-    package.json
-docs/
-  examples/            # 示例图片，不混入应用源码
-package.json           # 仓库级命令与开发工具
-package-lock.json      # 全仓唯一锁文件
-```
+## 启动
 
-前后端通过 `/api` 通信，**Web 不导入 API 服务实现**；API 所有的[纯契约包](<apps/api/contracts/package.json>)继续通过 `@nanobanana/shared` 包名供两端使用。根级工作区只包含 `apps/*` 与 `apps/api/contracts`，不再单设根级契约、测试或运行数据目录。具体命令、独立调试及迁移说明见[开发指南](<docs/DEVELOPMENT.md>)。
-
-## 快速开始
-
-要求 **Node.js >= 22.18**（建议 Node 24 LTS），无需额外数据库、Redis 或后端框架。在仓库根目录安装一次依赖：
+推荐使用 [Docker Compose 配置](<compose.yaml>)。复制 [环境变量示例](<.env.example>) 为根目录 `.env`，填写数据库密码和首次管理员凭据，按需修改本机 `WEB_PORT`（默认 8080）：
 
 ```sh
-npm install
+docker compose up -d --build
 ```
 
-开发时使用两个终端，彼此不会自动启动或停止：
+没有默认管理员密码。登录后先配置共享渠道、启用模型及日额度；未配置额度时共享生成关闭。由宝塔 Nginx 配置域名和 HTTPS，整站反代至 `http://127.0.0.1:8080`；容器内 Caddy 仅提供 HTTP 静态页面和同源 API 转发，不占用宿主机 80/443。完整说明、管理员恢复命令、备份及本地开发见 [部署指南](<docs/DEPLOYMENT.md>)。
+
+本地开发要求 JDK 21、Maven 3.9+、PostgreSQL 和 Node 22.18+：
 
 ```sh
-# 终端 1：后端，http://127.0.0.1:3001
+npm ci
+# Set DATABASE_URL / DATABASE_USER / DATABASE_PASSWORD in the shell first.
 npm run dev:api
-
-# 终端 2：前端，http://127.0.0.1:5173
+# Another terminal:
 npm run dev:web
 ```
 
-也可分别进入 `apps/api`、`apps/web` 执行 `npm run dev`。Vite 将 `/api` 转发到后端，浏览器不再直连供应商。前端支持热更新；修改后端代码后需重启后端，刻意不使用自动重启，避免中断正在生成的任务。
+Java 后端默认监听 `127.0.0.1:3001`，Vite 默认 `127.0.0.1:5173` 并代理 `/api`。前后端独立运行，`npm start` 现在只启动构建后的 Java API；生产页面由 Compose 的 Web 服务提供。
 
-分别构建、启动本机构建预览：
+## 项目结构
 
-```sh
-npm run build:web
-npm run build:api       # 原生 TypeScript 运行，build 只做类型检查
-
-# 两个终端分别执行
-npm run start:api       # http://127.0.0.1:3001
-npm run start:web       # http://127.0.0.1:4173，Vite preview，非生产服务器
+```text
+apps/api/pom.xml             Java 21 / Spring Boot 构建
+apps/api/src/main/java       认证、渠道、配额、队列、供应商、图片存储
+apps/api/src/main/resources  应用配置与 Flyway 数据库迁移
+apps/api/src/test/java       Java 回归测试（H2 + 本地模拟上游）
+apps/api/contracts           前端使用的 TypeScript 契约与参数工具
+apps/web                    React 工作台、图库、账号及管理界面
+compose.yaml                PostgreSQL + Java API + Caddy/Web
+deploy/Caddyfile             同源反代和静态页面服务
 ```
 
-仍保留本机长期使用的兼容方式：`npm run build && npm start`，后端会同时提供 [前端构建产物](<apps/web/dist>)与 API，访问 **http://127.0.0.1:3001**。`npm run dev`、`npm run dev:server`、`npm run preview` 也保留为兼容入口。正式分离部署应由静态服务器提供前端，并将同源 `/api` 反向代理至本机后端；当前服务不应直接暴露公网。
+Java 不执行或依赖 TypeScript。旧 Node 后端接口与旧业务数据不迁移，新数据使用数据库和独立持久卷。原有前端主题/布局改动保留。
 
-### 配置
-
-两端各自管理配置，默认值即可运行；需要修改时，将[后端配置示例](<apps/api/.env.example>)、[前端配置示例](<apps/web/.env.example>)分别复制为各自目录下的 `.env`，或设置进程环境变量：
-
-| 应用 | 变量 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| API | `PORT` | `3001` | 后端端口 |
-| API | `DATA_DIR` | `data` | **相对于 `apps/api`**或使用绝对路径，存放任务与图片 |
-| API | `IMAGE_REQUEST_TIMEOUT_MS` | `180000` | 供应商请求超时，限制为 15000–600000 ms |
-| Web | `VITE_API_PROXY_TARGET` | `http://127.0.0.1:3001` | Vite 开发与预览代理目标 |
-
-旧根目录 `.env` 需迁移到 `apps/api`；后端不读取 `.env.local`。本次已将原根级 `server-data` 中的历史任务和图片完整迁至 [API 数据目录](<apps/api/data>)；旧配置 `DATA_DIR=server-data` 应改为 `DATA_DIR=data`，自定义相对路径也需按 API 目录的新基准调整，绝对路径支持不变。修改后端端口时，同步修改前端代理目标并分别重启。不要把密钥放进 `VITE_*` 变量；前端不会读取后端环境文件。旧的 `VITE_IMAGE_REQUEST_TIMEOUT_MS` 不再生效。
-
-## 详细文档
-
-- [开发指南](<docs/DEVELOPMENT.md>)：独立启动、调试、环境配置及根目录清理规则。
-- [功能、数据与 API 参考](<docs/REFERENCE.md>)：模型参数、参考图限制、故障排查、任务恢复、数据安全与接口说明。
-
-## 验证
+## 开发与验证
 
 ```sh
-npm run test:server
+npm run test:api
+npm run test:web
 npm run build
 ```
 
-API 测试包含任务测试与其管理的协议契约测试；根级 `npm test` 依次调用 API、Web 测试，不重复执行契约测试，`npm run test:contracts` 仅转发 API 的同名脚本。针对性测试使用本机模拟供应商与临时数据，不需要真实密钥，不会调用收费 API。覆盖脱离客户端连接的执行、幂等提交、重启恢复、写锁、存储失败恢复、URL 图片落盘、图库删除、跨站拒绝、协议错误/超时以及浏览器提交恢复。供应商超时测试约需 15 秒。
+测试不调用真实付费供应商。当前后端验证使用 H2 的 PostgreSQL 兼容模式，不等于真实 PostgreSQL 或容器部署验证。
+
+- [开发说明](<docs/DEVELOPMENT.md>)
+- [功能与运行边界](<docs/REFERENCE.md>)
+- [新版 API 契约](<docs/API_V2.md>)
+- [已确认的重构计划](<docs/JAVA_REBUILD_PLAN.md>)

@@ -1,52 +1,11 @@
 import type { ProviderConfig, ReferenceImage, RequestPreview } from '@nanobanana/shared/types/generation'
+import { taskParams } from '@nanobanana/shared/utils/generationParams'
 import { referenceImageBytes } from '../utils/referenceImages.ts'
-import { createAppError } from '@nanobanana/shared/utils/errors'
-import {
-  buildGeminiEndpoint,
-  buildGeminiRequestBody,
-  buildOpenAIImageEndpoint,
-  buildOpenAIRequestBody,
-} from '@nanobanana/shared/utils/providerRequests'
-
 export function buildRequestPreview(config: ProviderConfig, referenceImages: readonly ReferenceImage[] = []): RequestPreview {
-  const editing = referenceImages.length > 0
-  const imageSummary = referenceImages.map((image) => ({ name: image.name, mimeType: image.mimeType, bytes: referenceImageBytes(image) }))
-  switch (config.activeProvider) {
-    case 'openai-compatible': {
-      const profile = config.profiles['openai-compatible']
-      return {
-        provider: config.activeProvider,
-        endpoint: buildOpenAIImageEndpoint(profile.baseUrl, editing),
-        method: 'POST',
-        headersPreview: {
-          'Content-Type': editing ? 'multipart/form-data; boundary=[自动生成]' : 'application/json',
-          Authorization: profile.apiKey ? 'Bearer ***' : 'Bearer [API_KEY]',
-        },
-        bodyPreview: { ...buildOpenAIRequestBody(profile, undefined, editing), ...(editing ? { 'image[]': imageSummary } : {}) },
-      }
-    }
-    case 'gemini-compatible': {
-      const profile = config.profiles['gemini-compatible']
-      const { generationConfig } = buildGeminiRequestBody(profile, '')
-      return {
-        provider: config.activeProvider,
-        endpoint: buildGeminiEndpoint(
-          profile.baseUrl,
-          profile.model,
-          profile.apiKey ? '***' : '[API_KEY]',
-        ),
-        method: 'POST',
-        headersPreview: { 'Content-Type': 'application/json' },
-        bodyPreview: {
-          generationConfig,
-          ...(editing ? { contents: [{ role: 'user', parts: [
-            { text: '[提示词]' },
-            ...imageSummary.map((image) => ({ inlineData: { mimeType: image.mimeType, data: `[${image.bytes} bytes，Base64 已隐藏]` } })),
-          ] }] } : {}),
-        },
-      }
-    }
-    default:
-      throw createAppError('UNSUPPORTED', `不支持的供应商：${config.activeProvider}`, false)
-  }
+  const profile = config.profiles[config.activeProvider]
+  const params = taskParams(config.activeProvider, profile.params)
+  return { provider: config.activeProvider, endpoint: '/api/tasks', method: 'POST', headersPreview: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': '[cookie token]' }, bodyPreview: {
+    id: '[提交时生成 UUID]', prompt: '[提示词]', channelId: config.channelId ?? '', model: profile.model, params,
+    ...(referenceImages.length ? { referenceImages: referenceImages.map((image) => ({ name: image.name, mimeType: image.mimeType, base64Data: `[${referenceImageBytes(image)} bytes，已隐藏]` })) } : {}),
+  } }
 }

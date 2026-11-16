@@ -1,6 +1,6 @@
 import type { ProviderType, ReferenceImage } from '../types/generation.ts'
 import { createAppError } from './errors.ts'
-import { GEMINI_IMAGE_MODELS } from './imageModels.ts'
+
 
 const MiB = 1024 * 1024
 export interface ReferenceImageLimits {
@@ -22,25 +22,8 @@ const GEMINI_LIMITS: ReferenceImageLimits = {
   maxImages: 14, maxImageBytes: 12 * MiB, maxTotalBytes: 12 * MiB,
   note: 'Gemini 使用内联图片；原图合计 12 MiB 编码后约 16 MiB，为 20 MB 请求上限预留文字和配置空间。',
 }
-const GEMINI_LITE_LIMITS: ReferenceImageLimits = {
-  ...GEMINI_LIMITS,
-  note: `${GEMINI_LIMITS.note} Lite 支持 14 张输入，但官方提示其并未针对多参考图编辑优化。`,
-}
-const GEMINI_LEGACY_LIMITS: ReferenceImageLimits = {
-  ...GEMINI_LIMITS, maxImages: 3,
-  note: 'Gemini 2.5 官方建议最多 3 张以获得较好效果；应用沿用此建议值，并非宣称 API 硬上限。合计体积仍受内联请求限制。',
-}
-const GEMINI_CUSTOM_LIMITS: ReferenceImageLimits = {
-  ...GEMINI_LIMITS, maxImages: 3,
-  note: '自定义 Gemini 模型的参考图能力未确认，暂按 3 张处理；合计体积受内联请求限制。',
-}
-
-export function getReferenceImageLimits(provider: ProviderType, model: string): ReferenceImageLimits {
-  if (provider === 'openai-compatible') return OPENAI_LIMITS
-  const id = model.trim().replace(/-preview$/, '')
-  if (id === 'gemini-2.5-flash-image') return GEMINI_LEGACY_LIMITS
-  if (id === 'gemini-3.1-flash-lite-image') return GEMINI_LITE_LIMITS
-  return GEMINI_IMAGE_MODELS.some((item) => item.id === id) ? GEMINI_LIMITS : GEMINI_CUSTOM_LIMITS
+export function getReferenceImageLimits(provider: ProviderType, _model: string): ReferenceImageLimits {
+  return provider === 'openai-compatible' ? OPENAI_LIMITS : GEMINI_LIMITS
 }
 
 // Base64 for 32 MiB of originals plus JSON overhead; other API routes retain their smaller limit.

@@ -1,174 +1,121 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import type {
-    GeminiImageParams,
-    OpenAIImageParams,
-    ProviderConfig,
-    ProviderType,
-} from '@nanobanana/shared/types/generation'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { GeminiImageParams, OpenAIImageParams, ProviderConfig, ProviderType } from '@nanobanana/shared/types/generation'
+import type { Channel, ModelCatalog, Template, Quota } from '@nanobanana/shared/types/studio'
 import { createDefaultProviderConfig } from '@nanobanana/shared/utils/configDefaults'
-import { loadPersistedConfig, savePersistedConfig } from '../utils/storage'
-import { normalizeText } from '@nanobanana/shared/utils/validation'
-import { normalizeGeminiParams, normalizeOpenAIParams } from '@nanobanana/shared/utils/imageModels'
-
-const RISK_ACK_KEY = 'nanobanana.api-key-risk-ack'
-const API_KEY_RISK_NOTICE = 'API Key 会自动缓存到浏览器本地存储，请仅在可信设备使用。'
-
-export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = createDefaultProviderConfig()
-
+import { backendRequest, backendErrorMessage } from '../services/backendClient'
+import { getSessionEpoch, userStorageKey } from '../services/sessionScope'
+import { applyChannelSelection, reconcileChannelProtocol, restoreChannelSelection } from '../utils/channelSelection'
+export const DEFAULT_PROVIDER_CONFIG = createDefaultProviderConfig()
 export function usePersistentConfig() {
-    const [config, setConfig] = useState<ProviderConfig>(
-        () => loadPersistedConfig() ?? createDefaultProviderConfig(),
-    )
-    const [apiKeyRiskNotice, setApiKeyRiskNotice] = useState<string | null>(null)
-    const isHydrated = true
-
-    useEffect(() => {
-        try {
-            savePersistedConfig(normalizeProviderConfigForSave(config))
-        } catch {
-            // Ignore storage failures so editing remains non-blocking.
-        }
-    }, [config])
-
-    const maybeRevealApiKeyRiskNotice = useCallback((apiKey: string) => {
-        if (!apiKey.trim()) {
-            return
-        }
-
-        try {
-            const hasAcknowledged = sessionStorage.getItem(RISK_ACK_KEY) === '1'
-            if (hasAcknowledged) {
-                return
-            }
-
-            sessionStorage.setItem(RISK_ACK_KEY, '1')
-        } catch {
-            // Ignore sessionStorage failures and still show notice.
-        }
-
-        setApiKeyRiskNotice((previous) => previous ?? API_KEY_RISK_NOTICE)
-    }, [])
-
-    const dismissApiKeyRiskNotice = useCallback(() => {
-        setApiKeyRiskNotice(null)
-    }, [])
-
-    const setActiveProvider = useCallback((provider: ProviderType) => {
-        setConfig((previous) => ({
-            ...previous,
-            activeProvider: provider,
-        }))
-    }, [])
-
-    const updateProviderProfile = useCallback(
-        (
-            provider: ProviderType,
-            patch: Partial<{
-                baseUrl: string
-                model: string
-                apiKey: string
-            }>,
-        ) => {
-            if (typeof patch.apiKey === 'string') {
-                maybeRevealApiKeyRiskNotice(patch.apiKey)
-            }
-
-            setConfig((previous) => {
-                const next = { ...previous, profiles: { ...previous.profiles } }
-                if (provider === 'openai-compatible') {
-                    const profile = { ...previous.profiles[provider], ...patch }
-                    next.profiles[provider] = {
-                        ...profile,
-                        params: patch.model === undefined ? profile.params : normalizeOpenAIParams(profile.model, profile.params),
-                    }
-                } else {
-                    const profile = { ...previous.profiles[provider], ...patch }
-                    next.profiles[provider] = {
-                        ...profile,
-                        params: patch.model === undefined ? profile.params : normalizeGeminiParams(profile.model, profile.params),
-                    }
-                }
-                return next
-            })
-        },
-        [maybeRevealApiKeyRiskNotice],
-    )
-
-    const updateOpenAIParams = useCallback((patch: Partial<OpenAIImageParams>) => {
-        setConfig((previous) => ({
-            ...previous,
-            profiles: {
-                ...previous.profiles,
-                'openai-compatible': {
-                    ...previous.profiles['openai-compatible'],
-                    params: {
-                        ...previous.profiles['openai-compatible'].params,
-                        ...patch,
-                        // JPEG cannot carry alpha; keep the visible setting consistent with the request.
-                        ...(patch.outputFormat === 'jpeg' && previous.profiles['openai-compatible'].params.background === 'transparent'
-                            ? { background: 'auto' as const } : {}),
-                    },
-                },
-            },
-        }))
-    }, [])
-
-    const updateGeminiParams = useCallback((patch: Partial<GeminiImageParams>) => {
-        setConfig((previous) => ({
-            ...previous,
-            profiles: {
-                ...previous.profiles,
-                'gemini-compatible': {
-                    ...previous.profiles['gemini-compatible'],
-                    params: {
-                        ...previous.profiles['gemini-compatible'].params,
-                        ...patch,
-                    },
-                },
-            },
-        }))
-    }, [])
-
-    const activeProvider = config.activeProvider
-    const activeProfile = config.profiles[activeProvider]
-    const hasApiKey = useMemo(() => activeProfile.apiKey.trim().length > 0, [activeProfile.apiKey])
-
-    return {
-        config,
-        activeProvider,
-        activeProfile,
-        isHydrated,
-        hasApiKey,
-        apiKeyRiskNotice,
-        dismissApiKeyRiskNotice,
-        setActiveProvider,
-        updateProviderProfile,
-        updateOpenAIParams,
-        updateGeminiParams,
-    }
-}
-
-function normalizeProviderConfigForSave(config: ProviderConfig): ProviderConfig {
-    const normalizedOpenAI = config.profiles['openai-compatible']
-    const normalizedGemini = config.profiles['gemini-compatible']
-
-    return {
-        ...config,
-        profiles: {
-            'openai-compatible': {
-                ...normalizedOpenAI,
-                model: normalizeText(normalizedOpenAI.model),
-                apiKey: normalizeText(normalizedOpenAI.apiKey),
-                baseUrl: normalizeText(normalizedOpenAI.baseUrl),
-                params: normalizeOpenAIParams(normalizedOpenAI.model, normalizedOpenAI.params),
-            },
-            'gemini-compatible': {
-                ...normalizedGemini,
-                model: normalizeText(normalizedGemini.model),
-                apiKey: normalizeText(normalizedGemini.apiKey),
-                baseUrl: normalizeText(normalizedGemini.baseUrl),
-                params: normalizeGeminiParams(normalizedGemini.model, normalizedGemini.params),
-            },
-        },
-    }
+  const [config, setConfig] = useState<ProviderConfig>(createDefaultProviderConfig)
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [catalog, setCatalog] = useState<ModelCatalog | null>(null)
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [quota, setQuota] = useState<Quota | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loadedKey, setLoadedKey] = useState('')
+  const [dirty, setDirty] = useState(0)
+  const [saveStatus, setSaveStatus] = useState('')
+  const ownerEpoch = useRef(getSessionEpoch())
+  const revision = useRef(0)
+  const selectionRestored = useRef(false)
+  const channelRefreshSequence = useRef(0)
+  const [selectionLoaded, setSelectionLoaded] = useState(false)
+  const [selectionStorageKey] = useState(() => userStorageKey('nanobanana.channel-selection'))
+  const activeProvider = config.activeProvider
+  const activeProfile = config.profiles[activeProvider]
+  const key = `${config.channelId ?? ''}:${activeProfile.model}`
+  const currentKey = useRef(key); currentKey.current = key
+  const channel = channels.find((item) => item.id === config.channelId)
+  const isHydrated = loadedKey === key
+  const ready = Boolean(channel?.enabled && channel.provider === activeProvider && channel.hasApiKey && activeProfile.model.trim() && (channel.scope === 'private' || channel.enabledModels.includes(activeProfile.model)))
+  const refreshChannels = useCallback(async () => {
+    const sequence = ++channelRefreshSequence.current
+    try {
+      const data = await backendRequest<{ channels: Channel[] }>('/channels')
+      if (ownerEpoch.current !== getSessionEpoch() || sequence !== channelRefreshSequence.current) return
+      let restored: ReturnType<typeof restoreChannelSelection> = null
+      if (!selectionRestored.current) {
+        selectionRestored.current = true
+        try { restored = restoreChannelSelection(localStorage.getItem(selectionStorageKey), data.channels) } catch { /* Optional local selection. */ }
+      }
+      setChannels(data.channels)
+      setConfig((previous) => restored && !previous.channelId ? applyChannelSelection(previous, restored) : reconcileChannelProtocol(previous, data.channels))
+      setSelectionLoaded(true); setError(null)
+    } catch (e) { if (ownerEpoch.current === getSessionEpoch() && sequence === channelRefreshSequence.current) setError(backendErrorMessage(e)) }
+  }, [selectionStorageKey])
+  useEffect(() => {
+    if (!selectionLoaded || ownerEpoch.current !== getSessionEpoch()) return
+    try {
+      if (channel?.enabled && channel.provider === activeProvider) localStorage.setItem(selectionStorageKey, JSON.stringify({ channelId: channel.id, model: activeProfile.model, provider: activeProvider }))
+      else localStorage.removeItem(selectionStorageKey)
+    } catch { /* Saving local selection is optional; server parameters are unaffected. */ }
+  }, [selectionLoaded, selectionStorageKey, channel, activeProvider, activeProfile.model])
+  useEffect(() => {
+    void refreshChannels()
+    void backendRequest<{ templates: Template[] }>('/templates').then((r) => setTemplates(r.templates)).catch((e) => setError(backendErrorMessage(e)))
+    const controller = new AbortController()
+    const refreshQuota = () => { if (ownerEpoch.current !== getSessionEpoch()) return; void backendRequest<Quota>('/me/quota', { signal: controller.signal }).then((data) => { if (!controller.signal.aborted) setQuota(data) }).catch((e) => { if (!controller.signal.aborted) setError(backendErrorMessage(e)) }) }
+    refreshQuota()
+    const timer = window.setInterval(refreshQuota, 10_000)
+    const refreshOnFocus = () => { void refreshChannels() }
+    window.addEventListener('focus', refreshOnFocus)
+    return () => { controller.abort(); window.clearInterval(timer); window.removeEventListener('focus', refreshOnFocus) }
+  }, [refreshChannels])
+  useEffect(() => {
+    setCatalog(null)
+    if (!config.channelId) return
+    const controller = new AbortController()
+    void backendRequest<ModelCatalog>(`/channels/${encodeURIComponent(config.channelId)}/models`, { signal: controller.signal }).then((data) => { if (!controller.signal.aborted) setCatalog(data) }).catch((e) => { if (!controller.signal.aborted) setError(backendErrorMessage(e)) })
+    return () => controller.abort()
+  }, [config.channelId, activeProvider])
+  useEffect(() => {
+    setSaveStatus(''); setDirty(0)
+    if (!config.channelId || !activeProfile.model.trim()) { setLoadedKey(key); return }
+    const controller = new AbortController()
+    void backendRequest<{ params: Partial<OpenAIImageParams & GeminiImageParams> | null }>(`/preferences?channelId=${encodeURIComponent(config.channelId)}&model=${encodeURIComponent(activeProfile.model)}`, { signal: controller.signal }).then(({ params }) => {
+      if (controller.signal.aborted || currentKey.current !== key) return
+      setConfig((previous) => {
+        const defaults = createDefaultProviderConfig().profiles[activeProvider].params
+        return { ...previous, profiles: { ...previous.profiles, [activeProvider]: { ...previous.profiles[activeProvider], params: { ...defaults, ...params } } } } as ProviderConfig
+      }); setLoadedKey(key); setSaveStatus('已加载最近参数')
+    }).catch((e) => { if (!controller.signal.aborted) { setLoadedKey(key); setSaveStatus(`加载失败，当前使用默认参数：${backendErrorMessage(e)}`) } })
+    return () => controller.abort()
+  }, [key, config.channelId, activeProfile.model, activeProvider])
+  useEffect(() => {
+    if (!dirty || !isHydrated || !config.channelId || !activeProfile.model.trim()) return
+    const snapshot = { channelId: config.channelId, model: activeProfile.model, params: { ...activeProfile.params } }
+    const version = revision.current
+    const controller = new AbortController()
+    setSaveStatus('尚未保存')
+    const timer = window.setTimeout(() => {
+      if (ownerEpoch.current !== getSessionEpoch()) return
+      setSaveStatus('正在保存…')
+      void backendRequest('/preferences', { method: 'PUT', body: JSON.stringify(snapshot), signal: controller.signal }).then(() => {
+        if (!controller.signal.aborted && currentKey.current === key && revision.current === version) setSaveStatus('已保存最近参数')
+      }).catch((e) => { if (!controller.signal.aborted && currentKey.current === key && revision.current === version) setSaveStatus(`保存失败：${backendErrorMessage(e)}`) })
+    }, 700)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [dirty, isHydrated, config.channelId, activeProfile.model, activeProfile.params, key])
+  function selectChannel(id: string) {
+    if (id === config.channelId) return
+    const selected = channels.find((item) => item.id === id)
+    setLoadedKey(''); setDirty(0)
+    setConfig((previous) => ({ ...previous, channelId: id, activeProvider: selected?.provider ?? previous.activeProvider, profiles: { ...previous.profiles, [selected?.provider ?? previous.activeProvider]: { ...createDefaultProviderConfig().profiles[selected?.provider ?? previous.activeProvider], model: '' } } }))
+    selectionRestored.current = true
+  }
+  const setActiveProvider = (provider: ProviderType) => { if (provider === activeProvider) return; selectionRestored.current = true; setDirty(0); setLoadedKey(''); setConfig((p) => ({ ...p, channelId: undefined, activeProvider: provider })) }
+  const updateProviderProfile = (_provider: ProviderType, patch: Partial<{ model: string; baseUrl: string; apiKey: string }>) => {
+    if (patch.model === undefined || patch.model === activeProfile.model) return
+    setDirty(0); setLoadedKey('')
+    setConfig((p) => ({ ...p, profiles: { ...p.profiles, [p.activeProvider]: { ...p.profiles[p.activeProvider], model: patch.model ?? p.profiles[p.activeProvider].model, params: createDefaultProviderConfig().profiles[p.activeProvider].params } } }) as ProviderConfig)
+  }
+  function updateParams(provider: ProviderType, patch: Partial<OpenAIImageParams & GeminiImageParams>) {
+    revision.current += 1; setDirty(revision.current)
+    setConfig((p) => ({ ...p, profiles: { ...p.profiles, [provider]: { ...p.profiles[provider], params: { ...p.profiles[provider].params, ...patch } } } }) as ProviderConfig)
+  }
+  return { config, activeProvider, activeProfile, channels, channel, catalog, templates, quota, error, saveStatus, isHydrated, ready, selectChannel, refreshChannels, setActiveProvider, updateProviderProfile,
+    updateOpenAIParams: (patch: Partial<OpenAIImageParams>) => updateParams('openai-compatible', patch),
+    updateGeminiParams: (patch: Partial<GeminiImageParams>) => updateParams('gemini-compatible', patch),
+  }
 }

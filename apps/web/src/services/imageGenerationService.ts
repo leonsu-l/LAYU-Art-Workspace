@@ -1,5 +1,6 @@
 import type { GenerateImageRequest, GenerationTask, TaskDeletionSummary } from '@nanobanana/shared/types/generation'
-import { createDefaultProviderConfig } from '@nanobanana/shared/utils/configDefaults'
+import { getSessionEpoch, getSessionUserId, userStorageKey } from './sessionScope.ts'
+import { taskParams } from '@nanobanana/shared/utils/generationParams'
 import { createAppError } from '@nanobanana/shared/utils/errors'
 import { backendRequest, BackendRequestError } from './backendClient.ts'
 
@@ -7,12 +8,15 @@ export { buildRequestPreview } from './requestPreview.ts'
 
 export const PENDING_TASK_PREFIX = 'nanobanana.pending-task.'
 const SUBMISSION_LOCK = 'nanobanana.task-submission'
+export function clearSubmissionMemory(): void { requestBodies.clear() }
+function pendingPrefix(): string { return userStorageKey(PENDING_TASK_PREFIX) + '.' }
 const requestBodies = new Map<string, string>()
 
 export interface PendingSubmission {
   id: string
   createdAt: string
   requestHash: string
+  userId: string
 }
 
 export async function listGenerationTasks(signal?: AbortSignal): Promise<GenerationTask[]> {
@@ -45,12 +49,12 @@ export function readPendingSubmissions(): PendingSubmission[] {
   const pending: PendingSubmission[] = []
   for (let index = 0; index < localStorage.length; index += 1) {
     const key = localStorage.key(index)
-    if (!key?.startsWith(PENDING_TASK_PREFIX)) continue
+    if (!key?.startsWith(pendingPrefix())) continue
     const raw = localStorage.getItem(key)
     if (raw === null) continue // Another tab may have reconciled it.
     const value = JSON.parse(raw) as PendingSubmission
-    if (!value || typeof value.id !== 'string' || key !== `${PENDING_TASK_PREFIX}${value.id}` ||
-      typeof value.createdAt !== 'string' || typeof value.requestHash !== 'string') {
+    if (!value || typeof value.id !== 'string' || key !== `${pendingPrefix()}${value.id}` ||
+      value.userId !== getSessionUserId() || typeof value.createdAt !== 'string' || typeof value.requestHash !== 'string') {
       throw new Error('未确认提交记录已损坏，已暂停新提交以避免重复扣费。')
     }
     pending.push(value)
@@ -63,8 +67,10 @@ export async function withSubmissionLock<T>(action: () => Promise<T>): Promise<T
   if (!navigator.locks || !crypto.subtle || !crypto.randomUUID) {
     throw createAppError('UNSUPPORTED', '安全提交需要支持 Web Locks 的浏览器及 HTTPS / localhost 环境。', false)
   }
-  return navigator.locks.request(SUBMISSION_LOCK, { ifAvailable: true }, async (lock) => {
+  const epoch = getSessionEpoch()
+  return navigator.locks.request(userStorageKey(SUBMISSION_LOCK), { ifAvailable: true }, async (lock) => {
     if (!lock) throw createAppError('VALIDATION', '另一个标签页正在提交或重试，请稍后刷新任务。', true)
+    if (epoch !== getSessionEpoch()) throw createAppError('AUTH', '会话已切换。', false)
     return action()
   })
 }
@@ -73,23 +79,29 @@ export async function prepareSubmission(request: GenerateImageRequest): Promise<
   if (readPendingSubmissions().length > 0) {
     throw createAppError('VALIDATION', '仍有提交结果未确认，请先恢复或重试原请求，避免重复扣费。', false)
   }
+  if (!getSessionUserId()) throw createAppError('AUTH', '请先登录。', false)
+  const epoch = getSessionEpoch()
   const id = crypto.randomUUID()
   // Freeze the exact serialized body: editing the form must not change an idempotent retry.
   const body = serializeRequest(id, request)
-  const pending = { id, createdAt: new Date().toISOString(), requestHash: await hashBody(body) }
-  localStorage.setItem(`${PENDING_TASK_PREFIX}${id}`, JSON.stringify(pending))
-  requestBodies.set(id, body)
+  const pending = { id, userId: getSessionUserId(), createdAt: new Date().toISOString(), requestHash: await hashBody(body) }
+  if (epoch !== getSessionEpoch()) throw createAppError('AUTH', '会话已切换，请重新登录。', false)
+  localStorage.setItem(`${pendingPrefix()}${id}`, JSON.stringify(pending))
+  requestBodies.set(`${getSessionUserId()}:${id}`, body)
   return pending
 }
 
 export async function submitPendingRequest(pending: PendingSubmission, currentRequest: GenerateImageRequest): Promise<GenerationTask> {
-  let body = requestBodies.get(pending.id)
+  const epoch = getSessionEpoch()
+  if (pending.userId !== getSessionUserId()) throw createAppError('AUTH', '提交记录不属于当前账号。', false)
+  let body = requestBodies.get(`${pending.userId}:${pending.id}`)
   if (!body) {
     body = serializeRequest(pending.id, currentRequest)
     if (await hashBody(body) !== pending.requestHash) {
-      throw createAppError('VALIDATION', '原请求内容已不在内存中。请恢复提交时的提示词、配置、API Key，并按原顺序重新选择相同参考图后重试同一 ID；不会自动创建新任务。', false)
+      throw createAppError('VALIDATION', '原请求内容已不在内存中。请恢复提交时的提示词、渠道、模型及参数，并按原顺序重新选择相同参考图后重试同一 ID；不会自动创建新任务。', false)
     }
-    requestBodies.set(pending.id, body)
+    if (epoch !== getSessionEpoch()) throw createAppError('AUTH', '会话已切换。', false)
+    requestBodies.set(`${pending.userId}:${pending.id}`, body)
   }
   const response = await backendRequest<{ task: GenerationTask }>('/tasks', { method: 'POST', body })
   if (!response.task || response.task.id !== pending.id) throw invalidResponse()
@@ -97,26 +109,20 @@ export async function submitPendingRequest(pending: PendingSubmission, currentRe
 }
 
 export function acknowledgeSubmission(id: string): void {
-  localStorage.removeItem(`${PENDING_TASK_PREFIX}${id}`)
-  requestBodies.delete(id)
+  localStorage.removeItem(`${pendingPrefix()}${id}`)
+  requestBodies.delete(`${getSessionUserId()}:${id}`)
 }
 
 /** Only an explicit rejection from the API proves that this POST was not accepted. */
 export function isDefiniteSubmissionRejection(error: unknown): boolean {
   return error instanceof BackendRequestError && error.isApiError &&
-    [400, 401, 403, 410, 413, 415, 422].includes(error.appError.status ?? 0)
+    [400, 401, 403, 410, 413, 415, 422, 429].includes(error.appError.status ?? 0)
 }
 
 function serializeRequest(id: string, request: GenerateImageRequest): string {
-  // Match existing config-storage trimming/count normalization and stabilize key
-  // order, so a reload alone does not invalidate an otherwise identical retry.
-  const config = createDefaultProviderConfig()
-  const active = request.config.activeProvider
-  config.activeProvider = active
-  if (active === 'openai-compatible') config.profiles[active] = request.config.profiles[active]
-  else config.profiles[active] = request.config.profiles[active]
-  // Only the active profile needs to leave the browser or participate in retry identity.
-  return JSON.stringify({ id, prompt: request.prompt, config,
+  const profile = request.config.profiles[request.config.activeProvider]
+  const params = taskParams(request.config.activeProvider, profile.params)
+  return JSON.stringify({ id, prompt: request.prompt, channelId: request.config.channelId, model: profile.model, params,
     ...(request.referenceImages?.length ? { referenceImages: request.referenceImages } : {}),
   }, (key, value: unknown) => {
     if (typeof value === 'string') return value.trim()

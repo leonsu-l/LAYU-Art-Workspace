@@ -6,6 +6,23 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#141310" />
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('nanobanana.theme-mode');
+        var mode = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+        var prefersDark = typeof window.matchMedia === 'function'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : true;
+        var resolved = mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
+        var root = document.documentElement;
+        root.dataset.theme = resolved;
+        root.style.colorScheme = resolved;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', resolved === 'light' ? '#fef8e9' : '#141310');
+      } catch (e) {}
+    })();
+  </script>
   <meta name="description" content="NanoBanana Studio — 连接你自己的模型，把灵感变成画面。支持 OpenAI 与 Gemini 兼容协议的 AI 生图暗房：写下描述、挂上参考图，等一张照片显影。" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

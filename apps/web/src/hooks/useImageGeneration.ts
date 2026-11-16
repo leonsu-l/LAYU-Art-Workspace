@@ -15,6 +15,7 @@ import {
   withSubmissionLock,
   type PendingSubmission,
 } from '../services/imageGenerationService'
+import { getSessionEpoch, getSessionUserId } from '../services/sessionScope'
 import { backendErrorMessage, BackendRequestError } from '../services/backendClient'
 import { createAppError, isAppError } from '@nanobanana/shared/utils/errors'
 import { validatePrompt, validateProviderConfig } from '@nanobanana/shared/utils/validation'
@@ -35,6 +36,7 @@ export function useImageGeneration() {
   const [deletionNotice, setDeletionNotice] = useState<string | null>(null)
   const [refreshVersion, setRefreshVersion] = useState(0)
   const [submissionShape, setSubmissionShape] = useState({ count: 1, ratio: '1:1' })
+  const ownerRef = useRef(getSessionUserId())
   const submittingRef = useRef(false)
   const mountedRef = useRef(false)
   const deletingRef = useRef(false)
@@ -54,6 +56,7 @@ export function useImageGeneration() {
     let failures = 0
 
     async function poll() {
+      if (ownerRef.current !== getSessionUserId()) return
       setIsRefreshing(true)
       let nextDelay = 10_000
       try {
@@ -125,7 +128,8 @@ export function useImageGeneration() {
   }, [refreshTasks])
 
   const submit = useCallback(async (prompt: string, config: ProviderConfig, referenceImages: ReferenceImage[], retry?: PendingSubmission) => {
-    if (submittingRef.current || deletingRef.current || (!retry && (!hasDiscovered || connectionError))) return
+    if (ownerRef.current !== getSessionUserId() || submittingRef.current || deletingRef.current || (!retry && (!hasDiscovered || connectionError))) return
+    const epoch = getSessionEpoch()
     if (!retry) {
       const validation = [validatePrompt(prompt), validateProviderConfig(config)].find((item) => !item.valid)
       if (validation) {
@@ -153,6 +157,7 @@ export function useImageGeneration() {
         postStarted = true
         return submitPendingRequest(pending, request)
       })
+      if (epoch !== getSessionEpoch()) return
       taskMutationVersion.current += 1
       if (mountedRef.current && !deletedTaskIds.current.has(task.id)) {
         setTasks((previous) => mergeTasks(previous, [task]).filter((entry) => !deletedTaskIds.current.has(entry.id)))
@@ -162,6 +167,7 @@ export function useImageGeneration() {
       // Clear only this id; another tab may have a different unresolved request.
       acknowledgeSubmission(task.id)
     } catch (error) {
+      if (epoch !== getSessionEpoch()) return
       if (pending && (postStarted || isDeletedTaskError(error)) && isDefiniteSubmissionRejection(error)) {
         try { acknowledgeSubmission(pending.id) } catch { /* Keep recovery blocked if storage cannot be updated. */ }
       }
@@ -175,7 +181,7 @@ export function useImageGeneration() {
       }
     } finally {
       submittingRef.current = false
-      if (mountedRef.current) {
+      if (mountedRef.current && epoch === getSessionEpoch()) {
         setIsSubmitting(false)
         try { setPendingSubmissions(readPendingSubmissions()) } catch (error) {
           setConnectionError(`无法读取提交恢复记录：${backendErrorMessage(error)}`)

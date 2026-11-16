@@ -1,16 +1,16 @@
-/* MD3 top app bar: a surface that stays put while the canvas scrolls under it. */
+/* MD3 Expressive top app bar: shared across Workbench and Gallery. */
 
 .header {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: color-mix(in srgb, var(--md-sys-color-surface-container) 88%, transparent);
+  background: color-mix(in srgb, var(--md-sys-color-surface-container) 90%, transparent);
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
   transition:
-    background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
-    box-shadow var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+    background-color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard),
+    border-color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard);
 }
 
 @supports not (background: color-mix(in srgb, red 50%, transparent)) {
@@ -34,11 +34,11 @@
   text-decoration: none;
   white-space: nowrap;
   opacity: 0;
-  transform: translate(-50%, -150%) scale(0.9);
+  transform: translate(-50%, -150%) scale(0.92);
   pointer-events: none;
   transition:
     opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
-    transform var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-spring);
+    transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring-soft);
 }
 
 .skip:focus-visible {
@@ -50,11 +50,12 @@
 /* ---- bar ---------------------------------------------------------------- */
 .inner {
   max-width: var(--md-sys-layout-max-width);
-  height: var(--md-sys-layout-top-bar-height);
+  min-height: var(--md-sys-layout-top-bar-height);
   margin: 0 auto;
-  padding: 0 var(--md-sys-spacing-gutter);
+  padding: 8px var(--md-sys-spacing-gutter);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
@@ -64,10 +65,11 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 16px 4px 4px;
+  padding: 4px 12px 4px 4px;
   border-radius: var(--md-sys-shape-corner-full);
   color: var(--md-sys-color-on-surface);
   text-decoration: none;
+  flex-shrink: 0;
   transition: background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
 }
 
@@ -78,26 +80,26 @@
 .mark {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--md-sys-shape-corner-full);
   background: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
   transition:
-    transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring),
-    background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+    transform var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-spring-soft),
+    background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .brand:hover .mark {
-  transform: rotate(-8deg) scale(1.06);
+  transform: rotate(-6deg) scale(1.05);
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
 }
 
 .brand:active .mark {
-  transform: rotate(-3deg) scale(0.96);
+  transform: scale(0.96);
   transition-duration: var(--md-sys-motion-duration-short2);
-  transition-timing-function: var(--md-sys-motion-easing-standard-accelerate);
 }
 
 .wordmark {
@@ -105,7 +107,7 @@
   gap: 1px;
   font: var(--md-sys-typescale-title-small);
   letter-spacing: var(--md-sys-typescale-title-small-tracking);
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .wordmark small {
@@ -115,12 +117,11 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* ---- navigation: MD3 segmented pills ------------------------------------ */
+/* ---- navigation: M3 segmented pills ------------------------------------- */
 .nav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
-  margin-inline: auto;
   padding: 3px;
   border-radius: var(--md-sys-shape-corner-full);
   background: var(--md-sys-color-surface-container-high);
@@ -131,9 +132,9 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   height: 36px;
-  padding: 0 16px;
+  padding: 0 15px;
   border-radius: var(--md-sys-shape-corner-full);
   font: var(--md-sys-typescale-label-large);
   letter-spacing: var(--md-sys-typescale-label-large-tracking);
@@ -144,8 +145,6 @@
   transition: color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
 }
 
-/* The active pill grows out of the centre on the spring curve: it arrives
-   with a touch of overshoot, which the eye reads as the selection landing. */
 .navLink::before {
   content: '';
   position: absolute;
@@ -154,10 +153,10 @@
   border-radius: inherit;
   background: var(--md-sys-color-secondary-container);
   opacity: 0;
-  transform: scale(0.72);
+  transform: scale(0.84);
   transition:
     opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
-    transform var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-spring);
+    transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring-soft);
 }
 
 .navLink::after {
@@ -183,14 +182,6 @@
   opacity: var(--md-sys-state-pressed-opacity);
 }
 
-.navLink svg {
-  transition: transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring-soft);
-}
-
-.navLink:hover svg {
-  transform: translateY(-1px) scale(1.08);
-}
-
 .navLink.active {
   color: var(--md-sys-color-on-secondary-container);
 }
@@ -204,28 +195,31 @@
   opacity: 0;
 }
 
-/* ---- local-storage badge ------------------------------------------------ */
+/* ---- right utilities: local note + 3-way theme segmented control -------- */
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .localNote {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   margin: 0;
-  padding: 7px 14px 7px 12px;
+  padding: 6px 12px 6px 10px;
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-full);
   font: var(--md-sys-typescale-label-medium);
   letter-spacing: var(--md-sys-typescale-label-medium-tracking);
   color: var(--md-sys-color-on-surface-variant);
   white-space: nowrap;
-  transition:
-    border-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
-    color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
 }
 
 .dot {
-  position: relative;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: var(--md-sys-shape-corner-full);
   background: var(--md-sys-color-tertiary);
   animation: header-alive 2.8s var(--md-sys-motion-easing-emphasized) infinite;
@@ -234,46 +228,129 @@
 @keyframes header-alive {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(169 209 143 / 0.5);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-sys-color-tertiary) 45%, transparent);
   }
   60% {
-    box-shadow: 0 0 0 6px rgb(169 209 143 / 0);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--md-sys-color-tertiary) 0%, transparent);
   }
+}
+
+.themeSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.themeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-label-medium);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  white-space: nowrap;
+  transition:
+    background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring-soft);
+}
+
+.themeButton:hover:not(.themeActive) {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  color: var(--md-sys-color-on-surface);
+}
+
+.themeButton:active {
+  transform: scale(0.95);
+}
+
+.themeActive {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  box-shadow: var(--md-sys-elevation-level1);
 }
 
 /* ---- responsive --------------------------------------------------------- */
-@media (max-width: 1100px) {
+@media (max-width: 1120px) {
   .localNote {
-    padding: 7px 12px;
-    font-size: 11px;
+    display: none;
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 780px) {
   .inner {
     gap: 8px;
-  }
-
-  .nav {
-    margin-inline: auto;
-  }
-
-  .navLink {
-    padding: 0 12px;
   }
 
   .wordmark small {
     display: none;
   }
+
+  .navLink {
+    padding: 0 12px;
+  }
+
+  .themeText {
+    display: none;
+  }
+
+  .themeButton {
+    width: 34px;
+    padding: 0;
+  }
 }
 
-@media (max-width: 460px) {
+@media (max-width: 560px) {
+  .inner {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .brand {
+    padding: 2px;
+  }
+
+  .mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .wordmark {
+    display: none;
+  }
+
+  .navLink {
+    height: 34px;
+    padding: 0 10px;
+    gap: 5px;
+    font-size: 12.5px;
+  }
+
+  .themeButton {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+@media (max-width: 360px) {
   .navLink span {
     display: none;
   }
 
   .navLink {
-    padding: 0 12px;
+    width: 36px;
+    padding: 0;
+    justify-content: center;
   }
 }
 

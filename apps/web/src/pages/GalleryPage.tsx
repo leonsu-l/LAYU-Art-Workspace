@@ -93,7 +93,7 @@ export function GalleryPage() {
     const entries = images.filter((image) => image.source === source)
     return `${entries.length} 张 · ${formatBytes(entries.reduce((sum, image) => sum + image.bytes, 0))}`
   }
-  const gallerySummary = `后端 ${sourceSummary('server')} / 浏览器旧图库 ${sourceSummary('browser')}`
+  const gallerySummary = `后端 ${sourceSummary('server')}`
   const selectedCount = selectedIds.size
   const isAllSelected = images.length > 0 && selectedCount === images.length
 
@@ -189,11 +189,11 @@ export function GalleryPage() {
 
         <div role="status" aria-live="polite" aria-atomic="true">
           {actionNotice ? <p className={styles.actionNotice}>{actionNotice}</p> : null}
-          {serverError ? <p className={styles.actionNotice}>后端图库暂不可用：{serverError} 已保留上次元数据；浏览器旧图库仍可使用。</p> : null}
+          {serverError ? <p className={styles.actionNotice}>后端图库暂不可用：{serverError} 已保留当前账号上次元数据。</p> : null}
           {browserError ? <p className={styles.actionNotice}>浏览器旧图库读取失败：{browserError}</p> : null}
         </div>
 
-        <section className={styles.collection} aria-label="后端与浏览器图片收藏" aria-busy={isLoading}>
+        <section className={styles.collection} aria-label="我的图片收藏" aria-busy={isLoading}>
           {isLoading && images.length === 0 ? (
             <div className={styles.loadingState} role="status">
               <span className={styles.spinner}><Icon name="loader" size={22} /></span>
@@ -263,7 +263,7 @@ export function GalleryPage() {
 
         <p className={styles.storageNote}>
           <Icon name="shield" size={14} />
-          <span>新作品由后端保存，关闭页面不会中断生成。后端任务历史与图片双向联动：删除任务历史或任一图片，都会删除所属生成任务的历史及全部图片，包括未选中的同任务图片，且无法撤销。浏览器旧图库仅在此设备保存，与后端任务无关联，删除时仅移除该图或选中图片，且无法撤销；清除浏览器数据只会移除旧图库。每 10 秒刷新元数据，不会预先下载全部后端图片。</span>
+          <span>新作品由后端保存，关闭页面不会中断生成。后端任务历史与图片双向联动：删除任务历史或任一图片，都会删除所属生成任务的历史及全部图片，包括未选中的同任务图片，且无法撤销。旧浏览器图库不展示，也不会分配给当前账号。每 10 秒刷新元数据，不会预先下载全部后端图片。</span>
         </p>
       </main>
 

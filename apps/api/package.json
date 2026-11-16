@@ -2,25 +2,15 @@
   "name": "@nanobanana/api",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
-  "engines": {
-    "node": ">=22.18.0"
-  },
+  "description": "Java 21 / Spring Boot backend command wrappers",
   "scripts": {
-    "dev": "node --env-file-if-exists=.env src/index.ts",
-    "debug": "node --inspect=127.0.0.1:9229 --env-file-if-exists=.env src/index.ts",
-    "start": "node --env-file-if-exists=.env src/index.ts",
-    "typecheck": "tsc -p tsconfig.json",
-    "build": "npm run typecheck",
-    "test": "node --test --experimental-test-isolation=none tests/tasks.test.ts tests/contracts/providers.test.ts",
-    "test:contracts": "node --test --experimental-test-isolation=none tests/contracts/providers.test.ts",
-    "lint": "eslint src tests"
-  },
-  "dependencies": {
-    "@nanobanana/shared": "*"
-  },
-  "devDependencies": {
-    "@types/node": "^24.12.2",
-    "typescript": "~6.0.2"
+    "dev": "mvn spring-boot:run",
+    "debug": "mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005\"",
+    "start": "java -jar target/studio-api-1.0.0.jar",
+    "typecheck": "mvn -q -DskipTests compile",
+    "build": "mvn -B -ntp -DskipTests package",
+    "test": "mvn -B -ntp test",
+    "test:contracts": "mvn -B -ntp -Dtest=ProviderServiceTest test",
+    "lint": "mvn -q -DskipTests compile"
   }
 }

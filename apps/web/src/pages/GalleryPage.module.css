@@ -559,7 +559,7 @@
 }
 
 .previewDialog::backdrop {
-  background: rgb(0 0 0 / 0.6);
+  background: var(--md-sys-color-overlay-scrim);
   backdrop-filter: blur(6px);
   animation: md-enter-fade var(--md-sys-motion-duration-medium4) var(--md-sys-motion-easing-standard) both;
 }

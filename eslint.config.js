@@ -6,14 +6,14 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['**/dist/**']),
+  globalIgnores(['**/dist/**', '**/target/**']),
   {
-    files: ['apps/api/**/*.ts', 'apps/web/vite.config.ts'],
+    files: ['apps/web/vite.config.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: { globals: globals.node },
   },
   {
-    files: ['apps/api/contracts/src/**/*.ts', 'apps/api/tests/contracts/**/*.ts', 'apps/web/tests/**/*.ts'],
+    files: ['apps/api/contracts/src/**/*.ts', 'apps/web/tests/**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },

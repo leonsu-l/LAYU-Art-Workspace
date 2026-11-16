@@ -1,19 +1,21 @@
 @import 'tailwindcss';
 
 /* ==========================================================================
-   NanoBanana Studio — Material Design 3 (dark scheme)
+   NanoBanana Studio — Material 3 Expressive Design System (Dark + Light)
 
-   Layer 1 · reference palette  → raw tones, no semantics
-   Layer 2 · system tokens      → colour roles, type scale, shape, motion
-   Layer 3 · base + utilities   → typography classes, state layers, entrances
+   Layer 1 · reference palette  -> centralized raw tones (swap here for blue!)
+   Layer 2 · system tokens      -> semantic colour roles, type, shape, motion
+   Layer 3 · base + utilities   -> typography classes, state layers, ripple
 
-   Motion note: every state change in this app rides a non-linear curve.
-   Linear easing is reserved for indeterminate progress and nothing else.
+   Future palette swap note:
+   To migrate from warm gold to a blue palette, update the primary/secondary/
+   neutral-variant reference tones in Layer 1 and THEME_COLORS in utils/theme.ts
+   (+ index.html boot script). Components only consume --md-sys-* roles.
    ========================================================================== */
 
 /* ---------------------------- 1 · REFERENCE PALETTE ---------------------- */
 :root {
-  /* Primary — the safelight gold */
+  /* Primary — safelight gold (centralized brand hue) */
   --md-ref-primary-10: #241a00;
   --md-ref-primary-20: #3f2e00;
   --md-ref-primary-30: #5b4300;
@@ -34,7 +36,7 @@
   --md-ref-secondary-90: #f6e0b2;
   --md-ref-secondary-95: #ffefd2;
 
-  /* Tertiary — sage: "stored / ready", the calm counterpoint to gold */
+  /* Tertiary — sage: "stored / ready", the calm counterpoint */
   --md-ref-tertiary-10: #0a1f02;
   --md-ref-tertiary-20: #163009;
   --md-ref-tertiary-30: #2e4a24;
@@ -52,7 +54,7 @@
   --md-ref-error-90: #ffdad6;
   --md-ref-error-95: #ffedea;
 
-  /* Neutral — warm graphite, not blue-grey */
+  /* Neutral — warm graphite & warm ivory */
   --md-ref-neutral-4: #0f0e0b;
   --md-ref-neutral-6: #141310;
   --md-ref-neutral-10: #1d1b17;
@@ -66,19 +68,116 @@
   --md-ref-neutral-50: #7a7466;
   --md-ref-neutral-60: #958e7f;
   --md-ref-neutral-80: #cdc3b2;
+  --md-ref-neutral-87: #e2d6c0;
   --md-ref-neutral-90: #e9decd;
+  --md-ref-neutral-92: #efe4cb;
+  --md-ref-neutral-94: #f5ecd6;
   --md-ref-neutral-95: #f8eedc;
+  --md-ref-neutral-96: #faf2df;
   --md-ref-neutral-98: #fef8e9;
+  --md-ref-neutral-99: #fffcf5;
+  --md-ref-neutral-100: #ffffff;
 
   /* Neutral variant */
   --md-ref-neutral-variant-30: #4d4639;
+  --md-ref-neutral-variant-45: #6d6555;
   --md-ref-neutral-variant-50: #7a7363;
   --md-ref-neutral-variant-60: #998f7d;
   --md-ref-neutral-variant-70: #b5ab98;
   --md-ref-neutral-variant-80: #cfc5ae;
   --md-ref-neutral-variant-90: #e8dfc4;
 
-/* ------------------------- 2 · SYSTEM · COLOUR ROLES ------------------ */
+  /* ------------------------- 2 · SYSTEM · TYPE SCALE -------------------- */
+  --md-ref-typeface-brand: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --md-ref-typeface-plain: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --md-ref-typeface-mono: 'Roboto Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', monospace;
+
+  --md-sys-typescale-display-large: 400 57px / 64px var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-large-tracking: -0.25px;
+  --md-sys-typescale-display-medium: 400 45px / 52px var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-medium-tracking: 0px;
+  --md-sys-typescale-display-small: 400 36px / 44px var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-small-tracking: 0px;
+
+  --md-sys-typescale-headline-large: 400 32px / 40px var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-large-tracking: 0px;
+  --md-sys-typescale-headline-medium: 400 28px / 36px var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-medium-tracking: 0px;
+  --md-sys-typescale-headline-small: 400 24px / 32px var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-small-tracking: 0px;
+
+  --md-sys-typescale-title-large: 500 20px / 28px var(--md-ref-typeface-brand);
+  --md-sys-typescale-title-large-tracking: 0px;
+  --md-sys-typescale-title-medium: 500 16px / 24px var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-medium-tracking: 0.15px;
+  --md-sys-typescale-title-small: 500 14px / 20px var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-small-tracking: 0.1px;
+
+  --md-sys-typescale-body-large: 400 15px / 24px var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-large-tracking: 0.25px;
+  --md-sys-typescale-body-medium: 400 14px / 20px var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-medium-tracking: 0.25px;
+  --md-sys-typescale-body-small: 400 12px / 17px var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-small-tracking: 0.35px;
+
+  --md-sys-typescale-label-large: 500 14px / 20px var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-large-tracking: 0.1px;
+  --md-sys-typescale-label-medium: 500 12px / 16px var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-medium-tracking: 0.4px;
+  --md-sys-typescale-label-small: 500 11px / 16px var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-small-tracking: 0.45px;
+
+  /* ------------------------- 2 · SYSTEM · SHAPE ------------------------- */
+  --md-sys-shape-corner-none: 0;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-large-increased: 20px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-extra-large-increased: 32px;
+  --md-sys-shape-corner-extra-extra-large: 48px;
+  --md-sys-shape-corner-full: 999px;
+
+  /* ------------------------- 2 · SYSTEM · MOTION ------------------------ */
+  --md-sys-motion-easing-linear: linear;
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+  --md-sys-motion-easing-spring-soft: cubic-bezier(0.22, 1.18, 0.36, 1);
+
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 280ms;
+  --md-sys-motion-duration-medium3: 320ms;
+  --md-sys-motion-duration-medium4: 380ms;
+  --md-sys-motion-duration-long1: 420ms;
+  --md-sys-motion-duration-long2: 480ms;
+
+  /* ------------------------- 2 · SYSTEM · STATE ------------------------- */
+  --md-sys-state-hover-opacity: 0.08;
+  --md-sys-state-focus-opacity: 0.12;
+  --md-sys-state-pressed-opacity: 0.12;
+  --md-sys-state-dragged-opacity: 0.16;
+
+  /* ------------------------- 2 · SYSTEM · LAYOUT ------------------------ */
+  --md-sys-spacing-gutter: clamp(14px, 3vw, 36px);
+  --md-sys-layout-max-width: 1480px;
+  --md-sys-layout-top-bar-height: 64px;
+}
+
+/* ------------------------- 2 · SYSTEM · COLOUR ROLES (DARK) -------------- */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
   --md-sys-color-primary: var(--md-ref-primary-80);
   --md-sys-color-on-primary: var(--md-ref-primary-20);
   --md-sys-color-primary-container: var(--md-ref-primary-30);
@@ -117,106 +216,76 @@
   --md-sys-color-inverse-primary: var(--md-ref-primary-40);
   --md-sys-color-scrim: #000;
   --md-sys-color-shadow: #000;
+  --md-sys-color-overlay-scrim: rgb(0 0 0 / 0.68);
+  --md-sys-color-on-overlay: var(--md-ref-neutral-99);
 
-  /* ------------------------- 2 · SYSTEM · TYPE SCALE -------------------- */
-  --md-ref-typeface-brand: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --md-ref-typeface-plain: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --md-ref-typeface-mono: 'Roboto Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', monospace;
-
-  --md-sys-typescale-display-large: 400 57px / 64px var(--md-ref-typeface-brand);
-  --md-sys-typescale-display-large-tracking: -0.25px;
-  --md-sys-typescale-display-medium: 400 45px / 52px var(--md-ref-typeface-brand);
-  --md-sys-typescale-display-medium-tracking: 0px;
-  --md-sys-typescale-display-small: 400 36px / 44px var(--md-ref-typeface-brand);
-  --md-sys-typescale-display-small-tracking: 0px;
-
-  --md-sys-typescale-headline-large: 400 32px / 40px var(--md-ref-typeface-brand);
-  --md-sys-typescale-headline-large-tracking: 0px;
-  --md-sys-typescale-headline-medium: 400 28px / 36px var(--md-ref-typeface-brand);
-  --md-sys-typescale-headline-medium-tracking: 0px;
-  --md-sys-typescale-headline-small: 400 24px / 32px var(--md-ref-typeface-brand);
-  --md-sys-typescale-headline-small-tracking: 0px;
-
-  --md-sys-typescale-title-large: 400 22px / 28px var(--md-ref-typeface-brand);
-  --md-sys-typescale-title-large-tracking: 0px;
-  --md-sys-typescale-title-medium: 500 16px / 24px var(--md-ref-typeface-plain);
-  --md-sys-typescale-title-medium-tracking: 0.15px;
-  --md-sys-typescale-title-small: 500 14px / 20px var(--md-ref-typeface-plain);
-  --md-sys-typescale-title-small-tracking: 0.1px;
-
-  --md-sys-typescale-body-large: 400 16px / 24px var(--md-ref-typeface-plain);
-  --md-sys-typescale-body-large-tracking: 0.5px;
-  --md-sys-typescale-body-medium: 400 14px / 20px var(--md-ref-typeface-plain);
-  --md-sys-typescale-body-medium-tracking: 0.25px;
-  --md-sys-typescale-body-small: 400 12px / 16px var(--md-ref-typeface-plain);
-  --md-sys-typescale-body-small-tracking: 0.4px;
-
-  --md-sys-typescale-label-large: 500 14px / 20px var(--md-ref-typeface-plain);
-  --md-sys-typescale-label-large-tracking: 0.1px;
-  --md-sys-typescale-label-medium: 500 12px / 16px var(--md-ref-typeface-plain);
-  --md-sys-typescale-label-medium-tracking: 0.5px;
-  --md-sys-typescale-label-small: 500 11px / 16px var(--md-ref-typeface-plain);
-  --md-sys-typescale-label-small-tracking: 0.5px;
-
-  /* ------------------------- 2 · SYSTEM · SHAPE ------------------------- */
-  --md-sys-shape-corner-none: 0;
-  --md-sys-shape-corner-extra-small: 4px;
-  --md-sys-shape-corner-small: 8px;
-  --md-sys-shape-corner-medium: 12px;
-  --md-sys-shape-corner-large: 16px;
-  --md-sys-shape-corner-large-increased: 20px;
-  --md-sys-shape-corner-extra-large: 28px;
-  --md-sys-shape-corner-extra-large-increased: 32px;
-  --md-sys-shape-corner-extra-extra-large: 48px;
-  --md-sys-shape-corner-full: 999px;
-
-  /* ------------------------- 2 · SYSTEM · ELEVATION --------------------- */
   --md-sys-elevation-level0: 0 0 0 0 transparent;
-  --md-sys-elevation-level1: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
-  --md-sys-elevation-level2: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
-  --md-sys-elevation-level3: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
-  --md-sys-elevation-level4: 0 2px 3px 0 rgb(0 0 0 / 0.3), 0 6px 10px 4px rgb(0 0 0 / 0.15);
-  --md-sys-elevation-level5: 0 4px 4px 0 rgb(0 0 0 / 0.3), 0 8px 12px 6px rgb(0 0 0 / 0.15);
+  --md-sys-elevation-level1: 0 1px 2px 0 rgb(0 0 0 / 0.34), 0 1px 3px 1px rgb(0 0 0 / 0.18);
+  --md-sys-elevation-level2: 0 1px 2px 0 rgb(0 0 0 / 0.36), 0 2px 6px 2px rgb(0 0 0 / 0.20);
+  --md-sys-elevation-level3: 0 1px 3px 0 rgb(0 0 0 / 0.38), 0 4px 8px 3px rgb(0 0 0 / 0.22);
+  --md-sys-elevation-level4: 0 2px 3px 0 rgb(0 0 0 / 0.40), 0 6px 10px 4px rgb(0 0 0 / 0.24);
+  --md-sys-elevation-level5: 0 4px 4px 0 rgb(0 0 0 / 0.42), 0 8px 12px 6px rgb(0 0 0 / 0.26);
 
-/* ------------------------- 2 · SYSTEM · MOTION ------------------------ */
-  /* Non-linear by default. The emphasized pair carries whole-surface changes;
-     the spring pair carries direct manipulation (press, select, pop-in). */
-  --md-sys-motion-easing-linear: linear;
-  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
-  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
-  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
-  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
-  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
-  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
-  --md-sys-motion-easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --md-sys-motion-easing-spring-soft: cubic-bezier(0.22, 1.28, 0.36, 1);
+  --md-sys-ambient-backdrop:
+    radial-gradient(110% 60% at 50% -18%, color-mix(in srgb, var(--md-sys-color-primary) 7%, transparent) 0%, transparent 58%),
+    radial-gradient(80% 45% at 100% 0%, color-mix(in srgb, var(--md-sys-color-secondary) 4%, transparent) 0%, transparent 62%);
+}
 
-  --md-sys-motion-duration-short1: 50ms;
-  --md-sys-motion-duration-short2: 100ms;
-  --md-sys-motion-duration-short3: 150ms;
-  --md-sys-motion-duration-short4: 200ms;
-  --md-sys-motion-duration-medium1: 250ms;
-  --md-sys-motion-duration-medium2: 300ms;
-  --md-sys-motion-duration-medium3: 350ms;
-  --md-sys-motion-duration-medium4: 400ms;
-  --md-sys-motion-duration-long1: 450ms;
-  --md-sys-motion-duration-long2: 500ms;
-  --md-sys-motion-duration-long3: 550ms;
-  --md-sys-motion-duration-long4: 600ms;
-  --md-sys-motion-duration-extra-long1: 700ms;
-  --md-sys-motion-duration-extra-long2: 800ms;
+/* ------------------------- 2 · SYSTEM · COLOUR ROLES (LIGHT) ------------- */
+:root[data-theme='light'] {
+  color-scheme: light;
 
-  /* ------------------------- 2 · SYSTEM · STATE ------------------------- */
-  --md-sys-state-hover-opacity: 0.08;
-  --md-sys-state-focus-opacity: 0.12;
-  --md-sys-state-pressed-opacity: 0.12;
-  --md-sys-state-dragged-opacity: 0.16;
+  --md-sys-color-primary: var(--md-ref-primary-40);
+  --md-sys-color-on-primary: var(--md-ref-primary-99);
+  --md-sys-color-primary-container: var(--md-ref-primary-90);
+  --md-sys-color-on-primary-container: var(--md-ref-primary-10);
 
-  /* ------------------------- 2 · SYSTEM · LAYOUT ------------------------ */
-  --md-sys-spacing-gutter: clamp(16px, 3.2vw, 40px);
-  --md-sys-layout-max-width: 1460px;
-  --md-sys-layout-top-bar-height: 64px;
+  --md-sys-color-secondary: var(--md-ref-secondary-40);
+  --md-sys-color-on-secondary: var(--md-ref-primary-99);
+  --md-sys-color-secondary-container: var(--md-ref-secondary-90);
+  --md-sys-color-on-secondary-container: var(--md-ref-secondary-10);
 
+  --md-sys-color-tertiary: var(--md-ref-tertiary-40);
+  --md-sys-color-on-tertiary: var(--md-ref-neutral-100);
+  --md-sys-color-tertiary-container: var(--md-ref-tertiary-90);
+  --md-sys-color-on-tertiary-container: var(--md-ref-tertiary-10);
+
+  --md-sys-color-error: var(--md-ref-error-40);
+  --md-sys-color-on-error: var(--md-ref-neutral-100);
+  --md-sys-color-error-container: var(--md-ref-error-90);
+  --md-sys-color-on-error-container: var(--md-ref-error-10);
+
+  --md-sys-color-surface-dim: var(--md-ref-neutral-87);
+  --md-sys-color-surface: var(--md-ref-neutral-98);
+  --md-sys-color-surface-bright: var(--md-ref-neutral-99);
+  --md-sys-color-surface-container-lowest: var(--md-ref-neutral-100);
+  --md-sys-color-surface-container-low: var(--md-ref-neutral-96);
+  --md-sys-color-surface-container: var(--md-ref-neutral-94);
+  --md-sys-color-surface-container-high: var(--md-ref-neutral-92);
+  --md-sys-color-surface-container-highest: var(--md-ref-neutral-90);
+  --md-sys-color-on-surface: var(--md-ref-neutral-10);
+  --md-sys-color-on-surface-variant: var(--md-ref-neutral-variant-30);
+  --md-sys-color-outline: var(--md-ref-neutral-variant-45);
+  --md-sys-color-outline-variant: var(--md-ref-neutral-variant-80);
+  --md-sys-color-surface-tint: var(--md-sys-color-primary);
+  --md-sys-color-inverse-surface: var(--md-ref-neutral-20);
+  --md-sys-color-inverse-on-surface: var(--md-ref-neutral-95);
+  --md-sys-color-inverse-primary: var(--md-ref-primary-80);
+  --md-sys-color-scrim: #000;
+  --md-sys-color-shadow: #1d1b17;
+  --md-sys-color-overlay-scrim: rgb(29 27 23 / 0.68);
+  --md-sys-color-on-overlay: var(--md-ref-neutral-99);
+
+  --md-sys-elevation-level0: 0 0 0 0 transparent;
+  --md-sys-elevation-level1: 0 1px 2px 0 rgb(29 27 23 / 0.08), 0 1px 3px 1px rgb(29 27 23 / 0.05);
+  --md-sys-elevation-level2: 0 1px 3px 0 rgb(29 27 23 / 0.10), 0 3px 8px 2px rgb(29 27 23 / 0.07);
+  --md-sys-elevation-level3: 0 2px 4px 0 rgb(29 27 23 / 0.12), 0 6px 12px 4px rgb(29 27 23 / 0.08);
+  --md-sys-elevation-level4: 0 3px 6px 0 rgb(29 27 23 / 0.14), 0 8px 16px 5px rgb(29 27 23 / 0.10);
+  --md-sys-elevation-level5: 0 4px 8px 0 rgb(29 27 23 / 0.16), 0 10px 20px 6px rgb(29 27 23 / 0.12);
+
+  --md-sys-ambient-backdrop:
+    radial-gradient(110% 60% at 50% -18%, color-mix(in srgb, var(--md-sys-color-primary) 6%, transparent) 0%, transparent 58%),
+    radial-gradient(80% 45% at 100% 0%, color-mix(in srgb, var(--md-sys-color-secondary) 5%, transparent) 0%, transparent 62%);
 }
 
 /* ------------------------------- BASE ------------------------------------ */
@@ -227,7 +296,6 @@
 }
 
 :root {
-  color-scheme: dark;
   font: var(--md-sys-typescale-body-medium);
   letter-spacing: var(--md-sys-typescale-body-medium-tracking);
   color: var(--md-sys-color-on-surface);
@@ -253,13 +321,12 @@ body,
 
 body {
   min-width: 320px;
-  /* One safelight falling into the room from above. Fixed, so scrolling
-     moves the content through the light instead of dragging the light along. */
-  background-image:
-    radial-gradient(120% 70% at 50% -18%, rgb(242 191 72 / 0.07) 0%, transparent 58%),
-    radial-gradient(80% 50% at 100% 0%, rgb(217 196 140 / 0.04) 0%, transparent 62%);
+  background-image: var(--md-sys-ambient-backdrop);
   background-attachment: fixed;
   background-repeat: no-repeat;
+  transition:
+    background-color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard);
 }
 
 #root {
@@ -369,19 +436,14 @@ samp {
 }
 
 /* --------------------------- MOTION · KEYFRAMES -------------------------- */
-/* A layered entrance: opacity leads, a short transform follows, blur resolves
-   last. Three properties on one emphasized-decelerate curve read as material
-   arriving in depth rather than as a box sliding in. */
 @keyframes md-enter {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.985);
-    filter: blur(6px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
   }
 }
 
@@ -410,7 +472,6 @@ samp {
   to { transform: rotate(360deg); }
 }
 
-/* Indeterminate progress: the only place linear motion is allowed. */
 @keyframes md-indeterminate {
   0% { transform: translateX(-100%) scaleX(0.35); }
   45% { transform: translateX(20%) scaleX(0.9); }
@@ -418,30 +479,33 @@ samp {
 }
 
 @keyframes md-pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgb(242 191 72 / 0.45); }
-  70% { box-shadow: 0 0 0 8px rgb(242 191 72 / 0); }
-  100% { box-shadow: 0 0 0 0 rgb(242 191 72 / 0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent); }
+  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-sys-color-primary) 0%, transparent); }
 }
 
 @keyframes md-breathe {
-  0%, 100% { opacity: 0.4; transform: scale(0.94); }
+  0%, 100% { opacity: 0.45; transform: scale(0.94); }
   50% { opacity: 1; transform: scale(1.06); }
 }
 
+@keyframes md-ripple-expand {
+  0% { transform: scale(0); opacity: 0.16; }
+  55% { opacity: 0.10; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
 /* ------------------------- MOTION · UTILITIES ---------------------------- */
-/* Stagger without JavaScript: set --md-enter-delay on each child. */
 .md-enter {
-  animation: md-enter var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-decelerate) both;
+  animation: md-enter var(--md-sys-motion-duration-medium4) var(--md-sys-motion-easing-emphasized-decelerate) both;
   animation-delay: var(--md-enter-delay, 0ms);
 }
 
 .md-enter-soft {
-  animation: md-enter-soft var(--md-sys-motion-duration-medium4) var(--md-sys-motion-easing-emphasized-decelerate) both;
+  animation: md-enter-soft var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-emphasized-decelerate) both;
   animation-delay: var(--md-enter-delay, 0ms);
 }
 
-/* Generic state layer: an on-colour wash that fades in on interaction and
-   inherits the parent radius. Requires a positioned ancestor. */
 .md-state-layer::before {
   content: '';
   position: absolute;
@@ -457,9 +521,6 @@ samp {
 .md-state-layer:focus-visible::before { opacity: var(--md-sys-state-focus-opacity); }
 .md-state-layer:active::before { opacity: var(--md-sys-state-pressed-opacity); }
 
-/* Expressive press: compresses quickly down the accelerate curve, springs
-   back on the eased side. Asymmetric on purpose — that asymmetry is what
-   reads as weight. */
 .md-pressable {
   transition:
     transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-spring-soft),
@@ -470,7 +531,7 @@ samp {
 }
 
 .md-pressable:active:not(:disabled) {
-  transform: scale(0.965);
+  transform: scale(0.97);
   transition-duration: var(--md-sys-motion-duration-short2);
   transition-timing-function: var(--md-sys-motion-easing-standard-accelerate);
 }
@@ -503,15 +564,12 @@ samp {
 }
 
 /* --------------------------- VIEW TRANSITIONS ---------------------------- */
-/* Route change = exit accelerating, enter decelerating. Different curves and
-   different durations, so the two surfaces overlap instead of cross-fading
-   flatly. Long hands are deliberate: the incoming page gets the time. */
 ::view-transition-old(root) {
-  animation: md-enter-fade var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-emphasized-accelerate) reverse both;
+  animation: md-enter-fade var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-accelerate) reverse both;
 }
 
 ::view-transition-new(root) {
-  animation: md-enter-fade var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-decelerate) both;
+  animation: md-enter-fade var(--md-sys-motion-duration-long1) var(--md-sys-motion-easing-emphasized-decelerate) both;
 }
 
 /* --------------------------- REDUCED MOTION ------------------------------ */
@@ -530,4 +588,3 @@ samp {
     scroll-behavior: auto !important;
   }
 }
-

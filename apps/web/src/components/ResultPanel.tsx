@@ -19,7 +19,7 @@ interface ResultPanelProps {
 }
 
 const errorGuidance: Record<AppError['code'], string> = {
-  VALIDATION: '请检查提示词和左侧的连接设置，再试一次。',
+  VALIDATION: '请检查提示词和连接与参数设置，再试一次。',
   AUTH: '请检查 API Key 是否正确，以及是否有权使用当前模型。',
   RATE_LIMIT: '请求过于频繁或额度不足，请检查账户额度，稍后再试。',
   NETWORK: '请检查网络与接口地址，再重新生成。',

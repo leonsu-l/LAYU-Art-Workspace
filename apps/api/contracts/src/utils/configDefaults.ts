@@ -10,7 +10,7 @@ export const DEFAULT_PROVIDER: ProviderType = 'openai-compatible'
 export const DEFAULT_PROVIDER_PROFILES: ProviderProfiles = {
   'openai-compatible': {
     baseUrl: 'https://api.openai.com',
-    model: 'gpt-image-2.5-flare',
+    model: '',
     apiKey: '',
     params: {
       size: '1024x1024',
@@ -24,11 +24,11 @@ export const DEFAULT_PROVIDER_PROFILES: ProviderProfiles = {
   },
   'gemini-compatible': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    model: 'gemini-nano-banana-2.1',
+    model: '',
     apiKey: '',
     params: {
-      imageSize: '1K',
-      aspectRatio: '1:1',
+      imageSize: 'auto',
+      aspectRatio: 'auto',
       imageOnly: false,
       thinkingLevel: 'auto',
     },

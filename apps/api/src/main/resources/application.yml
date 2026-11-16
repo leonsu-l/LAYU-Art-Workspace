@@ -1,0 +1,31 @@
+server:
+  port: ${PORT:3001}
+  address: ${BIND_ADDRESS:127.0.0.1}
+  shutdown: graceful
+  error:
+    include-message: never
+spring:
+  application:
+    name: nanobanana-studio
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/studio}
+    username: ${DATABASE_USER:studio}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: 8
+  task:
+    scheduling:
+      pool:
+        size: 4
+  lifecycle:
+    timeout-per-shutdown-phase: 620s
+  jackson:
+    default-property-inclusion: always
+  flyway:
+    enabled: true
+studio:
+  data-dir: ${DATA_DIR:./data-java}
+  encryption-key: ${ENCRYPTION_KEY:}
+  provider-timeout-seconds: ${PROVIDER_TIMEOUT_SECONDS:600}
+  worker-enabled: true
+  cookie-secure: ${COOKIE_SECURE:false}

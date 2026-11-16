@@ -5,15 +5,15 @@ export const providerOptions = [
 
 export type ProviderType = (typeof providerOptions)[number]
 
-export type OpenAIQuality = 'auto' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+export type OpenAIQuality = string
 
-export type OpenAIOutputFormat = 'png' | 'jpeg' | 'webp'
+export type OpenAIOutputFormat = string
 
-export type OpenAIBackground = 'auto' | 'opaque' | 'transparent'
+export type OpenAIBackground = string
 
-export type GeminiThinkingLevel = 'auto' | 'minimal' | 'medium' | 'high'
+export type GeminiThinkingLevel = string
 
-export type GeminiImageSize = '512' | '1K' | '2K' | '4K'
+export type GeminiImageSize = string
 
 export interface OpenAIImageParams {
     size: string
@@ -53,6 +53,7 @@ export interface ProviderProfiles {
 
 export interface ProviderConfig {
     activeProvider: ProviderType
+    channelId?: string
     profiles: ProviderProfiles
 }
 

@@ -1,0 +1,250 @@
+/* Material 3 Expressive Select: inspired by m3_example.html, adapted for
+   controlled React state, portal viewport positioning, and full keyboard/AT. */
+
+.root {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.trigger {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 10px 0 18px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font: var(--md-sys-typescale-body-medium);
+  font-weight: 500;
+  text-align: left;
+  transition:
+    background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized),
+    border-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.trigger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 7%, var(--md-sys-color-surface-container-high));
+  border-color: var(--md-sys-color-outline);
+}
+
+.open .trigger:not(:disabled) {
+  border-color: var(--md-sys-color-primary);
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-container-high));
+}
+
+.trigger:disabled {
+  opacity: 0.44;
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+.value {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arrow {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface-variant);
+  flex-shrink: 0;
+  transition: transform var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized);
+}
+
+.open .arrow {
+  transform: rotate(180deg);
+  color: var(--md-sys-color-primary);
+}
+
+/* ---- menu portal -------------------------------------------------------- */
+.menu {
+  position: fixed;
+  z-index: 90;
+  padding: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container);
+  box-shadow: var(--md-sys-elevation-level3);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+.menu[data-placement='bottom'] {
+  transform-origin: top center;
+}
+
+.menu[data-placement='top'] {
+  transform-origin: bottom center;
+}
+
+.menuOpen {
+  animation: m3-menu-in 240ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+.menuClosing {
+  pointer-events: none;
+  animation: m3-menu-out 140ms var(--md-sys-motion-easing-emphasized-accelerate) both;
+}
+
+@keyframes m3-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.menu[data-placement='top'].menuOpen {
+  animation-name: m3-menu-in-top;
+}
+
+@keyframes m3-menu-in-top {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes m3-menu-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* ---- option ------------------------------------------------------------- */
+.option {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px 8px 16px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  font: var(--md-sys-typescale-body-medium);
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-emphasized);
+}
+
+.option + .option {
+  margin-top: 2px;
+}
+
+.optionActive:not(.optionDisabled),
+.option:hover:not(.optionDisabled) {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.option[aria-selected='true'] {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 500;
+}
+
+.option[aria-selected='true'].optionActive {
+  background-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-secondary-container) 8%,
+    var(--md-sys-color-secondary-container)
+  );
+}
+
+.optionDisabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.optionLabel {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.check {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized),
+    transform var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized);
+}
+
+.option[aria-selected='true'] .check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---- ripple ------------------------------------------------------------- */
+.rippleLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: currentColor;
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0;
+  animation: md-ripple-expand 520ms var(--md-sys-motion-easing-emphasized) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menuOpen,
+  .menuClosing,
+  .arrow,
+  .check {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  .ripple {
+    display: none;
+  }
+}

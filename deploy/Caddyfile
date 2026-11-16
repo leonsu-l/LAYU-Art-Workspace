@@ -1,0 +1,17 @@
+# Internal HTTP only; public HTTPS terminates at BaoTa Nginx.
+:80 {
+    encode zstd gzip
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy same-origin
+        X-Frame-Options DENY
+    }
+    handle /api/* {
+        reverse_proxy api:3001
+    }
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+}
