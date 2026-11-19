@@ -300,20 +300,23 @@
   border: 1.5px solid var(--md-sys-color-outline);
   border-radius: 7px;
   background-color: transparent;
-  color: var(--md-sys-color-on-primary);
+  color: var(--md-sys-color-primary);
   cursor: pointer;
   transition:
     background-color 180ms var(--md-sys-motion-easing-standard),
-    border-color 180ms var(--md-sys-motion-easing-standard);
+    border-color 180ms var(--md-sys-motion-easing-standard),
+    color 180ms var(--md-sys-motion-easing-standard);
 }
 
 .cardCheckBtnActive {
   border-color: var(--md-sys-color-primary);
   background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 .checkGlyph {
   display: block;
+  color: var(--md-sys-color-on-primary);
   opacity: 0;
   transition: opacity 160ms var(--md-sys-motion-easing-standard);
 }
@@ -705,7 +708,7 @@
     font-size: 11px;
   }
 
-  .hudDownloadBtn span {
+  .hudDownloadBtn > span:not([data-ripple-layer]) {
     display: none;
   }
 

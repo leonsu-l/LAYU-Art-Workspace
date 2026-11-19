@@ -9,6 +9,7 @@ import {
   SegmentedRail,
   StudioSelect,
 } from '../components/LabControls'
+import { RippleButton } from '../components/LabRipple'
 import {
   ConnectedRatioSkeleton,
   ShimmerImage,
@@ -502,7 +503,7 @@ export function GalleryPrototype({
           ) : (
             <span className={styles.summaryPill}>已存 {items.length} 张 · 7.2 MiB</span>
           )}
-          <button
+          <RippleButton
             type="button"
             className={styles.tonalBtn}
             disabled={showListSkeleton}
@@ -520,11 +521,11 @@ export function GalleryPrototype({
           >
             <Icon name="loader" size={14} />
             <span>{showListSkeleton ? '正在刷新…' : '刷新图库'}</span>
-          </button>
-          <button type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
+          </RippleButton>
+          <RippleButton type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
             <Icon name="plus" size={15} />
             <span>创建新作品</span>
-          </button>
+          </RippleButton>
         </div>
       </header>
 
@@ -548,7 +549,7 @@ export function GalleryPrototype({
             </div>
 
             <div className={styles.toolbarRight}>
-              <button
+              <RippleButton
                 type="button"
                 aria-pressed={allSelected}
                 className={`${styles.selectToggleBtn} ${allSelected ? styles.selectToggleActive : ''}`}
@@ -556,11 +557,11 @@ export function GalleryPrototype({
               >
                 <Icon name={allSelected ? 'check' : 'grid'} size={14} />
                 <span>{allSelected ? '取消全选' : '全选当前'}</span>
-              </button>
+              </RippleButton>
 
               <span className={styles.countChip}>已选 {selectedKeys.length} 张</span>
 
-              <button
+              <RippleButton
                 type="button"
                 className={styles.dangerTonalBtn}
                 disabled={selectedKeys.length === 0}
@@ -573,7 +574,7 @@ export function GalleryPrototype({
               >
                 <Icon name="trash" size={14} />
                 <span>删除所选</span>
-              </button>
+              </RippleButton>
             </div>
           </>
         )}
@@ -655,7 +656,7 @@ export function GalleryPrototype({
                 <div className={styles.galleryCardTop}>
                   <span className={styles.frameCode}>{String(idx + 1).padStart(2, '0')}</span>
                   <span className={styles.modelChip}>{item.model}</span>
-                  <button
+                  <RippleButton
                     type="button"
                     aria-pressed={selected}
                     aria-label={`选择作品 ${idx + 1}`}
@@ -663,14 +664,15 @@ export function GalleryPrototype({
                     onClick={() => toggleSelect(item.key)}
                   >
                     <Icon name="check" size={14} className={styles.checkGlyph} />
-                  </button>
+                  </RippleButton>
                 </div>
 
-                <button
+                <RippleButton
                   ref={(el) => {
                     thumbRefs.current[item.key] = el
                   }}
                   type="button"
+                  rippleTone="light"
                   className={`${styles.galleryThumbBtn} ${previewItem?.key === item.key ? styles.galleryThumbHidden : ''}`}
                   onClick={() => openPreview(item)}
                 >
@@ -686,7 +688,7 @@ export function GalleryPrototype({
                     <Icon name="eye" size={15} />
                     <span>查看大图</span>
                   </span>
-                </button>
+                </RippleButton>
 
                 <p className={styles.galleryPrompt}>{item.prompt}</p>
 
@@ -700,11 +702,11 @@ export function GalleryPrototype({
                 </div>
 
                 <div className={styles.galleryCardActions}>
-                  <button type="button" className={styles.cardGhostBtn} onClick={() => openPreview(item)}>
+                  <RippleButton type="button" className={styles.cardGhostBtn} onClick={() => openPreview(item)}>
                     <Icon name="eye" size={14} />
                     <span>预览</span>
-                  </button>
-                  <button
+                  </RippleButton>
+                  <RippleButton
                     type="button"
                     className={styles.cardGhostBtn}
                     onClick={() =>
@@ -713,8 +715,8 @@ export function GalleryPrototype({
                   >
                     <Icon name="download" size={14} />
                     <span>下载</span>
-                  </button>
-                  <button
+                  </RippleButton>
+                  <RippleButton
                     type="button"
                     className={styles.cardDangerBtn}
                     aria-label={`删除 ${item.key}`}
@@ -726,7 +728,7 @@ export function GalleryPrototype({
                     }
                   >
                     <Icon name="trash" size={14} />
-                  </button>
+                  </RippleButton>
                 </div>
               </article>
             )
@@ -790,7 +792,7 @@ export function GalleryPrototype({
                     >
                       {items.length > 1 ? (
                         <div className={styles.hudNavGroup}>
-                          <button
+                          <RippleButton
                             type="button"
                             className={styles.hudIconBtn}
                             onClick={() => stepPreview(-1)}
@@ -798,8 +800,8 @@ export function GalleryPrototype({
                             title="上一张 (←)"
                           >
                             <Icon name="arrow-left" size={15} />
-                          </button>
-                          <button
+                          </RippleButton>
+                          <RippleButton
                             type="button"
                             className={styles.hudIconBtn}
                             onClick={() => stepPreview(1)}
@@ -807,11 +809,11 @@ export function GalleryPrototype({
                             title="下一张 (→)"
                           >
                             <Icon name="arrow-right" size={15} />
-                          </button>
+                          </RippleButton>
                         </div>
                       ) : null}
 
-                      <button
+                      <RippleButton
                         type="button"
                         className={styles.hudDownloadBtn}
                         onClick={() =>
@@ -820,10 +822,10 @@ export function GalleryPrototype({
                       >
                         <Icon name="download" size={15} />
                         <span>下载原图</span>
-                      </button>
+                      </RippleButton>
                     </div>
 
-                    <button
+                    <RippleButton
                       type="button"
                       className={styles.hudIconBtn}
                       onClick={() => setHudVisible((v) => !v)}
@@ -831,9 +833,9 @@ export function GalleryPrototype({
                       title={hudVisible ? '隐藏信息栏' : '显示信息栏'}
                     >
                       <Icon name={hudVisible ? 'eye-off' : 'eye'} size={15} />
-                    </button>
+                    </RippleButton>
 
-                    <button
+                    <RippleButton
                       type="button"
                       className={styles.hudIconBtn}
                       onClick={closePreview}
@@ -841,7 +843,7 @@ export function GalleryPrototype({
                       title="关闭 (Esc)"
                     >
                       <Icon name="close" size={17} />
-                    </button>
+                    </RippleButton>
                   </div>
                 </div>
 
@@ -935,7 +937,7 @@ export function ChannelsPrototype({
             </p>
           </div>
           <div className={styles.pageHeaderActions}>
-            <button
+            <RippleButton
               type="button"
               className={styles.tonalBtn}
               disabled={showChannelSkeleton}
@@ -950,8 +952,8 @@ export function ChannelsPrototype({
             >
               <Icon name="loader" size={14} />
               <span>{showChannelSkeleton ? '正在刷新…' : '刷新列表'}</span>
-            </button>
-            <button
+            </RippleButton>
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() => {
@@ -964,7 +966,7 @@ export function ChannelsPrototype({
             >
               <Icon name="plus" size={15} />
               <span>新增自定义渠道</span>
-            </button>
+            </RippleButton>
           </div>
         </header>
       ) : null}
@@ -1065,7 +1067,7 @@ export function ChannelsPrototype({
             {scopedChannels.map((ch) => {
               const active = ch.id === selectedId
               return (
-                <button
+                <RippleButton
                   key={ch.id}
                   type="button"
                   aria-pressed={active}
@@ -1085,7 +1087,7 @@ export function ChannelsPrototype({
                     <span>{ch.hasApiKey ? '密钥已配置（只写）' : '未设密钥'}</span>
                   </div>
                   <code className={styles.urlSnippet}>{ch.baseUrl}</code>
-                </button>
+                </RippleButton>
               )
             })}
           </div>
@@ -1098,7 +1100,7 @@ export function ChannelsPrototype({
               <span className={styles.pageEyebrow}>CHANNEL CONFIGURATION</span>
               <h2>{selectedId ? `编辑：${editName}` : '新建渠道'}</h2>
             </div>
-            <button
+            <RippleButton
               type="button"
               aria-pressed={editEnabled}
               className={`${styles.switchPill} ${editEnabled ? styles.switchPillOn : ''}`}
@@ -1106,7 +1108,7 @@ export function ChannelsPrototype({
             >
               <span className={styles.switchThumb} />
               <span>{editEnabled ? '已启用' : '已停用'}</span>
-            </button>
+            </RippleButton>
           </div>
 
           <div className={styles.formGrid}>
@@ -1158,7 +1160,7 @@ export function ChannelsPrototype({
                 <strong>模型目录与启用列表</strong>
                 <span>目录来自渠道 `/models`，不保证全部支持生图；{scope === 'shared' ? '普通用户仅可选中已启用模型' : '私有渠道也可在工作台手填 ID'}</span>
               </div>
-              <button
+              <RippleButton
                 type="button"
                 className={styles.tonalBtn}
                 disabled={showCatalogSkeleton}
@@ -1176,7 +1178,7 @@ export function ChannelsPrototype({
               >
                 <Icon name="loader" size={14} />
                 <span>{showCatalogSkeleton ? '正在发现…' : '发现 / 刷新模型'}</span>
-              </button>
+              </RippleButton>
             </div>
 
             {showCatalogSkeleton ? (
@@ -1190,7 +1192,7 @@ export function ChannelsPrototype({
                 {catalog.models.map((m) => {
                   const checked = enabledModelIds.includes(m.id)
                   return (
-                    <button
+                    <RippleButton
                       key={m.id}
                       type="button"
                       aria-pressed={checked}
@@ -1203,7 +1205,7 @@ export function ChannelsPrototype({
                     >
                       <Icon name={checked ? 'check' : 'plus'} size={13} />
                       <span>{m.name || m.id}</span>
-                    </button>
+                    </RippleButton>
                   )
                 })}
               </div>
@@ -1228,7 +1230,7 @@ export function ChannelsPrototype({
 
           <div className={styles.detailFooter}>
             {selectedId ? (
-              <button
+              <RippleButton
                 type="button"
                 className={styles.dangerTonalBtn}
                 onClick={() =>
@@ -1240,9 +1242,9 @@ export function ChannelsPrototype({
               >
                 <Icon name="trash" size={14} />
                 <span>删除此渠道</span>
-              </button>
+              </RippleButton>
             ) : <span />}
-            <button
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() =>
@@ -1254,7 +1256,7 @@ export function ChannelsPrototype({
             >
               <Icon name="check" size={15} />
               <span>保存渠道配置</span>
-            </button>
+            </RippleButton>
           </div>
         </section>
       </div>
@@ -1457,13 +1459,13 @@ export function AccountPrototype({
                   defaultValue="example-secure-passphrase"
                   required
                 />
-                <button
+                <RippleButton
                   type="button"
                   onClick={() => setShowPwd((v) => !v)}
                   aria-label={showPwd ? '隐藏密码' : '显示密码'}
                 >
                   <Icon name={showPwd ? 'eye-off' : 'eye'} size={16} />
-                </button>
+                </RippleButton>
               </div>
             </div>
 
@@ -1482,11 +1484,11 @@ export function AccountPrototype({
             ) : null}
 
             <div className={styles.authActions}>
-              <button type="submit" className={styles.primaryBtnFull}>
+              <RippleButton type="submit" className={styles.primaryBtnFull}>
                 {authMode === 'password' ? '更新密码并重新登录' : authMode === 'register' ? '注册并进入工作台' : '登录工作台'}
-              </button>
+              </RippleButton>
               {authMode !== 'password' ? (
-                <button
+                <RippleButton
                   type="button"
                   className={styles.tonalBtnFull}
                   onClick={() => {
@@ -1494,7 +1496,7 @@ export function AccountPrototype({
                   }}
                 >
                   {authMode === 'login' ? '还没有账号？使用邀请码注册' : '已有账号？返回登录'}
-                </button>
+                </RippleButton>
               ) : null}
             </div>
           </form>
@@ -1633,7 +1635,7 @@ export function AdminPrototype({
                   <span className={styles.monoMeta}>
                     {u.mustChangePassword ? '下次登录须改密' : '密码状态正常'}
                   </span>
-                  <button
+                  <RippleButton
                     type="button"
                     className={styles.tonalBtn}
                     onClick={() =>
@@ -1644,7 +1646,7 @@ export function AdminPrototype({
                     }
                   >
                     保存设置
-                  </button>
+                  </RippleButton>
                 </div>
               </article>
             ))}
@@ -1682,7 +1684,7 @@ export function AdminPrototype({
                 无限次邀请码不过期，可反复注册普通用户；撤销后立即停止新注册。
               </span>
             </div>
-            <button
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() =>
@@ -1694,7 +1696,7 @@ export function AdminPrototype({
             >
               <Icon name="plus" size={15} />
               <span>创建邀请码</span>
-            </button>
+            </RippleButton>
           </div>
           <div className={styles.inviteList}>
             {MOCK_INVITES.map((inv) => (
@@ -1705,7 +1707,7 @@ export function AdminPrototype({
                 </span>
                 <span className={styles.monoMeta}>已注册 {inv.registrationCount} 人</span>
                 <div className={styles.inviteActions}>
-                  <button
+                  <RippleButton
                     type="button"
                     className={styles.tonalBtn}
                     onClick={() =>
@@ -1714,8 +1716,8 @@ export function AdminPrototype({
                   >
                     <Icon name="copy" size={14} />
                     <span>复制</span>
-                  </button>
-                  <button
+                  </RippleButton>
+                  <RippleButton
                     type="button"
                     className={styles.dangerTonalBtn}
                     disabled={!inv.enabled}
@@ -1727,7 +1729,7 @@ export function AdminPrototype({
                     }
                   >
                     撤销
-                  </button>
+                  </RippleButton>
                 </div>
               </div>
             ))}
@@ -1788,7 +1790,7 @@ export function AdminPrototype({
           </div>
           <div className={styles.detailFooter}>
             <span className={styles.monoMeta}>任务失败会自动退回原提交日额度；删除终态任务不退额。</span>
-            <button
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() =>
@@ -1797,7 +1799,7 @@ export function AdminPrototype({
             >
               <Icon name="check" size={15} />
               <span>保存全站配置</span>
-            </button>
+            </RippleButton>
           </div>
         </div>
         )
@@ -1930,7 +1932,7 @@ export function AdminPrototype({
             </div>
             <div className={styles.detailFooter}>
               <span />
-              <button
+              <RippleButton
                 type="button"
                 className={styles.primaryBtn}
                 onClick={() =>
@@ -1939,7 +1941,7 @@ export function AdminPrototype({
               >
                 <Icon name="check" size={15} />
                 <span>保存模板</span>
-              </button>
+              </RippleButton>
             </div>
           </section>
         </div>
@@ -2008,7 +2010,7 @@ export function AdminPrototype({
                     <span className={styles.pageEyebrow}>NON-PRIVATE TELEMETRY</span>
                     <h2>渠道与最近任务状态（不含提示词或图片）</h2>
                   </div>
-                  <button
+                  <RippleButton
                     type="button"
                     className={styles.tonalBtn}
                     onClick={() => {
@@ -2022,7 +2024,7 @@ export function AdminPrototype({
                   >
                     <Icon name="loader" size={14} />
                     <span>刷新统计</span>
-                  </button>
+                  </RippleButton>
                 </div>
                 <div className={styles.tableWrap} data-no-swipe="true">
                   <table className={styles.dataTable}>

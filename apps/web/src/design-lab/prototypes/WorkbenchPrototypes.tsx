@@ -17,6 +17,7 @@ import {
   SegmentedRail,
   StudioSelect,
 } from '../components/LabControls'
+import { RippleButton } from '../components/LabRipple'
 import {
   ConnectedRatioSkeleton,
   ShimmerImage,
@@ -199,7 +200,7 @@ export function WorkbenchPrototype({
             断线前提交的任务 <code>9f4a81d2-7b30-4e92</code> 尚未确认接收，重试仅使用同一 ID。
           </p>
           <div className={styles.recoveryActions}>
-            <button
+            <RippleButton
               type="button"
               className={styles.recoveryBtnPrimary}
               onClick={() => {
@@ -211,8 +212,8 @@ export function WorkbenchPrototype({
               }}
             >
               恢复 / 重试同一请求
-            </button>
-            <button
+            </RippleButton>
+            <RippleButton
               type="button"
               className={styles.recoveryBtnTonal}
               onClick={() => {
@@ -224,7 +225,7 @@ export function WorkbenchPrototype({
               }}
             >
               刷新状态
-            </button>
+            </RippleButton>
           </div>
         </div>
       )
@@ -286,7 +287,7 @@ export function WorkbenchPrototype({
 
           {activeImages.length > 0 ? (
             <div className={styles.stageBarActions}>
-              <button
+              <RippleButton
                 type="button"
                 className={styles.stageTonalBtn}
                 onClick={() =>
@@ -295,8 +296,8 @@ export function WorkbenchPrototype({
               >
                 <Icon name="download" size={14} />
                 <span>下载原图</span>
-              </button>
-              <button
+              </RippleButton>
+              <RippleButton
                 type="button"
                 className={styles.stageTextBtn}
                 onClick={() => {
@@ -306,7 +307,7 @@ export function WorkbenchPrototype({
               >
                 <Icon name="close" size={14} />
                 <span>清空</span>
-              </button>
+              </RippleButton>
             </div>
           ) : null}
         </div>
@@ -332,7 +333,7 @@ export function WorkbenchPrototype({
               <p>从下方挑一个创作灵感快速填入，或在左侧输入描述；多张结果将直接在这里对照显影。</p>
               <div className={styles.emptyStarterGrid}>
                 {MOCK_PROMPT_PRESETS.map((preset) => (
-                  <button
+                  <RippleButton
                     key={preset.label}
                     type="button"
                     className={styles.starterCard}
@@ -343,7 +344,7 @@ export function WorkbenchPrototype({
                   >
                     <strong>{preset.label}</strong>
                     <span>{preset.prompt.slice(0, 32)}…</span>
-                  </button>
+                  </RippleButton>
                 ))}
               </div>
             </div>
@@ -379,7 +380,7 @@ export function WorkbenchPrototype({
               const selected = task.id === selectedTaskId
               const thumb = task.result?.images[0]?.url
               return (
-                <button
+                <RippleButton
                   key={task.id}
                   type="button"
                   aria-pressed={selected}
@@ -423,7 +424,7 @@ export function WorkbenchPrototype({
                     </strong>
                     <span>{task.prompt}</span>
                   </span>
-                </button>
+                </RippleButton>
               )
             })}
           </div>
@@ -483,7 +484,7 @@ export function WorkbenchPrototype({
           ) : (
             <div className={styles.fieldGroup}>
               <span className={styles.fieldTitle}>输出模式</span>
-              <button
+              <RippleButton
                 type="button"
                 aria-pressed={imageOnly}
                 className={`${styles.toggleChip} ${imageOnly ? styles.toggleChipActive : ''}`}
@@ -491,12 +492,12 @@ export function WorkbenchPrototype({
               >
                 <Icon name={imageOnly ? 'check' : 'image'} size={15} />
                 <span>{imageOnly ? '仅输出图片' : '图文混合'}</span>
-              </button>
+              </RippleButton>
             </div>
           )}
         </div>
 
-        <button
+        <RippleButton
           type="button"
           className={styles.advancedToggle}
           aria-expanded={showAdvanced}
@@ -504,7 +505,7 @@ export function WorkbenchPrototype({
         >
           <span>高级参数（输出格式 · 背景 · 审核）</span>
           <Icon name="chevron-down" size={16} className={showAdvanced ? styles.rotated : ''} />
-        </button>
+        </RippleButton>
 
         {showAdvanced ? (
           <div className={styles.advancedPanel}>
@@ -870,7 +871,7 @@ export function WorkbenchPrototype({
                   placeholder="描述主体、光线、材质与构图…"
                 />
                 <div className={styles.promptToolbar}>
-                  <button
+                  <RippleButton
                     type="button"
                     aria-pressed={hasRefImage}
                     className={`${styles.refAttachBtn} ${hasRefImage ? styles.refAttachActive : ''}`}
@@ -878,17 +879,17 @@ export function WorkbenchPrototype({
                   >
                     <Icon name="image" size={14} />
                     <span>{hasRefImage ? '已附 1 张参考图' : '+ 参考图'}</span>
-                  </button>
+                  </RippleButton>
                   <div className={styles.presetMiniRow}>
                     {MOCK_PROMPT_PRESETS.slice(0, 2).map((p) => (
-                      <button
+                      <RippleButton
                         key={p.label}
                         type="button"
                         className={styles.presetChip}
                         onClick={() => setPrompt(p.prompt)}
                       >
                         {p.label}
-                      </button>
+                      </RippleButton>
                     ))}
                   </div>
                 </div>
@@ -906,9 +907,9 @@ export function WorkbenchPrototype({
                       <strong>reference-still-life.webp</strong>
                       <span>图生图模式 · 1 / 16 张</span>
                     </div>
-                    <button type="button" onClick={() => setHasRefImage(false)} aria-label="移除参考图">
+                    <RippleButton type="button" onClick={() => setHasRefImage(false)} aria-label="移除参考图">
                       <Icon name="close" size={14} />
-                    </button>
+                    </RippleButton>
                   </div>
                 ) : null}
               </div>
@@ -975,7 +976,7 @@ export function WorkbenchPrototype({
     <div className={`${styles.frame} ${viewportMode === 'mobile' ? styles.frameMobile : ''}`}>
       {/* M3 Top App Bar + Desktop Primary Tabs */}
       <header className={styles.appHeader}>
-        <button
+        <RippleButton
           type="button"
           className={styles.appBrand}
           onClick={() => handleTabSwitch('workbench')}
@@ -987,7 +988,7 @@ export function WorkbenchPrototype({
             <strong>nanobanana</strong>
             <span className={styles.brandTag}>STUDIO</span>
           </div>
-        </button>
+        </RippleButton>
 
         <div className={styles.desktopNavHost}>
           <M3PrimaryTabs
@@ -1002,14 +1003,14 @@ export function WorkbenchPrototype({
         </div>
 
         <div className={styles.appHeaderRight}>
-          <button
+          <RippleButton
             type="button"
             className={styles.userPill}
             onClick={() => handleTabSwitch('account')}
             title="查看账号安全与日额度"
           >
             leon · 今日 12/50
-          </button>
+          </RippleButton>
         </div>
       </header>
 

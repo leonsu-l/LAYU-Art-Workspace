@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import type { Channel, ModelCatalog, Quota, Template } from '@nanobanana/shared/types/studio'
@@ -19,34 +18,10 @@ import {
   findSelectedEnabledIndex,
   type SelectOptionItem,
 } from '../../components/ui/selectNavigation'
+import { RippleButton, RippleOverlay } from './LabRipple'
+import rippleStyles from './LabRipple.module.css'
 import { SkeletonBlock } from './LabSkeleton'
 import styles from './LabControls.module.css'
-
-function RippleOverlay({
-  ripples,
-  onDone,
-}: {
-  ripples: ReturnType<typeof useRipple>['ripples']
-  onDone: (id: number) => void
-}) {
-  return (
-    <span className={styles.rippleLayer} aria-hidden="true">
-      {ripples.map((wave) => (
-        <span
-          key={wave.id}
-          className={styles.ripple}
-          style={{
-            width: `${wave.size}px`,
-            height: `${wave.size}px`,
-            left: `${wave.left}px`,
-            top: `${wave.top}px`,
-          }}
-          onAnimationEnd={() => onDone(wave.id)}
-        />
-      ))}
-    </span>
-  )
-}
 
 /* --------------------------------------------------------------------------
    1. Authentic M3 Expressive Select (faithful to m3_example.html language)
@@ -73,7 +48,6 @@ export function StudioSelect<T extends string>({
   const [activeIndex, setActiveIndex] = useState(() => findSelectedEnabledIndex(options, value))
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const { ripples, triggerRipple, dismissRipple } = useRipple(disabled)
 
   const current = options.find((opt) => opt.value === value)
 
@@ -98,7 +72,7 @@ export function StudioSelect<T extends string>({
 
   return (
     <div ref={rootRef} className={`${styles.selectRoot} ${open ? styles.selectOpen : ''}`}>
-      <button
+      <RippleButton
         ref={triggerRef}
         id={triggerId}
         type="button"
@@ -109,7 +83,6 @@ export function StudioSelect<T extends string>({
         aria-controls={listboxId}
         disabled={disabled}
         className={styles.selectTrigger}
-        onPointerDown={triggerRipple}
         onClick={() => {
           if (disabled) return
           if (!open) setActiveIndex(findSelectedEnabledIndex(options, value))
@@ -151,12 +124,11 @@ export function StudioSelect<T extends string>({
           }
         }}
       >
-        <RippleOverlay ripples={ripples} onDone={dismissRipple} />
         <span className={styles.selectValue}>{current?.label ?? '请选择'}</span>
         <span className={styles.selectChevron} aria-hidden="true">
           <Icon name="chevron-down" size={18} />
         </span>
-      </button>
+      </RippleButton>
 
       {open ? (
         <div id={listboxId} role="listbox" className={styles.selectMenu}>
@@ -200,7 +172,7 @@ function SelectOptionItemRow({
       role="option"
       aria-selected={selected}
       aria-disabled={disabled || undefined}
-      className={`${styles.selectOption} ${active ? styles.selectOptionActive : ''} ${disabled ? styles.selectOptionDisabled : ''}`}
+      className={`${rippleStyles.rippleHost} ${styles.selectOption} ${active ? styles.selectOptionActive : ''} ${disabled ? styles.selectOptionDisabled : ''}`}
       onPointerDown={(event) => {
         event.preventDefault()
         triggerRipple(event)
@@ -263,18 +235,15 @@ function ConnectedSegmentButton({
   label: string
   onClick: () => void
 }) {
-  const { ripples, triggerRipple, dismissRipple } = useRipple(false)
   return (
-    <button
+    <RippleButton
       type="button"
       aria-pressed={active}
       className={`${styles.connectedBtn} ${active ? styles.connectedBtnActive : ''}`}
-      onPointerDown={triggerRipple}
       onClick={onClick}
     >
-      <RippleOverlay ripples={ripples} onDone={dismissRipple} />
       <span className={styles.btnContent}>{label}</span>
-    </button>
+    </RippleButton>
   )
 }
 
@@ -329,22 +298,19 @@ function RatioTileItem({
   selected: boolean
   onSelect: () => void
 }) {
-  const { ripples, triggerRipple, dismissRipple } = useRipple(false)
   const maxSide = 16
   const scale = maxSide / Math.max(preset.w, preset.h)
   const boxW = Math.max(8, Math.round(preset.w * scale))
   const boxH = Math.max(8, Math.round(preset.h * scale))
 
   return (
-    <button
+    <RippleButton
       type="button"
       role="radio"
       aria-checked={selected}
       className={`${styles.ratioTile} ${selected ? styles.ratioTileActive : ''}`}
-      onPointerDown={triggerRipple}
       onClick={onSelect}
     >
-      <RippleOverlay ripples={ripples} onDone={dismissRipple} />
       <span className={styles.ratioPreviewSlot} aria-hidden="true">
         {preset.id === 'auto' ? (
           <Icon name="sparkles" size={15} />
@@ -356,7 +322,7 @@ function RatioTileItem({
         )}
       </span>
       <span className={styles.ratioLabel}>{preset.label}</span>
-    </button>
+    </RippleButton>
   )
 }
 
@@ -374,36 +340,29 @@ export function CountStepper({
   max?: number
   onChange: (next: number) => void
 }) {
-  const decRipple = useRipple(value <= min)
-  const incRipple = useRipple(value >= max)
-
   return (
     <div className={styles.stepper} role="group" aria-label="生成数量">
-      <button
+      <RippleButton
         type="button"
         className={`${styles.stepperBtn} ${styles.stepperStart}`}
         disabled={value <= min}
         aria-label="减少数量"
-        onPointerDown={decRipple.triggerRipple}
         onClick={() => onChange(Math.max(min, value - 1))}
       >
-        <RippleOverlay ripples={decRipple.ripples} onDone={decRipple.dismissRipple} />
         <span className={styles.btnContent}>−</span>
-      </button>
+      </RippleButton>
       <span className={styles.stepperValue} aria-live="polite">
         {value} 张
       </span>
-      <button
+      <RippleButton
         type="button"
         className={`${styles.stepperBtn} ${styles.stepperEnd}`}
         disabled={value >= max}
         aria-label="增加数量"
-        onPointerDown={incRipple.triggerRipple}
         onClick={() => onChange(Math.min(max, value + 1))}
       >
-        <RippleOverlay ripples={incRipple.ripples} onDone={incRipple.dismissRipple} />
         <span className={styles.btnContent}>+</span>
-      </button>
+      </RippleButton>
     </div>
   )
 }
@@ -428,8 +387,6 @@ export function M3SplitGenerateButton({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
-  const mainRipple = useRipple(disabled)
-  const sideRipple = useRipple(templates.length === 0)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -444,35 +401,31 @@ export function M3SplitGenerateButton({
 
   return (
     <div ref={wrapRef} className={styles.splitWrap}>
-      <button
+      <RippleButton
         type="button"
         className={styles.splitMain}
         disabled={disabled}
-        onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => mainRipple.triggerRipple(event)}
         onClick={onGenerate}
       >
-        <RippleOverlay ripples={mainRipple.ripples} onDone={mainRipple.dismissRipple} />
         <Icon name={busy ? 'loader' : 'sparkles'} size={18} className={busy ? styles.spin : ''} />
         <span className={styles.btnContent}>{label}</span>
-      </button>
-      <button
+      </RippleButton>
+      <RippleButton
         type="button"
         className={`${styles.splitSide} ${menuOpen ? styles.splitSideOpen : ''}`}
         aria-label="快捷套用参数模板"
         aria-expanded={menuOpen}
         disabled={templates.length === 0}
-        onPointerDown={sideRipple.triggerRipple}
         onClick={() => setMenuOpen((v) => !v)}
       >
-        <RippleOverlay ripples={sideRipple.ripples} onDone={sideRipple.dismissRipple} />
         <Icon name="chevron-down" size={18} className={menuOpen ? styles.splitChevronUp : ''} />
-      </button>
+      </RippleButton>
 
       {menuOpen ? (
         <div className={styles.splitMenu} role="menu" aria-label="快捷参数模板">
           <div className={styles.splitMenuLabel}>套用管理员预填模板</div>
           {templates.map((tpl) => (
-            <button
+            <RippleButton
               key={tpl.id}
               type="button"
               role="menuitem"
@@ -484,7 +437,7 @@ export function M3SplitGenerateButton({
             >
               <Icon name="sliders" size={14} />
               <span>{tpl.name}</span>
-            </button>
+            </RippleButton>
           ))}
         </div>
       ) : null}
@@ -527,7 +480,6 @@ export function ChannelModelBar({
   const [open, setOpen] = useState(false)
   const [scope, setScope] = useState<'shared' | 'private'>('shared')
   const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRipple = useRipple(false)
 
   const currentChannel = channels.find((item) => item.id === channelId)
   const activeScope = currentChannel?.scope ?? scope
@@ -557,14 +509,12 @@ export function ChannelModelBar({
 
   return (
     <div ref={containerRef} className={styles.channelBarRoot}>
-      <button
+      <RippleButton
         type="button"
         className={`${styles.channelTrigger} ${compact ? styles.channelTriggerCompact : ''} ${!currentChannel || !model ? styles.channelTriggerWarn : ''}`}
         aria-expanded={open}
-        onPointerDown={triggerRipple.triggerRipple}
         onClick={() => setOpen((prev) => !prev)}
       >
-        <RippleOverlay ripples={triggerRipple.ripples} onDone={triggerRipple.dismissRipple} />
         <span className={styles.channelTriggerLeading}>
           <span className={styles.channelAvatar} aria-hidden="true">
             <Icon name="sliders" size={16} />
@@ -592,7 +542,7 @@ export function ChannelModelBar({
             <Icon name="chevron-down" size={16} />
           </span>
         </span>
-      </button>
+      </RippleButton>
 
       {open ? (
         <div className={styles.channelPopover} role="dialog" aria-label="渠道、模型与参数模板设置">
@@ -601,9 +551,9 @@ export function ChannelModelBar({
               <strong>渠道与模型目录</strong>
               <span className={styles.popoverSub}>参数按「账号 + 渠道 + 模型」自动记忆</span>
             </div>
-            <button type="button" className={styles.popoverClose} onClick={() => setOpen(false)} aria-label="关闭">
+            <RippleButton type="button" className={styles.popoverClose} onClick={() => setOpen(false)} aria-label="关闭">
               <Icon name="close" size={15} />
-            </button>
+            </RippleButton>
           </div>
 
           <div className={styles.popoverSplit}>
@@ -683,7 +633,7 @@ export function ChannelModelBar({
                   {catalogModels.map((item) => {
                     const active = item.id === model
                     return (
-                      <button
+                      <RippleButton
                         key={item.id}
                         type="button"
                         aria-pressed={active}
@@ -692,7 +642,7 @@ export function ChannelModelBar({
                       >
                         {active ? <Icon name="check" size={14} /> : null}
                         <span>{item.name || item.id}</span>
-                      </button>
+                      </RippleButton>
                     )
                   })}
                   {catalogModels.length === 0 ? (
@@ -720,7 +670,7 @@ export function ChannelModelBar({
               <span className={styles.popoverLabel}>快速套用参数模板（不覆盖模型）</span>
               <div className={styles.templateRow}>
                 {matchingTemplates.map((tpl) => (
-                  <button
+                  <RippleButton
                     key={tpl.id}
                     type="button"
                     className={styles.templateBtn}
@@ -731,7 +681,7 @@ export function ChannelModelBar({
                   >
                     <Icon name="sliders" size={13} />
                     <span>{tpl.name}</span>
-                  </button>
+                  </RippleButton>
                 ))}
               </div>
             </div>
@@ -932,24 +882,21 @@ function PrimaryTabButton<T extends string>({
   setBtnRef: (el: HTMLButtonElement | null) => void
   setLabelRef: (el: HTMLSpanElement | null) => void
 }) {
-  const { ripples, triggerRipple, dismissRipple } = useRipple(false)
   return (
-    <button
+    <RippleButton
       ref={setBtnRef}
       type="button"
       role="tab"
       aria-selected={active}
       tabIndex={active ? 0 : -1}
       className={`${styles.primaryTabBtn} ${active ? styles.primaryTabBtnActive : ''}`}
-      onPointerDown={triggerRipple}
       onKeyDown={onKeyDown}
       onClick={onClick}
     >
-      <RippleOverlay ripples={ripples} onDone={dismissRipple} />
       <span ref={setLabelRef} className={styles.primaryTabLabel}>
         <span>{item.label}</span>
         {item.badge !== undefined ? <span className={styles.primaryTabBadge}>{item.badge}</span> : null}
       </span>
-    </button>
+    </RippleButton>
   )
 }

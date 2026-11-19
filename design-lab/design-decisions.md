@@ -67,6 +67,15 @@
   1. **Hover + Selected State Separation**: Scope unselected hover with `:hover:not(.galleryCardSelected)` (and `.filmCard:hover:not(.filmCardSelected)`), and introduce `--md-sys-color-secondary-container-hover` (`color-mix(in srgb, primary 12%, secondary-container)` `#C3D1FC` in light; `color-mix(in srgb, primary-container 24%, secondary-container)` `#324477` in dark) so hovered selected items remain blue and deepen subtly across both themes.
   2. **M3 Expressive Shimmer Skeleton Family (`LabSkeleton.tsx` / `LabSkeleton.module.css`)**: Implement GPU-composited (`translate3d`) Cobalt-tinted tonal shimmer skeletons (`SkeletonBlock`, `SkeletonTextStack`, `ShimmerImage`, `ConnectedRatioSkeleton`, `SplitCtaSkeleton`) matching M3 shape scales (circular avatars, pill text bars, M3 filled fields, connected matrices, Split CTAs, and `4:3` media frames with `prefers-reduced-motion` fallback), covering all 5 Design Lab pages, `ChannelModelBar` catalog discovery, and interactive Component Sandbox previews.
 
+## Decision: Unified Shared Ripple Surface & Button Reuse (`dec-008-unified-m3-ripple-button-reuse`)
+
+- **Date:** 2026-11-19
+- **Scope:** global / all clickable interactive surfaces in Design Lab
+- **Status:** accepted (pending Stage 6 production integration approval)
+- **Context:** Previously, only a subset of controls in `LabControls.tsx` rendered M3 radial pointer ripples by manually duplicating `useRipple`, `<RippleOverlay>`, and CSS keyframes, leaving shell toggles, snackbars, gallery cards/actions, lightbox buttons, channel items, auth controls, and admin buttons without ripples.
+- **Decision:** Centralize `RippleOverlay` and `RippleButton` in `apps/web/src/design-lab/components/LabRipple.tsx` + `LabRipple.module.css` reusing the shared `useRipple` hook (`apps/web/src/components/ui/useRipple.ts`), remove the duplicated ripple JSX/CSS from `LabControls.tsx`/`LabControls.module.css`, use zero-specificity `:where(.rippleHost)` so absolute/custom-positioned buttons (e.g. password toggle) stay intact, and replace every interactive `<button>` across `DesignLabApp`, `LabControls`, `LabSnackbar`, `WorkbenchPrototypes`, and `MultiPagePrototypes` (with `rippleTone="light"` for gallery artwork thumbnails).
+
+
 
 
 

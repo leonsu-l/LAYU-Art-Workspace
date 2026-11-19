@@ -22,4 +22,7 @@
   - **图库清理与选框修正**：移除前端旧版浏览器图库兼容提示与筛选（仅保留后端云端作品与整组联删说明）；选中框改为静态 `20px` 圆角配 `1px` 渐入淡出边框及 `22×22` 居中勾选符号。
   - **统一 M3 Snackbar 反馈**：将各页操作成功、刷新、模板应用、警告与任务详情迁入底部反转表面浮动条（展开大图预览时自动上避底栏），阻断性提示与强制改密规则保留内联。
   - **沉浸式图库预览与应用级缩放动效**：重构全屏磨砂浮层预览（顶部胶囊控制条 + 底部可收起提示词停靠栏，支持点击/键盘隐藏浮层）；通过 `lightboxTransition.ts`（`buildContainerMorphKeyframes`）驱动 28 帧非匀速解耦曲线与抛物线轨迹（`340ms` 展开 / `260ms` 实时追踪 `←` `→` 后当前卡片或原卡片槽位收回），消除关闭后全屏闪回并支持开关/切换途中随时打断。
+  - **图库 Hover + 选中状态叠加修正**：以 `:hover:not(.galleryCardSelected)`（同步修复工作台 `.filmCard`）与 `--md-sys-color-secondary-container-hover`（浅色 `#C3D1FC` / 深色 `#324477`）解决选中态被未选中 Hover 色覆盖问题，实现 Hover + 选中时蓝色略微加深。
+  - **M3 Expressive Shimmer Skeleton 占位体系**：新增 `LabSkeleton.tsx` 与 `ShimmerImage`，以 GPU 合成的 `translate3d` 钴蓝微光扫掠按 M3 形态尺度占位（圆形、胶囊文本、填充输入框、6 联比例矩阵、Split CTA 与 `4:3` 媒体框，含 `prefers-reduced-motion` 降级），覆盖全部 5 页数据/图片加载态、模型目录刷新与组件沙盒第 7 面板。
+  - **全局可复用点击晕开效果**：新建 `LabRipple.tsx`（`RippleButton` + `RippleOverlay`）统一复用 `useRipple.ts` 并清除 `LabControls` 中的重复实现，通过 `:where(.rippleHost)` 为全站所有按钮、列表卡片、缩略图（白色微光）、LightBox 控制条、Snackbar 与密码显隐开关提供一致的 M3 点击涟漪反馈。
 - **Stage 5–6（当前状态：待评审后落入生产）**：仍隔离于 `apps/web/src/design-lab/`，现有生产代码保持零入侵；获批后即可按「共用顶栏与令牌 → `/` 工作台 → 其余 4 页」顺序推进生产集成。

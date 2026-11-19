@@ -3,31 +3,7 @@
    Tonal elevation, connected shape morphing, state layers, and ripples
    ========================================================================== */
 
-/* ---- Shared Ripple Layer ------------------------------------------------ */
-.rippleLayer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.ripple {
-  position: absolute;
-  border-radius: 50%;
-  background-color: currentColor;
-  pointer-events: none;
-  transform: scale(0);
-  opacity: 0;
-  animation: m3-ripple 520ms var(--md-sys-motion-easing-standard) forwards;
-}
-
-@keyframes m3-ripple {
-  0% { transform: scale(0); opacity: 0.11; }
-  55% { opacity: 0.06; }
-  100% { transform: scale(1); opacity: 0; }
-}
-
+/* ---- Shared Content Elevation ----------------------------------------- */
 .btnContent {
   position: relative;
   z-index: 1;

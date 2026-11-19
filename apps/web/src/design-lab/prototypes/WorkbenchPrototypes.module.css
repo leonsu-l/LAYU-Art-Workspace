@@ -42,8 +42,10 @@
   gap: 10px;
   flex-shrink: 0;
   border: none;
+  border-radius: var(--md-sys-shape-corner-medium);
   background: transparent;
-  padding: 0;
+  padding: 4px 8px;
+  margin-left: -8px;
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -909,7 +911,7 @@
   font-size: 12.5px;
 }
 
-.starterCard span {
+.starterCard > span:not([data-ripple-layer]) {
   font-size: 11px;
   color: var(--md-sys-color-on-surface-variant);
   line-height: 1.45;

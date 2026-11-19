@@ -48,6 +48,14 @@
       "notes": "GPU-composited Cobalt-tinted tonal shimmer blocks, progressive ShimmerImage crossfade reveal, and page-matching skeletons across all 5 routes."
     },
     {
+      "id": "lab-ripple",
+      "name": "Unified M3 RippleButton & RippleOverlay",
+      "kind": "component",
+      "status": "experimental",
+      "location": "apps/web/src/design-lab/components/LabRipple.tsx",
+      "notes": "Shared ripple surface and drop-in RippleButton reusing useRipple across all clickable controls, tabs, snackbars, cards, thumbnails, and lightbox HUD buttons."
+    },
+    {
       "id": "lab-workbench",
       "name": "Page 1: Creative Workbench Prototype (/)",
       "kind": "page",
@@ -88,7 +96,8 @@
     "Select Direction A (Cobalt Studio); discard Direction B",
     "Design all 5 application pages matching the Direction A M3 Expressive system",
     "Keep selected gallery items blue and slightly deepen blue when hovered+selected instead of reverting to unselected hover surface",
-    "Use Material 3 Expressive Shimmer Skeleton Loading placeholders whenever elements or images have not finished loading"
+    "Use Material 3 Expressive Shimmer Skeleton Loading placeholders whenever elements or images have not finished loading",
+    "Apply consistent radial click/tap ripple feedback across all interactive clickable elements while reusing a shared implementation"
   ],
   "decisions": [
     "dec-001-design-lab-isolation",
@@ -97,11 +106,12 @@
     "dec-004-m3-primary-tabs-and-swipe-pager",
     "dec-005-m3-snackbar-feedback",
     "dec-006-gallery-immersive-launch-transition",
-    "dec-007-gallery-selected-hover-and-m3-shimmer-skeleton"
+    "dec-007-gallery-selected-hover-and-m3-shimmer-skeleton",
+    "dec-008-unified-m3-ripple-button-reuse"
   ],
   "openQuestions": [
     "Approve the 5-page M3 Expressive prototypes under Direction A so Stage 6 production integration can begin (shared header + tokens + Workbench /, followed by Gallery, Channels, Account, and Admin)?"
   ],
   "nextSuggestedAction": "Verify all 5 pages in /design-lab.html (desktop + 390px mobile, light + dark) and await user confirmation for Stage 6 production integration.",
-  "updatedAt": "2026-11-19T16:32:00+08:00"
+  "updatedAt": "2026-11-19T17:15:00+08:00"
 }
