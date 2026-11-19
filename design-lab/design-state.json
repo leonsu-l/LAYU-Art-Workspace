@@ -4,7 +4,7 @@
   "activeTask": "Multi-page Material 3 Expressive design system (Direction A selected)",
   "currentFocus": "multi-page-review",
   "designDirection": {
-    "summary": "Selected Direction A (Cobalt Studio): authentic Material 3 Expressive across all 5 application pages with 5-level cool slate tonal surfaces (zero 1px border cages), Cobalt Primary + Muted Blue Secondary Container + Warm Amber Tertiary Container, connected button groups with overshoot-safe shape morphing, M3 Split CTA, radial ripples, and tonal filled StudioSelect.",
+    "summary": "Selected Direction A (Cobalt Studio): authentic Material 3 Expressive across all 5 application pages with 5-level cool slate tonal surfaces (zero 1px border cages), Cobalt Primary + Muted Blue Secondary Container + Warm Amber Tertiary Container, connected button groups with overshoot-safe shape morphing, M3 Split CTA, radial ripples, tonal filled StudioSelect, and Cobalt-tinted M3 Expressive Shimmer Skeleton Loading.",
     "tokenFiles": [
       "apps/web/src/design-lab/tokens.module.css"
     ],
@@ -29,7 +29,7 @@
       "kind": "token-set",
       "status": "approved",
       "location": "apps/web/src/design-lab/tokens.module.css",
-      "notes": "Light & dark M3 tonal neutral ladder + Cobalt/Amber color roles for Direction A; Direction B pruned."
+      "notes": "Light & dark M3 tonal neutral ladder + Cobalt/Amber color roles + secondary-container hover and shimmer skeleton tokens for Direction A."
     },
     {
       "id": "lab-components",
@@ -37,7 +37,23 @@
       "kind": "composition",
       "status": "experimental",
       "location": "apps/web/src/design-lab/components/LabControls.tsx",
-      "notes": "ChannelModelBar popover, RatioTileSelector, SegmentedRail, CountStepper, M3SplitGenerateButton, and StudioSelect with ripple and outer-corner clamp fix."
+      "notes": "ChannelModelBar popover (with catalog loading skeleton), RatioTileSelector, SegmentedRail, CountStepper, M3SplitGenerateButton, and StudioSelect with ripple and outer-corner clamp fix."
+    },
+    {
+      "id": "lab-skeleton",
+      "name": "M3 Expressive Shimmer Skeleton Loading System",
+      "kind": "component",
+      "status": "experimental",
+      "location": "apps/web/src/design-lab/components/LabSkeleton.tsx",
+      "notes": "GPU-composited Cobalt-tinted tonal shimmer blocks, progressive ShimmerImage crossfade reveal, and page-matching skeletons across all 5 routes."
+    },
+    {
+      "id": "lab-ripple",
+      "name": "Unified M3 RippleButton & RippleOverlay",
+      "kind": "component",
+      "status": "experimental",
+      "location": "apps/web/src/design-lab/components/LabRipple.tsx",
+      "notes": "Shared ripple surface and drop-in RippleButton reusing useRipple across all clickable controls, tabs, snackbars, cards, thumbnails, and lightbox HUD buttons."
     },
     {
       "id": "lab-workbench",
@@ -45,7 +61,7 @@
       "kind": "page",
       "status": "experimental",
       "location": "apps/web/src/design-lab/prototypes/WorkbenchPrototypes.tsx",
-      "notes": "Direction A left rail + right canvas with scenario switching, mobile nav strip, and light/dark preview."
+      "notes": "Direction A left rail + right canvas with scenario switching (including loading skeleton), mobile nav strip, and light/dark preview."
     },
     {
       "id": "lab-multi-page",
@@ -53,7 +69,7 @@
       "kind": "page",
       "status": "experimental",
       "location": "apps/web/src/design-lab/prototypes/MultiPagePrototypes.tsx",
-      "notes": "Full Direction A M3 Expressive designs for /gallery, /channels, /login & /password, and /admin (all 6 tabs)."
+      "notes": "Full Direction A M3 Expressive designs for /gallery (with hover+selected blue deepen fix & shimmer image/grid skeletons), /channels, /login & /password, and /admin (all 6 tabs)."
     }
   ],
   "experiments": [
@@ -78,7 +94,10 @@
     "Adopt authentic Material 3 Expressive (tonal surface elevation, connected groups, shape morphing, split CTA, ripples)",
     "Keep outer corners smooth without radius overshoot clipping during connected-group selection switches",
     "Select Direction A (Cobalt Studio); discard Direction B",
-    "Design all 5 application pages matching the Direction A M3 Expressive system"
+    "Design all 5 application pages matching the Direction A M3 Expressive system",
+    "Keep selected gallery items blue and slightly deepen blue when hovered+selected instead of reverting to unselected hover surface",
+    "Use Material 3 Expressive Shimmer Skeleton Loading placeholders whenever elements or images have not finished loading",
+    "Apply consistent radial click/tap ripple feedback across all interactive clickable elements while reusing a shared implementation"
   ],
   "decisions": [
     "dec-001-design-lab-isolation",
@@ -86,11 +105,13 @@
     "dec-003-direction-a-and-multipage-system",
     "dec-004-m3-primary-tabs-and-swipe-pager",
     "dec-005-m3-snackbar-feedback",
-    "dec-006-gallery-immersive-launch-transition"
+    "dec-006-gallery-immersive-launch-transition",
+    "dec-007-gallery-selected-hover-and-m3-shimmer-skeleton",
+    "dec-008-unified-m3-ripple-button-reuse"
   ],
   "openQuestions": [
     "Approve the 5-page M3 Expressive prototypes under Direction A so Stage 6 production integration can begin (shared header + tokens + Workbench /, followed by Gallery, Channels, Account, and Admin)?"
   ],
   "nextSuggestedAction": "Verify all 5 pages in /design-lab.html (desktop + 390px mobile, light + dark) and await user confirmation for Stage 6 production integration.",
-  "updatedAt": "2026-11-19T02:00:00+08:00"
+  "updatedAt": "2026-11-19T17:15:00+08:00"
 }

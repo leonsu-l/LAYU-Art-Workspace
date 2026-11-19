@@ -248,13 +248,17 @@
   transition: opacity 180ms var(--md-sys-motion-easing-standard);
 }
 
-.galleryCard:hover {
+.galleryCard:hover:not(.galleryCardSelected) {
   background-color: var(--md-sys-color-surface-container);
 }
 
 .galleryCardSelected {
   background-color: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
+}
+
+.galleryCard.galleryCardSelected:hover {
+  background-color: var(--md-sys-color-secondary-container-hover);
 }
 
 .galleryCardSelected::after {
@@ -296,20 +300,23 @@
   border: 1.5px solid var(--md-sys-color-outline);
   border-radius: 7px;
   background-color: transparent;
-  color: var(--md-sys-color-on-primary);
+  color: var(--md-sys-color-primary);
   cursor: pointer;
   transition:
     background-color 180ms var(--md-sys-motion-easing-standard),
-    border-color 180ms var(--md-sys-motion-easing-standard);
+    border-color 180ms var(--md-sys-motion-easing-standard),
+    color 180ms var(--md-sys-motion-easing-standard);
 }
 
 .cardCheckBtnActive {
   border-color: var(--md-sys-color-primary);
   background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 .checkGlyph {
   display: block;
+  color: var(--md-sys-color-on-primary);
   opacity: 0;
   transition: opacity 160ms var(--md-sys-motion-easing-standard);
 }
@@ -343,6 +350,7 @@
 
 .thumbOverlay {
   position: absolute;
+  z-index: 2;
   inset: auto 8px 8px auto;
   display: inline-flex;
   align-items: center;
@@ -419,6 +427,11 @@
 
 .cardGhostBtn {
   flex: 1;
+  transition: background-color 140ms var(--md-sys-motion-easing-standard);
+}
+
+.cardGhostBtn:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
 }
 
 .cardDangerBtn {
@@ -695,7 +708,7 @@
     font-size: 11px;
   }
 
-  .hudDownloadBtn span {
+  .hudDownloadBtn > span:not([data-ripple-layer]) {
     display: none;
   }
 
@@ -1335,6 +1348,25 @@
   .authFormPane {
     padding: 18px 16px;
   }
+}
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skeletonBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.skeletonListStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 @media (max-width: 880px) {

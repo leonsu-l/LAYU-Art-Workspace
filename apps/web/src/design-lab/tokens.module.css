@@ -48,6 +48,7 @@
   --md-sys-color-secondary: #535D78;
   --md-sys-color-on-secondary: #FFFFFF;
   --md-sys-color-secondary-container: #D8E2FF;
+  --md-sys-color-secondary-container-hover: color-mix(in srgb, var(--md-sys-color-primary) 12%, var(--md-sys-color-secondary-container));
   --md-sys-color-on-secondary-container: #101B32;
 
   --md-sys-color-tertiary: #8D4900;
@@ -67,6 +68,11 @@
   --md-sys-color-surface-container: #E9EDF5;
   --md-sys-color-surface-container-high: #E0E5F0;
   --md-sys-color-surface-container-highest: #D6DCE9;
+
+  --md-sys-color-skeleton-base: #D3DAE8;
+  --md-sys-color-skeleton-subtle: #E3E9F4;
+  --md-sys-color-skeleton-sheen: rgba(255, 255, 255, 0.88);
+  --md-sys-color-skeleton-tint: rgba(39, 84, 230, 0.11);
 
   --md-sys-color-on-surface: #181B22;
   --md-sys-color-on-surface-variant: #444752;
@@ -92,6 +98,7 @@
   --md-sys-color-secondary: #BCC6E4;
   --md-sys-color-on-secondary: #263047;
   --md-sys-color-secondary-container: #3D465F;
+  --md-sys-color-secondary-container-hover: color-mix(in srgb, var(--md-sys-color-primary-container) 24%, var(--md-sys-color-secondary-container));
   --md-sys-color-on-secondary-container: #D8E2FF;
 
   --md-sys-color-tertiary: #FFB780;
@@ -111,6 +118,11 @@
   --md-sys-color-surface-container: #1E222B;
   --md-sys-color-surface-container-high: #282D39;
   --md-sys-color-surface-container-highest: #333847;
+
+  --md-sys-color-skeleton-base: #282D39;
+  --md-sys-color-skeleton-subtle: #1F242E;
+  --md-sys-color-skeleton-sheen: rgba(182, 196, 255, 0.17);
+  --md-sys-color-skeleton-tint: rgba(227, 229, 236, 0.08);
 
   --md-sys-color-on-surface: #E3E5EC;
   --md-sys-color-on-surface-variant: #C4C7D3;

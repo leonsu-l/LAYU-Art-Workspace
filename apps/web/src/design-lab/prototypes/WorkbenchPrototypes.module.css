@@ -42,8 +42,10 @@
   gap: 10px;
   flex-shrink: 0;
   border: none;
+  border-radius: var(--md-sys-shape-corner-medium);
   background: transparent;
-  padding: 0;
+  padding: 4px 8px;
+  margin-left: -8px;
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -395,6 +397,13 @@
   padding: 8px 10px;
   border-radius: var(--md-sys-shape-corner-medium);
   background-color: var(--md-sys-color-surface-container);
+}
+
+.refMiniThumb {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--md-sys-shape-corner-small);
 }
 
 .refMiniStrip img {
@@ -782,26 +791,38 @@
   place-items: center;
   aspect-ratio: 4 / 3;
   border-radius: var(--md-sys-shape-corner-large);
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--md-sys-color-skeleton-base);
   overflow: hidden;
 }
 
 .developingShimmer {
   position: absolute;
   inset: 0;
+  transform: translate3d(-115%, 0, 0);
   background: linear-gradient(
-    110deg,
-    transparent 24%,
-    color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent) 50%,
-    transparent 76%
+    108deg,
+    transparent 14%,
+    var(--md-sys-color-skeleton-tint) 36%,
+    var(--md-sys-color-skeleton-sheen) 50%,
+    var(--md-sys-color-skeleton-tint) 64%,
+    transparent 86%
   );
-  background-size: 200% 100%;
-  animation: m3-sweep 1.8s linear infinite;
+  animation: m3-sweep 1.65s var(--md-sys-motion-easing-standard) infinite;
+  will-change: transform;
 }
 
 @keyframes m3-sweep {
-  from { background-position: 160% 0; }
-  to { background-position: -60% 0; }
+  0% { transform: translate3d(-115%, 0, 0); }
+  74%,
+  100% { transform: translate3d(118%, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .developingShimmer {
+    animation: none;
+    transform: none;
+    opacity: 0;
+  }
 }
 
 .developingLabel {
@@ -890,7 +911,7 @@
   font-size: 12.5px;
 }
 
-.starterCard span {
+.starterCard > span:not([data-ripple-layer]) {
   font-size: 11px;
   color: var(--md-sys-color-on-surface-variant);
   line-height: 1.45;
@@ -938,7 +959,7 @@
     background-color 140ms var(--md-sys-motion-easing-standard);
 }
 
-.filmCard:hover {
+.filmCard:hover:not(.filmCardSelected) {
   background-color: var(--md-sys-color-surface-container-highest);
 }
 
@@ -947,6 +968,10 @@
   background-color: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
   box-shadow: inset 0 0 0 2px var(--md-sys-color-primary);
+}
+
+.filmCard.filmCardSelected:hover {
+  background-color: var(--md-sys-color-secondary-container-hover);
 }
 
 .filmThumb {
@@ -1084,6 +1109,36 @@
   .emptyStarterGrid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skeletonBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.skeletonCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.skeletonRailCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container);
 }
 
 @media (max-width: 980px) {

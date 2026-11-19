@@ -49,7 +49,8 @@ public class ImageStorage {
         this.directory = dataDirectory.toAbsolutePath().normalize().resolve("images").normalize();
     }
 
-    public List<ImageRecord> save(ProviderResult result, String prompt, String taskId) {
+    public List<ImageRecord> writeResult(ProviderResult result, String prompt, String taskId,
+                                         java.util.function.BiConsumer<ImageRecord, byte[]> writer) {
         if (result == null || result.images() == null || result.images().isEmpty() || result.images().size() > 10) {
             throw badResponse("供应商图片数量无效。");
         }
@@ -61,27 +62,24 @@ public class ImageStorage {
             throw badResponse("任务 ID 无效。");
         }
         List<ImageRecord> saved = new ArrayList<>();
-        List<Path> written = new ArrayList<>();
+        for (GeneratedImage image : result.images()) {
+            byte[] bytes = resolveImage(image);
+            Format format = identify(bytes);
+            String id = UUID.randomUUID().toString();
+            String filename = taskUuid + "_" + id + "." + format.extension;
+            ImageRecord record = new ImageRecord(id, result.createdAt(), result.provider(), result.model(), prompt,
+                    format.mime, bytes.length, PREFIX + filename, null, null);
+            writer.accept(record, bytes);
+            saved.add(record);
+        }
+        return List.copyOf(saved);
+    }
+
+    public void writeLocal(String url, byte[] bytes) {
         try {
             Files.createDirectories(directory);
-            for (GeneratedImage image : result.images()) {
-                byte[] bytes = resolveImage(image);
-                Format format = identify(bytes);
-                String id = UUID.randomUUID().toString();
-                String filename = taskUuid + "_" + id + "." + format.extension;
-                Path target = checkedPath(PREFIX + filename);
-                ImageRecord record = new ImageRecord(id, result.createdAt(), result.provider(), result.model(), prompt,
-                        format.mime, bytes.length, PREFIX + filename);
-                writeAtomically(target, bytes);
-                written.add(target);
-                saved.add(record);
-            }
-            return List.copyOf(saved);
-        } catch (ApiException exception) {
-            rollback(written);
-            throw exception;
-        } catch (Exception exception) {
-            rollback(written);
+            writeAtomically(checkedPath(url), bytes);
+        } catch (IOException exception) {
             throw new ApiException("STORAGE", "图片保存失败。", 500, false);
         }
     }
@@ -95,16 +93,34 @@ public class ImageStorage {
         }
     }
 
-    public void remove(List<ImageRecord> images) {
-        if (images == null) return;
-        List<Path> paths = images.stream().map(image -> checkedPath(image.url())).toList();
-        for (Path path : paths) {
-            try {
-                Files.deleteIfExists(path);
-            } catch (IOException exception) {
-                throw new ApiException("STORAGE", "图片删除失败。", 500, false);
-            }
+    public void remove(String url) {
+        try {
+            Files.deleteIfExists(checkedPath(url));
+        } catch (IOException exception) {
+            throw new ApiException("STORAGE", "图片删除失败。", 500, false);
         }
+    }
+
+    String filename(String url) { return checkedPath(url).getFileName().toString(); }
+
+    // Only used when the database cannot journal a local write after a paid provider call.
+    // The empty marker identifies an exact candidate for recovery without scanning the gallery.
+    private Path markers() { return directory.resolveSibling("pending-local"); }
+    void markLocal(String url) {
+        try {
+            Files.createDirectories(markers());
+            Files.createFile(markers().resolve(filename(url)));
+        } catch (IOException e) { throw new ApiException("STORAGE", "无法登记图片写入。", 500, false); }
+    }
+    List<String> markedLocal() {
+        if (Files.notExists(markers())) return List.of();
+        try (var files = Files.list(markers())) {
+            return files.map(path -> PREFIX + path.getFileName()).toList();
+        } catch (IOException e) { throw new ApiException("STORAGE", "无法读取图片恢复记录。", 500, true); }
+    }
+    void unmarkLocal(String url) {
+        try { Files.deleteIfExists(markers().resolve(filename(url))); }
+        catch (IOException e) { throw new ApiException("STORAGE", "无法清理图片恢复记录。", 500, true); }
     }
 
     private Path checkedPath(String url) {
@@ -153,12 +169,6 @@ public class ImageStorage {
             moved = true;
         } finally {
             if (!moved) Files.deleteIfExists(temp);
-        }
-    }
-
-    private static void rollback(List<Path> paths) {
-        for (Path path : paths) {
-            try { Files.deleteIfExists(path); } catch (IOException ignored) { }
         }
     }
 

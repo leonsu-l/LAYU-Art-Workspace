@@ -45,6 +45,10 @@
 - GET `/admin/usage` -> `{users:[{userId,username,total,succeeded,failed,active}],channels:[{channelId,name,total,succeeded,failed,active}],tasks:[{id,userId,username,channelId,status,createdAt}]}`。最多100条最近任务，无prompt/图片/密钥；用户删任务不会抹去用量计数。
 - 站内任务额度：受理预占；任何失败全额返还、重复处理不重复退款；成功任务删除不返还。按Asia/Shanghai统计，失败撤销所属日的扣额，不变成另一日的额外额度。任务未发送即可取消退款，已发送允许收尾。
 
+## 图片保留、存储与运行问题
+
+本地/R2 路由、图库和任务的有效期字段、管理员存储设置、桶用量和问题日志，见[图片存储前端委派文档](<IMAGE_STORAGE_FRONTEND_HANDOFF.md>)。存储设置不会改变 `/admin/settings` 的额度接口。
+
 ## 前端实现边界
 
 保留当前未提交的M3风格、主题、工作台和图库布局；这是业务适配不是重新视觉设计。一级站点默认/自定义，协议在下方。加入登录注册/强制改密、管理员用户/邀请码/共享渠道/模板/额度/使用量界面。移除旧浏览器密钥配置；清理只限本应用旧key，不能localStorage.clear或清其他站点数据。待确认提交按用户隔离，保留同UUID恢复/冻结请求行为，429也是明确未受理可解除待确认；网络500等结果未知仍需查询。注销要清除内存任务/参考图/缓存并取消旧请求，跨账号不得看到旧画面或前一个账号待确认记录。生成请求预览只展示应用API或脱敏配置，绝不伪造/展示共享密钥。

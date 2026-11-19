@@ -17,6 +17,13 @@ import {
   SegmentedRail,
   StudioSelect,
 } from '../components/LabControls'
+import { RippleButton } from '../components/LabRipple'
+import {
+  ConnectedRatioSkeleton,
+  ShimmerImage,
+  SkeletonBlock,
+  SplitCtaSkeleton,
+} from '../components/LabSkeleton'
 import type { SnackbarPayload } from '../components/useSnackbar'
 import {
   MOCK_ARTWORKS,
@@ -32,12 +39,20 @@ import {
   AdminPrototype,
   ChannelsPrototype,
   GalleryPrototype,
+  type LabLoadMode,
   type LabPageRoute,
 } from './MultiPagePrototypes'
 import styles from './WorkbenchPrototypes.module.css'
 
-export type { LabPageRoute }
-export type LabScenario = 'succeeded' | 'multi' | 'generating' | 'blocker' | 'recovery' | 'empty'
+export type { LabLoadMode, LabPageRoute }
+export type LabScenario =
+  | 'succeeded'
+  | 'multi'
+  | 'generating'
+  | 'loading'
+  | 'blocker'
+  | 'recovery'
+  | 'empty'
 
 export interface LabPageTransition {
   fromPage: LabPageRoute
@@ -50,6 +65,7 @@ interface WorkbenchPrototypeProps {
   activePage: LabPageRoute
   pageTransition?: LabPageTransition | null
   scenario: LabScenario
+  loadMode?: LabLoadMode
   viewportMode: 'desktop' | 'mobile'
   onPageChange: (page: LabPageRoute, enterOffsetX?: number) => void
   onScenarioChange: (scenario: LabScenario) => void
@@ -86,6 +102,7 @@ export function WorkbenchPrototype({
   activePage,
   pageTransition = null,
   scenario,
+  loadMode = 'ready',
   viewportMode,
   onPageChange,
   onScenarioChange,
@@ -183,7 +200,7 @@ export function WorkbenchPrototype({
             断线前提交的任务 <code>9f4a81d2-7b30-4e92</code> 尚未确认接收，重试仅使用同一 ID。
           </p>
           <div className={styles.recoveryActions}>
-            <button
+            <RippleButton
               type="button"
               className={styles.recoveryBtnPrimary}
               onClick={() => {
@@ -195,8 +212,8 @@ export function WorkbenchPrototype({
               }}
             >
               恢复 / 重试同一请求
-            </button>
-            <button
+            </RippleButton>
+            <RippleButton
               type="button"
               className={styles.recoveryBtnTonal}
               onClick={() => {
@@ -208,7 +225,7 @@ export function WorkbenchPrototype({
               }}
             >
               刷新状态
-            </button>
+            </RippleButton>
           </div>
         </div>
       )
@@ -270,7 +287,7 @@ export function WorkbenchPrototype({
 
           {activeImages.length > 0 ? (
             <div className={styles.stageBarActions}>
-              <button
+              <RippleButton
                 type="button"
                 className={styles.stageTonalBtn}
                 onClick={() =>
@@ -279,8 +296,8 @@ export function WorkbenchPrototype({
               >
                 <Icon name="download" size={14} />
                 <span>下载原图</span>
-              </button>
-              <button
+              </RippleButton>
+              <RippleButton
                 type="button"
                 className={styles.stageTextBtn}
                 onClick={() => {
@@ -290,7 +307,7 @@ export function WorkbenchPrototype({
               >
                 <Icon name="close" size={14} />
                 <span>清空</span>
-              </button>
+              </RippleButton>
             </div>
           ) : null}
         </div>
@@ -316,7 +333,7 @@ export function WorkbenchPrototype({
               <p>从下方挑一个创作灵感快速填入，或在左侧输入描述；多张结果将直接在这里对照显影。</p>
               <div className={styles.emptyStarterGrid}>
                 {MOCK_PROMPT_PRESETS.map((preset) => (
-                  <button
+                  <RippleButton
                     key={preset.label}
                     type="button"
                     className={styles.starterCard}
@@ -327,15 +344,21 @@ export function WorkbenchPrototype({
                   >
                     <strong>{preset.label}</strong>
                     <span>{preset.prompt.slice(0, 32)}…</span>
-                  </button>
+                  </RippleButton>
                 ))}
               </div>
             </div>
           ) : (
             <div className={activeImages.length > 1 ? styles.multiGrid : styles.singleLightbox}>
-              {activeImages.map((img) => (
+              {activeImages.map((img, idx) => (
                 <figure key={img.label} className={styles.artworkFigure}>
-                  <img src={img.src} alt={img.label} />
+                  <ShimmerImage
+                    src={img.src}
+                    alt={img.label}
+                    aspectRatio="4 / 3"
+                    iconSize={26}
+                    staggerIndex={idx}
+                  />
                   <figcaption className={styles.artworkCaption}>
                     <span>{img.label}</span>
                     <span>{img.size}</span>
@@ -357,7 +380,7 @@ export function WorkbenchPrototype({
               const selected = task.id === selectedTaskId
               const thumb = task.result?.images[0]?.url
               return (
-                <button
+                <RippleButton
                   key={task.id}
                   type="button"
                   aria-pressed={selected}
@@ -382,7 +405,7 @@ export function WorkbenchPrototype({
                 >
                   <span className={styles.filmThumb}>
                     {thumb ? (
-                      <img src={thumb} alt="" />
+                      <ShimmerImage src={thumb} alt="" aspectRatio="1 / 1" iconSize={14} />
                     ) : (
                       <Icon
                         name={task.status === 'running' ? 'loader' : 'alert-circle'}
@@ -401,7 +424,7 @@ export function WorkbenchPrototype({
                     </strong>
                     <span>{task.prompt}</span>
                   </span>
-                </button>
+                </RippleButton>
               )
             })}
           </div>
@@ -461,7 +484,7 @@ export function WorkbenchPrototype({
           ) : (
             <div className={styles.fieldGroup}>
               <span className={styles.fieldTitle}>输出模式</span>
-              <button
+              <RippleButton
                 type="button"
                 aria-pressed={imageOnly}
                 className={`${styles.toggleChip} ${imageOnly ? styles.toggleChipActive : ''}`}
@@ -469,12 +492,12 @@ export function WorkbenchPrototype({
               >
                 <Icon name={imageOnly ? 'check' : 'image'} size={15} />
                 <span>{imageOnly ? '仅输出图片' : '图文混合'}</span>
-              </button>
+              </RippleButton>
             </div>
           )}
         </div>
 
-        <button
+        <RippleButton
           type="button"
           className={styles.advancedToggle}
           aria-expanded={showAdvanced}
@@ -482,7 +505,7 @@ export function WorkbenchPrototype({
         >
           <span>高级参数（输出格式 · 背景 · 审核）</span>
           <Icon name="chevron-down" size={16} className={showAdvanced ? styles.rotated : ''} />
-        </button>
+        </RippleButton>
 
         {showAdvanced ? (
           <div className={styles.advancedPanel}>
@@ -675,6 +698,146 @@ export function WorkbenchPrototype({
 
   function renderPageBody(pageId: LabPageRoute) {
     if (pageId === 'workbench') {
+      if (scenario === 'loading') {
+        return (
+          <div className={styles.proLayout} role="status" aria-busy="true" aria-label="正在加载工作台">
+            <aside className={styles.proRail} aria-hidden="true">
+              <div className={styles.proRailScroll}>
+                <div className={styles.skeletonRailCard}>
+                  <SkeletonBlock
+                    variant="rect"
+                    width={34}
+                    height={34}
+                    radius="var(--md-sys-shape-corner-medium)"
+                  />
+                  <div className={styles.skeletonCol}>
+                    <SkeletonBlock variant="text" width="46%" height={11} />
+                    <SkeletonBlock variant="text" width="76%" height={14} staggerIndex={1} />
+                  </div>
+                  <SkeletonBlock variant="pill" width={62} height={24} staggerIndex={2} />
+                </div>
+
+                <div className={styles.promptCard}>
+                  <div className={styles.fieldHead}>
+                    <SkeletonBlock variant="text" width={64} height={13} />
+                    <SkeletonBlock variant="text" width={48} height={11} staggerIndex={1} />
+                  </div>
+                  <SkeletonBlock
+                    variant="field"
+                    height={104}
+                    radius="var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-extra-small) var(--md-sys-shape-corner-extra-small)"
+                    staggerIndex={1}
+                  />
+                  <div className={styles.skeletonBetween}>
+                    <SkeletonBlock variant="rect" width={82} height={30} radius="var(--md-sys-shape-corner-small)" />
+                    <div className={styles.skeletonRow}>
+                      <SkeletonBlock variant="rect" width={88} height={28} radius="var(--md-sys-shape-corner-small)" staggerIndex={1} />
+                      <SkeletonBlock variant="rect" width={88} height={28} radius="var(--md-sys-shape-corner-small)" staggerIndex={2} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.paramStack}>
+                  <div className={styles.fieldGroup}>
+                    <div className={styles.fieldHead}>
+                      <SkeletonBlock variant="text" width={64} height={13} />
+                      <SkeletonBlock variant="text" width={58} height={11} staggerIndex={1} />
+                    </div>
+                    <ConnectedRatioSkeleton />
+                  </div>
+
+                  <div className={styles.twoCol}>
+                    <div className={styles.fieldGroup}>
+                      <SkeletonBlock variant="text" width={58} height={13} />
+                      <SkeletonBlock variant="pill" width="100%" height={38} radius={19} staggerIndex={1} />
+                    </div>
+                    <div className={styles.fieldGroup}>
+                      <SkeletonBlock variant="text" width={58} height={13} />
+                      <SkeletonBlock variant="pill" width="100%" height={38} radius={19} staggerIndex={2} />
+                    </div>
+                  </div>
+
+                  <SkeletonBlock
+                    variant="rect"
+                    width="100%"
+                    height={36}
+                    radius="var(--md-sys-shape-corner-medium)"
+                    staggerIndex={2}
+                  />
+                </div>
+              </div>
+
+              <footer className={styles.proRailFooter}>
+                <div className={styles.skeletonBetween}>
+                  <SkeletonBlock variant="text" width={148} height={12} />
+                  <SkeletonBlock variant="rect" width={34} height={20} radius={4} staggerIndex={1} />
+                </div>
+                <SplitCtaSkeleton />
+              </footer>
+            </aside>
+
+            <section className={styles.proStage} aria-hidden="true">
+              <div className={styles.stageCard}>
+                <div className={styles.stageBar}>
+                  <div className={styles.stageBarLeft}>
+                    <SkeletonBlock variant="pill" width={104} height={28} />
+                    <SkeletonBlock variant="text" width={142} height={12} staggerIndex={1} />
+                  </div>
+                  <div className={styles.stageBarActions}>
+                    <SkeletonBlock variant="pill" width={92} height={32} staggerIndex={1} />
+                    <SkeletonBlock variant="pill" width={62} height={32} staggerIndex={2} />
+                  </div>
+                </div>
+
+                <div className={styles.stageBody}>
+                  <div className={styles.singleLightbox}>
+                    <div className={styles.artworkFigure}>
+                      <SkeletonBlock
+                        variant="media"
+                        aspectRatio="4 / 3"
+                        radius={0}
+                        icon="sparkles"
+                        iconSize={26}
+                      />
+                      <div className={styles.artworkCaption}>
+                        <SkeletonBlock variant="text" width={68} height={11} />
+                        <SkeletonBlock variant="text" width={76} height={11} staggerIndex={1} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.filmstripDock}>
+                  <div className={styles.filmstripHead}>
+                    <SkeletonBlock variant="text" width={56} height={12} />
+                    <SkeletonBlock variant="text" width={132} height={12} staggerIndex={1} />
+                  </div>
+                  <div className={styles.filmstripRow}>
+                    {Array.from({ length: 4 }, (_, idx) => (
+                      <div key={idx} className={styles.filmCard}>
+                        <span className={styles.filmThumb}>
+                          <SkeletonBlock
+                            variant="rect"
+                            width={38}
+                            height={38}
+                            radius="var(--md-sys-shape-corner-small)"
+                            staggerIndex={idx}
+                          />
+                        </span>
+                        <span className={styles.filmMeta}>
+                          <SkeletonBlock variant="text" width={42} height={11} staggerIndex={idx} />
+                          <SkeletonBlock variant="text" width="88%" height={11} staggerIndex={idx + 1} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        )
+      }
+
       return (
         <div className={styles.proLayout}>
           <aside className={styles.proRail}>
@@ -708,7 +871,7 @@ export function WorkbenchPrototype({
                   placeholder="描述主体、光线、材质与构图…"
                 />
                 <div className={styles.promptToolbar}>
-                  <button
+                  <RippleButton
                     type="button"
                     aria-pressed={hasRefImage}
                     className={`${styles.refAttachBtn} ${hasRefImage ? styles.refAttachActive : ''}`}
@@ -716,30 +879,37 @@ export function WorkbenchPrototype({
                   >
                     <Icon name="image" size={14} />
                     <span>{hasRefImage ? '已附 1 张参考图' : '+ 参考图'}</span>
-                  </button>
+                  </RippleButton>
                   <div className={styles.presetMiniRow}>
                     {MOCK_PROMPT_PRESETS.slice(0, 2).map((p) => (
-                      <button
+                      <RippleButton
                         key={p.label}
                         type="button"
                         className={styles.presetChip}
                         onClick={() => setPrompt(p.prompt)}
                       >
                         {p.label}
-                      </button>
+                      </RippleButton>
                     ))}
                   </div>
                 </div>
                 {hasRefImage ? (
                   <div className={styles.refMiniStrip}>
-                    <img src={MOCK_ARTWORKS.single} alt="参考图预览" />
+                    <ShimmerImage
+                      src={MOCK_ARTWORKS.single}
+                      alt="参考图预览"
+                      aspectRatio="1 / 1"
+                      radius="var(--md-sys-shape-corner-small)"
+                      iconSize={14}
+                      wrapperClassName={styles.refMiniThumb}
+                    />
                     <div>
                       <strong>reference-still-life.webp</strong>
                       <span>图生图模式 · 1 / 16 张</span>
                     </div>
-                    <button type="button" onClick={() => setHasRefImage(false)} aria-label="移除参考图">
+                    <RippleButton type="button" onClick={() => setHasRefImage(false)} aria-label="移除参考图">
                       <Icon name="close" size={14} />
-                    </button>
+                    </RippleButton>
                   </div>
                 ) : null}
               </div>
@@ -785,22 +955,28 @@ export function WorkbenchPrototype({
     }
 
     if (pageId === 'gallery') {
-      return <GalleryPrototype onGoWorkbench={() => handleTabSwitch('workbench')} onNotify={onNotify} />
+      return (
+        <GalleryPrototype
+          loadMode={loadMode}
+          onGoWorkbench={() => handleTabSwitch('workbench')}
+          onNotify={onNotify}
+        />
+      )
     }
     if (pageId === 'channels') {
-      return <ChannelsPrototype scope="private" onNotify={onNotify} />
+      return <ChannelsPrototype scope="private" loadMode={loadMode} onNotify={onNotify} />
     }
     if (pageId === 'account') {
-      return <AccountPrototype onNotify={onNotify} />
+      return <AccountPrototype loadMode={loadMode} onNotify={onNotify} />
     }
-    return <AdminPrototype onNotify={onNotify} />
+    return <AdminPrototype loadMode={loadMode} onNotify={onNotify} />
   }
 
   return (
     <div className={`${styles.frame} ${viewportMode === 'mobile' ? styles.frameMobile : ''}`}>
       {/* M3 Top App Bar + Desktop Primary Tabs */}
       <header className={styles.appHeader}>
-        <button
+        <RippleButton
           type="button"
           className={styles.appBrand}
           onClick={() => handleTabSwitch('workbench')}
@@ -812,7 +988,7 @@ export function WorkbenchPrototype({
             <strong>nanobanana</strong>
             <span className={styles.brandTag}>STUDIO</span>
           </div>
-        </button>
+        </RippleButton>
 
         <div className={styles.desktopNavHost}>
           <M3PrimaryTabs
@@ -827,14 +1003,14 @@ export function WorkbenchPrototype({
         </div>
 
         <div className={styles.appHeaderRight}>
-          <button
+          <RippleButton
             type="button"
             className={styles.userPill}
             onClick={() => handleTabSwitch('account')}
             title="查看账号安全与日额度"
           >
             leon · 今日 12/50
-          </button>
+          </RippleButton>
         </div>
       </header>
 

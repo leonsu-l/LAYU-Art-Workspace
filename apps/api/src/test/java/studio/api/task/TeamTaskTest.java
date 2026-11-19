@@ -23,7 +23,11 @@ import studio.api.provider.GeneratedImage;
 import studio.api.provider.ImageProvider;
 import studio.api.provider.ProviderResult;
 import studio.api.quota.QuotaService;
+import studio.api.ops.OpsIssues;
+import studio.api.storage.GalleryFiles;
 import studio.api.storage.ImageStorage;
+import studio.api.storage.R2Client;
+import studio.api.storage.StorageSettings;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class TeamTaskTest {
     private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 1, 2, 3};
@@ -72,7 +77,10 @@ class TeamTaskTest {
         };
         ChannelService channels = new ChannelService(db, transactions, json, secrets, new ModelCatalog(json), new RequestParser(json), events);
         ImageStorage images = new ImageStorage(data);
-        TaskStore store = new TaskStore(db, tx, json, secrets, provider, images, data.toString(), true);
+        OpsIssues issues = new OpsIssues(db, manager);
+        StorageSettings storageSettings = new StorageSettings(db, transactions, secrets);
+        GalleryFiles files = new GalleryFiles(db, transactions, json, storageSettings, images, mock(R2Client.class), issues);
+        TaskStore store = new TaskStore(db, tx, json, secrets, provider, files, issues, data.toString(), true);
         store.configureTeamServices(quotas, channels);
         store.initialize();
         storeRef.set(store);

@@ -1,4 +1,5 @@
 import { Icon } from '../../components/Icon'
+import { RippleButton } from './LabRipple'
 import type { SnackbarItem } from './useSnackbar'
 import styles from './LabSnackbar.module.css'
 
@@ -38,7 +39,7 @@ export function LabSnackbarHost({
 
         <div className={styles.actions}>
           {snackbar.actionLabel && snackbar.onAction ? (
-            <button
+            <RippleButton
               type="button"
               className={styles.actionBtn}
               onClick={() => {
@@ -47,17 +48,17 @@ export function LabSnackbarHost({
               }}
             >
               {snackbar.actionLabel}
-            </button>
+            </RippleButton>
           ) : null}
 
-          <button
+          <RippleButton
             type="button"
             className={styles.closeBtn}
             onClick={onDismiss}
             aria-label="关闭通知"
           >
             <Icon name="close" size={15} />
-          </button>
+          </RippleButton>
         </div>
       </div>
     </div>

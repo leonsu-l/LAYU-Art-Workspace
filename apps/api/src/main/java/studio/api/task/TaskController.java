@@ -5,7 +5,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import studio.api.common.ApiException;
-import studio.api.storage.ImageStorage;
+import studio.api.storage.ImageRecord;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -15,9 +16,8 @@ import java.util.Map;
 public class TaskController {
     private final TaskStore tasks;
     private final studio.api.auth.AuthService auth;
-    private final ImageStorage images;
-    public TaskController(TaskStore tasks, studio.api.auth.AuthService auth, ImageStorage images) {
-        this.tasks = tasks; this.auth = auth; this.images = images;
+    public TaskController(TaskStore tasks, studio.api.auth.AuthService auth) {
+        this.tasks = tasks; this.auth = auth;
     }
     private String owner() { return auth.requireUser().id(); }
     @GetMapping("/health") public Map<String, Boolean> health() { return Map.of("ok", true); }
@@ -31,7 +31,8 @@ public class TaskController {
         if (!RequestParser.UUID_PATTERN.matcher(id).matches()) throw ApiException.notFound();
         return tasks.deleteTask(owner(), id);
     }
-    @GetMapping("/gallery") public Object gallery() { return Map.of("images", tasks.gallery(owner())); }
+    public record Gallery(List<ImageRecord> images, Integer retentionDays) {}
+    @GetMapping("/gallery") public Gallery gallery() { return new Gallery(tasks.gallery(owner()), tasks.retentionDays()); }
     @GetMapping("/gallery/stats") public Object stats() { return tasks.stats(owner()); }
     @DeleteMapping("/gallery/{id}") public Object deleteImage(@PathVariable String id) {
         if (!RequestParser.UUID_PATTERN.matcher(id).matches()) throw ApiException.notFound();
@@ -46,9 +47,9 @@ public class TaskController {
         return Map.of("deletedCount", tasks.deleteImages(owner(), new ArrayList<>(ids)));
     }
     @GetMapping("/images/{filename}") public ResponseEntity<byte[]> image(@PathVariable String filename) {
-        var record = tasks.image(owner(), "/api/images/" + filename);
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(record.mimeType()))
+        var image = tasks.readImage(owner(), "/api/images/" + filename);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(image.mimeType()))
                 .header("Content-Security-Policy", "default-src 'none'; sandbox")
-                .body(images.read(record.url()));
+                .body(image.bytes());
     }
 }

@@ -10,9 +10,18 @@ import {
   SegmentedRail,
   StudioSelect,
 } from './components/LabControls'
+import { RippleButton } from './components/LabRipple'
+import {
+  ConnectedRatioSkeleton,
+  ShimmerImage,
+  SkeletonBlock,
+  SkeletonTextStack,
+  SplitCtaSkeleton,
+} from './components/LabSkeleton'
 import { LabSnackbarHost } from './components/LabSnackbar'
 import { useSnackbar } from './components/useSnackbar'
 import {
+  MOCK_ARTWORKS,
   MOCK_CATALOG_BY_CHANNEL,
   MOCK_CHANNELS,
   MOCK_QUOTA,
@@ -20,6 +29,7 @@ import {
 } from './mockData'
 import {
   WorkbenchPrototype,
+  type LabLoadMode,
   type LabPageRoute,
   type LabPageTransition,
   type LabScenario,
@@ -37,6 +47,9 @@ export function DesignLabApp() {
   const [pageTransition, setPageTransition] = useState<LabPageTransition | null>(null)
   const [theme, setTheme] = useState<'dark' | 'light'>('light')
   const [scenario, setScenario] = useState<LabScenario>('succeeded')
+  const [loadMode, setLoadMode] = useState<LabLoadMode>('ready')
+  const [sandboxSkeleton, setSandboxSkeleton] = useState(true)
+  const [demoCatalogLoading, setDemoCatalogLoading] = useState(false)
   const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop')
 
   // Interactive atom sandbox states
@@ -58,12 +71,39 @@ export function DesignLabApp() {
 
   const transitionTimerRef = useRef<number | null>(null)
   const transitionSeqRef = useRef(0)
+  const loadDemoTimerRef = useRef<number | null>(null)
+  const sandboxDemoTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {
       if (transitionTimerRef.current !== null) window.clearTimeout(transitionTimerRef.current)
+      if (loadDemoTimerRef.current !== null) window.clearTimeout(loadDemoTimerRef.current)
+      if (sandboxDemoTimerRef.current !== null) window.clearTimeout(sandboxDemoTimerRef.current)
     }
   }, [])
+
+  function triggerPageLoadDemo() {
+    if (loadDemoTimerRef.current !== null) window.clearTimeout(loadDemoTimerRef.current)
+    if (activePage === 'workbench') {
+      setScenario('loading')
+      loadDemoTimerRef.current = window.setTimeout(() => {
+        setScenario('succeeded')
+      }, 1200)
+    } else {
+      setLoadMode('loading')
+      loadDemoTimerRef.current = window.setTimeout(() => {
+        setLoadMode('ready')
+      }, 1200)
+    }
+  }
+
+  function triggerSandboxLoadDemo() {
+    if (sandboxDemoTimerRef.current !== null) window.clearTimeout(sandboxDemoTimerRef.current)
+    setSandboxSkeleton(true)
+    sandboxDemoTimerRef.current = window.setTimeout(() => {
+      setSandboxSkeleton(false)
+    }, 1200)
+  }
 
   function handleNavigatePage(nextPage: LabPageRoute, enterOffsetX = 0) {
     if (nextPage === activePage) return
@@ -79,6 +119,9 @@ export function DesignLabApp() {
       enterOffsetX,
       key: transitionSeqRef.current,
     })
+    if (nextPage !== 'gallery' && loadMode === 'media-loading') {
+      setLoadMode('ready')
+    }
     setActivePage(nextPage)
     transitionTimerRef.current = window.setTimeout(() => {
       setPageTransition(null)
@@ -109,7 +152,7 @@ export function DesignLabApp() {
               { id: 'decisions', label: '04 · 决策与集成路线' },
             ] as const
           ).map((item) => (
-            <button
+            <RippleButton
               key={item.id}
               type="button"
               aria-pressed={tab === item.id}
@@ -117,7 +160,7 @@ export function DesignLabApp() {
               onClick={() => setTab(item.id)}
             >
               {item.label}
-            </button>
+            </RippleButton>
           ))}
         </nav>
 
@@ -125,22 +168,22 @@ export function DesignLabApp() {
           <span className={styles.selectedDirTag}>已选方向 A · 钴蓝暗房</span>
 
           <div className={styles.switchGroup} role="group" aria-label="主题模式">
-            <button
+            <RippleButton
               type="button"
               aria-pressed={theme === 'light'}
               onClick={() => setTheme('light')}
             >
               <Icon name="sun" size={14} />
               <span>浅色</span>
-            </button>
-            <button
+            </RippleButton>
+            <RippleButton
               type="button"
               aria-pressed={theme === 'dark'}
               onClick={() => setTheme('dark')}
             >
               <Icon name="moon" size={14} />
               <span>深色</span>
-            </button>
+            </RippleButton>
           </div>
         </div>
       </header>
@@ -181,6 +224,18 @@ export function DesignLabApp() {
                   title: '产品流重塑（渠道折叠 + 视觉选参 + Split CTA）',
                   problem: '400px 渠道表 + 8 个堆叠下拉框挤爆首屏。',
                   solution: '单行渠道触发卡 + 弹层、可视比例切片矩阵、连接式数量步进器、Split 生成按钮（右侧直接呼出参数模板）。',
+                },
+                {
+                  id: '05',
+                  title: 'M3 Expressive Shimmer Skeleton 渐进占位',
+                  problem: '页面、模型目录或图片未加载时缺乏统一占位，易出现空白等待或内容突变闪烁。',
+                  solution: '引入 GPU 合成钴蓝微光骨架（SkeletonBlock + ShimmerImage），按元素圆角形态一比一占位并在就绪后平滑淡入显影。',
+                },
+                {
+                  id: '06',
+                  title: '全局复用点击涟漪 + 状态层优先级修正',
+                  problem: '仅有少数控件实现点击晕开且存在代码重复；图库选中卡片 hover 时蓝色会被原色 hover 覆盖。',
+                  solution: '抽离共用 RippleButton / RippleOverlay 复用 useRipple 覆盖全部可点击控件，并用 :not() 与 secondary-container-hover 修复叠加态。',
                 },
               ].map((item) => (
                 <article key={item.id} className={styles.auditCard}>
@@ -243,9 +298,19 @@ export function DesignLabApp() {
             {/* Component Sandbox */}
             <div className={styles.componentGrid}>
               <div className={styles.labPanel}>
-                <h2 className={styles.panelTitle}>1. Tonal 渠道卡片 + 弹层选择器</h2>
+                <div className={styles.skeletonSubHead}>
+                  <h2 className={styles.panelTitle}>1. Tonal 渠道卡片 + 弹层选择器</h2>
+                  <RippleButton
+                    type="button"
+                    className={styles.scenarioBtn}
+                    aria-pressed={demoCatalogLoading}
+                    onClick={() => setDemoCatalogLoading((v) => !v)}
+                  >
+                    {demoCatalogLoading ? '目录骨架中' : '模拟目录加载'}
+                  </RippleButton>
+                </div>
                 <p className={styles.panelDesc}>
-                  表面填充式触发卡配 Tertiary 额度胶囊；点击展开 Elevated Popover，内含 Connected 协议切换与目录芯片。
+                  表面填充式触发卡配 Tertiary 额度胶囊；点击展开 Elevated Popover，内含 Connected 协议切换与目录芯片（支持目录加载骨架态）。
                 </p>
                 <ChannelModelBar
                   channels={MOCK_CHANNELS}
@@ -253,6 +318,7 @@ export function DesignLabApp() {
                   provider={demoProvider}
                   model={demoModel}
                   catalog={MOCK_CATALOG_BY_CHANNEL[demoChannelId] ?? null}
+                  catalogLoading={demoCatalogLoading}
                   templates={MOCK_TEMPLATES}
                   quota={MOCK_QUOTA}
                   onChannelChange={setDemoChannelId}
@@ -360,7 +426,7 @@ export function DesignLabApp() {
                   采用反转高对比表面浮于视口底部，不挤压破坏页面流式布局；保留强制改密、防重复提交恢复与安全守则等阻断型信息内联展示。
                 </p>
                 <div className={styles.snackbarDemoRow}>
-                  <button
+                  <RippleButton
                     type="button"
                     className={styles.snackbarTriggerBtn}
                     onClick={() =>
@@ -371,8 +437,8 @@ export function DesignLabApp() {
                     }
                   >
                     普通通知
-                  </button>
-                  <button
+                  </RippleButton>
+                  <RippleButton
                     type="button"
                     className={styles.snackbarTriggerBtn}
                     onClick={() =>
@@ -383,8 +449,8 @@ export function DesignLabApp() {
                     }
                   >
                     操作成功
-                  </button>
-                  <button
+                  </RippleButton>
+                  <RippleButton
                     type="button"
                     className={styles.snackbarTriggerBtn}
                     onClick={() =>
@@ -397,7 +463,94 @@ export function DesignLabApp() {
                     }
                   >
                     风险告警
-                  </button>
+                  </RippleButton>
+                </div>
+              </div>
+
+              <div className={`${styles.labPanel} ${styles.labPanelWide}`}>
+                <div className={styles.skeletonSubHead}>
+                  <h2 className={styles.panelTitle}>
+                    7. M3 Expressive Shimmer Skeleton Loading（骨架占位与渐进显影）
+                  </h2>
+                  <div className={styles.protoGroup} style={{ gap: 8 }}>
+                    <div className={styles.protoGroup}>
+                      <RippleButton
+                        type="button"
+                        aria-pressed={sandboxSkeleton}
+                        className={`${styles.scenarioBtn} ${sandboxSkeleton ? styles.scenarioBtnActive : ''}`}
+                        onClick={() => setSandboxSkeleton(true)}
+                      >
+                        骨架加载中
+                      </RippleButton>
+                      <RippleButton
+                        type="button"
+                        aria-pressed={!sandboxSkeleton}
+                        className={`${styles.scenarioBtn} ${!sandboxSkeleton ? styles.scenarioBtnActive : ''}`}
+                        onClick={() => setSandboxSkeleton(false)}
+                      >
+                        已加载完成
+                      </RippleButton>
+                    </div>
+                    <RippleButton
+                      type="button"
+                      className={styles.protoDemoBtn}
+                      onClick={triggerSandboxLoadDemo}
+                    >
+                      演示 1.2s 加载过渡
+                    </RippleButton>
+                  </div>
+                </div>
+                <p className={styles.panelDesc}>
+                  基于 M3 Tonal Surface 阶梯与主色钴蓝微光扫掠（GPU 合成 60fps），严格贴合各元素圆角形态（圆形、胶囊文本、填充输入框、连接式矩阵与 Split CTA），在图片解码或列表数据未就绪时平滑占位并在加载完成后渐显过渡。
+                </p>
+
+                <div className={styles.skeletonSandboxGrid}>
+                  <div className={styles.skeletonSubCard}>
+                    <div className={styles.skeletonSubHead}>
+                      <span>原子与连接形态骨架（Shapes &amp; Controls）</span>
+                    </div>
+                    <div className={styles.skeletonDemoRow}>
+                      <SkeletonBlock variant="circle" width={40} height={40} />
+                      <div className={styles.skeletonDemoCol}>
+                        <SkeletonBlock variant="text" width="62%" height={14} />
+                        <SkeletonBlock variant="text" width="42%" height={11} staggerIndex={1} />
+                      </div>
+                      <SkeletonBlock variant="pill" width={72} height={26} staggerIndex={2} />
+                    </div>
+                    <SkeletonTextStack widths={['96%', '84%', '58%']} lineHeight={12} staggerIndex={1} />
+                    <SkeletonBlock variant="field" staggerIndex={2} />
+                    <ConnectedRatioSkeleton />
+                    <SplitCtaSkeleton />
+                  </div>
+
+                  <div className={styles.skeletonSubCard}>
+                    <div className={styles.skeletonSubHead}>
+                      <span>媒体渐进显影（ShimmerImage · 切换状态体验淡入）</span>
+                    </div>
+                    <div className={styles.skeletonMediaFrame}>
+                      <ShimmerImage
+                        src={MOCK_ARTWORKS.single}
+                        alt="M3 Expressive Shimmer 渐进加载预览"
+                        aspectRatio="4 / 3"
+                        radius="14px 14px 0 0"
+                        forceSkeleton={sandboxSkeleton}
+                        iconSize={26}
+                      />
+                      <div className={styles.skeletonMediaCaption}>
+                        {sandboxSkeleton ? (
+                          <>
+                            <SkeletonBlock variant="text" width={82} height={11} />
+                            <SkeletonBlock variant="text" width={94} height={11} staggerIndex={1} />
+                          </>
+                        ) : (
+                          <>
+                            <span>FRAME 01 · READY</span>
+                            <span>1536 × 1024</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -418,7 +571,7 @@ export function DesignLabApp() {
                     { id: 'admin', label: '/admin 管理' },
                   ] as const
                 ).map((item) => (
-                  <button
+                  <RippleButton
                     key={item.id}
                     type="button"
                     aria-pressed={activePage === item.id}
@@ -426,54 +579,103 @@ export function DesignLabApp() {
                     onClick={() => handleNavigatePage(item.id)}
                   >
                     {item.label}
-                  </button>
+                  </RippleButton>
                 ))}
               </div>
 
               {activePage === 'workbench' ? (
                 <div className={styles.protoGroup}>
                   <span className={styles.protoLabel}>场景状态：</span>
-                  {(
-                    [
-                      { id: 'succeeded', label: '单图完成' },
-                      { id: 'multi', label: '2×2 多图' },
-                      { id: 'generating', label: '显影队列中' },
-                      { id: 'empty', label: '空态引导' },
-                      { id: 'blocker', label: '未选渠道阻塞' },
-                      { id: 'recovery', label: '待确认恢复' },
-                    ] as const
-                  ).map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      aria-pressed={scenario === item.id}
-                      className={`${styles.scenarioBtn} ${scenario === item.id ? styles.scenarioBtnActive : ''}`}
-                      onClick={() => setScenario(item.id)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
+                  <div className={styles.protoGroup}>
+                    {(
+                      [
+                        { id: 'succeeded', label: '单图完成' },
+                        { id: 'multi', label: '2×2 多图' },
+                        { id: 'generating', label: '显影队列中' },
+                        { id: 'loading', label: '骨架加载中' },
+                        { id: 'empty', label: '空态引导' },
+                        { id: 'blocker', label: '未选渠道阻塞' },
+                        { id: 'recovery', label: '待确认恢复' },
+                      ] as const
+                    ).map((item) => (
+                      <RippleButton
+                        key={item.id}
+                        type="button"
+                        aria-pressed={scenario === item.id}
+                        className={`${styles.scenarioBtn} ${scenario === item.id ? styles.scenarioBtnActive : ''}`}
+                        onClick={() => setScenario(item.id)}
+                      >
+                        {item.label}
+                      </RippleButton>
+                    ))}
+                  </div>
+                  <RippleButton
+                    type="button"
+                    className={styles.protoDemoBtn}
+                    onClick={triggerPageLoadDemo}
+                  >
+                    演示加载 1.2s
+                  </RippleButton>
                 </div>
-              ) : null}
+              ) : (
+                <div className={styles.protoGroup}>
+                  <span className={styles.protoLabel}>数据状态：</span>
+                  <div className={styles.protoGroup}>
+                    <RippleButton
+                      type="button"
+                      aria-pressed={loadMode === 'ready'}
+                      className={`${styles.scenarioBtn} ${loadMode === 'ready' ? styles.scenarioBtnActive : ''}`}
+                      onClick={() => setLoadMode('ready')}
+                    >
+                      已加载
+                    </RippleButton>
+                    <RippleButton
+                      type="button"
+                      aria-pressed={loadMode === 'loading'}
+                      className={`${styles.scenarioBtn} ${loadMode === 'loading' ? styles.scenarioBtnActive : ''}`}
+                      onClick={() => setLoadMode('loading')}
+                    >
+                      骨架加载中
+                    </RippleButton>
+                    {activePage === 'gallery' ? (
+                      <RippleButton
+                        type="button"
+                        aria-pressed={loadMode === 'media-loading'}
+                        className={`${styles.scenarioBtn} ${loadMode === 'media-loading' ? styles.scenarioBtnActive : ''}`}
+                        onClick={() => setLoadMode('media-loading')}
+                      >
+                        仅图片占位
+                      </RippleButton>
+                    ) : null}
+                  </div>
+                  <RippleButton
+                    type="button"
+                    className={styles.protoDemoBtn}
+                    onClick={triggerPageLoadDemo}
+                  >
+                    演示加载 1.2s
+                  </RippleButton>
+                </div>
+              )}
 
               <div className={styles.protoGroup}>
                 <span className={styles.protoLabel}>视口：</span>
-                <button
+                <RippleButton
                   type="button"
                   aria-pressed={viewportMode === 'desktop'}
                   className={`${styles.scenarioBtn} ${viewportMode === 'desktop' ? styles.scenarioBtnActive : ''}`}
                   onClick={() => setViewportMode('desktop')}
                 >
                   桌面端
-                </button>
-                <button
+                </RippleButton>
+                <RippleButton
                   type="button"
                   aria-pressed={viewportMode === 'mobile'}
                   className={`${styles.scenarioBtn} ${viewportMode === 'mobile' ? styles.scenarioBtnActive : ''}`}
                   onClick={() => setViewportMode('mobile')}
                 >
                   手机 390px
-                </button>
+                </RippleButton>
                 <span className={styles.swipeHintChip}>
                   {viewportMode === 'mobile'
                     ? '已启用左右滑动切换大栏目（子栏目仅点击）'
@@ -486,6 +688,7 @@ export function DesignLabApp() {
               activePage={activePage}
               pageTransition={pageTransition}
               scenario={scenario}
+              loadMode={loadMode}
               viewportMode={viewportMode}
               onPageChange={handleNavigatePage}
               onScenarioChange={setScenario}
@@ -498,27 +701,93 @@ export function DesignLabApp() {
           <section className={styles.sectionGrid}>
             <div className={styles.introCard}>
               <span className={styles.eyebrow}>STAGE 5–6 · REVIEW &amp; PRODUCTION INTEGRATION</span>
-              <h1>已选定方向 A · 钴蓝暗房，全站 5 页原型就绪</h1>
+              <h1>已选定方向 A · 钴蓝暗房，全站 5 页原型与交互细节已就绪</h1>
               <p>
-                本 Design Lab 仍处于 Mock 隔离实验态，生产代码尚未改写。方向 A 已按确认锁定（方向 B 已舍弃），并在「03 · 全站多页原型」覆盖全部 5 个真实业务页面。确认细节后即可进入 Stage 6 生产集成。
+                本 Design Lab 仍处于 Mock 隔离实验态，生产代码尚未改写。截至目前已完成方向锁定、连接式控件变形修正、M3 Primary Tabs 与手机横滑切页、纯云端图库改造、Snackbar 统一反馈、应用级抛物线缩放预览、图库 Hover+选中色阶修正、M3 Shimmer Skeleton 全站加载占位以及全局复用点击涟漪；确认后即可进入 Stage 6 生产集成。
               </p>
             </div>
 
             <div className={styles.auditGrid}>
-              <article className={styles.auditCard}>
-                <span className={styles.auditNum}>D1</span>
-                <h2>选定方向与色彩语言</h2>
-                <p className={styles.decisionCopy}>
-                  已选定 <strong>方向 A（钴蓝暗房 · 浅/深双主题）</strong>：冷石中性 5 级色调表面 + Cobalt Primary + Warm Amber Tertiary，已完全舍弃方向 B（青墨浮坞）。
-                </p>
-              </article>
-              <article className={styles.auditCard}>
-                <span className={styles.auditNum}>D2</span>
-                <h2>全站 5 页匹配与集成节奏</h2>
-                <p className={styles.decisionCopy}>
-                  原型已覆盖 <code>/</code>、<code>/gallery</code>、<code>/channels</code>、<code>/login /password</code> 与 <code>/admin</code>。获批后先集成共用顶栏、令牌系统与工作台 <code>/</code>，随后依次落入其余 4 个页面。
-                </p>
-              </article>
+              {[
+                {
+                  code: 'D1',
+                  title: '选定方向 A · 钴蓝暗房（浅/深双主题）',
+                  body: (
+                    <>
+                      已确定采用 <strong>Cobalt Primary + Secondary / Tertiary Container</strong> 配 5 级冷石/暗石色调表面阶梯（舍弃方向 B 青墨浮坞），确保作品色彩在界面中保持最高视觉优先级。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D2',
+                  title: '全站 5 页 M3 Expressive 原型与连接式控件',
+                  body: (
+                    <>
+                      完整覆盖 <code>/</code>、<code>/gallery</code>、<code>/channels</code>、<code>/login · /password</code> 与 <code>/admin</code>（6 大管理子模块）。连接式选项组固定外端半高圆角（<code>19px</code>/<code>18px</code>/<code>16px</code>），消除切换时的外角过冲回跳，并配套 Tonal 下拉与 Split CTA。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D3',
+                  title: 'M3 Primary Tabs + 手机端左滑右划切页',
+                  body: (
+                    <>
+                      主栏目与页内子栏目统一采用紧贴底线的 <code>3px</code> 主题色圆角短条（<code>M3PrimaryTabs</code>）。顶级大栏目支持手机端 <code>390px</code> 跟手横滑及双端水平切页动画；页内小栏目保持仅手动点击切换。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D4',
+                  title: '纯云端图库与卡片选框视觉修正',
+                  body: (
+                    <>
+                      移除前端旧版浏览器图库兼容提示与来源筛选，聚焦后端云端作品列表及同组联删安全规则；图库选中边框改为静态 <code>20px</code> 圆角配 <code>1px</code> 渐入淡出高亮框，并修正 <code>22×22</code> 勾选框内对勾居中定位。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D5',
+                  title: 'Snackbar 浮动通知体系与安全阻断边界',
+                  body: (
+                    <>
+                      新增 <code>LabSnackbarHost</code>（自动上避预览底栏），承接操作结果、模板套用、任务详情与删图警告等瞬时反馈，不破坏流式排版；强制改密说明、待恢复提交与无可用渠道阻断等核心提示保留内联常驻。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D6',
+                  title: '沉浸式磨砂图库预览与抛物线应用级动效',
+                  body: (
+                    <>
+                      全屏预览将作品铺展至视口主体并配顶/底磨砂浮层；基于 <code>buildContainerMorphKeyframes</code> 实现非线性解耦与抛物线弧度展开（<code>340ms</code>）及动态追踪目标卡片收回（<code>260ms</code>），全程本体不透明、无收尾闪屏，支持关闭或展开途中即时打断切换。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D7',
+                  title: '图库 Hover+选中色阶修正 & M3 Shimmer Skeleton 占位',
+                  body: (
+                    <>
+                      修正图库卡片与任务胶卷 <code>:hover</code> 覆盖选中蓝底的问题，引入 <code>--md-sys-color-secondary-container-hover</code> 实现浅/深主题下悬停蓝色略微加深；同时构建 <code>LabSkeleton</code> 与 <code>ShimmerImage</code> 渐进显影占位体系，覆盖全部 5 页数据加载、模型目录刷新与未加载图片。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D8',
+                  title: '全局统一可复用点击晕开效果（RippleButton）',
+                  body: (
+                    <>
+                      抽离 <code>LabRipple</code>（<code>RippleButton</code> / <code>RippleOverlay</code>），直接复用共享 <code>useRipple</code> Hook 消除局部重复实现，以零优先级 <code>:where(.rippleHost)</code> 兼容绝对定位按钮，实现顶栏、标签页、卡片、缩略图（白色微光）、弹层、Snackbar 与表单控件全覆盖。
+                    </>
+                  ),
+                },
+              ].map((card) => (
+                <article key={card.code} className={styles.auditCard}>
+                  <span className={styles.auditNum}>{card.code}</span>
+                  <h2>{card.title}</h2>
+                  <p className={styles.decisionCopy}>{card.body}</p>
+                </article>
+              ))}
             </div>
           </section>
         ) : null}

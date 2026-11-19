@@ -25,7 +25,8 @@ import studio.api.common.SecretBox;
 import studio.api.provider.ImageProvider;
 import studio.api.provider.ProviderResult;
 import studio.api.storage.ImageRecord;
-import studio.api.storage.ImageStorage;
+import studio.api.storage.GalleryFiles;
+import studio.api.ops.OpsIssues;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -61,7 +62,8 @@ public class TaskStore {
     private final Json json;
     private final SecretBox secrets;
     private final ImageProvider provider;
-    private final ImageStorage images;
+    private final GalleryFiles images;
+    private final OpsIssues issues;
     private final Path directory;
     private final boolean workerEnabled;
     private final ExecutorService workers = Executors.newVirtualThreadPerTaskExecutor();
@@ -81,10 +83,10 @@ public class TaskStore {
     }
 
     public TaskStore(JdbcTemplate db, TransactionTemplate tx, Json json, SecretBox secrets, ImageProvider provider,
-                     ImageStorage images, @Value("${studio.data-dir}") String directory,
+                     GalleryFiles images, OpsIssues issues, @Value("${studio.data-dir}") String directory,
                      @Value("${studio.worker-enabled:true}") boolean workerEnabled) {
         this.db = db; this.tx = tx; this.json = json; this.secrets = secrets;
-        this.provider = provider; this.images = images;
+        this.provider = provider; this.images = images; this.issues = issues;
         this.directory = Path.of(directory).toAbsolutePath().normalize(); this.workerEnabled = workerEnabled;
     }
 
@@ -102,7 +104,9 @@ public class TaskStore {
                 return null;
             });
             recover();
-            cleanupFiles();
+            expireDueTasks();
+            for (String id : db.query("SELECT id FROM deleted_tasks", (rs, i) -> rs.getString(1))) removeReceipt(id);
+            images.clean(true, null); // cloud availability must not gate startup; first scheduled pass drains R2
             ready = true;
         } catch (RuntimeException | IOException e) {
             if (lock != null) lock.release();
@@ -154,6 +158,7 @@ public class TaskStore {
         StoredTask existing = find(id);
         if (existing != null) {
             if (!existing.owner.equals(owner)) throw ApiException.notFound();
+            if (existing.expired()) throw gone();
             if (!existing.hash.equals(hash)) throw new ApiException("VALIDATION", "任务 ID 已用于不同请求，不能覆盖。", 409, false);
             return existing.task;
         }
@@ -182,31 +187,35 @@ public class TaskStore {
     }
 
     public List<ObjectNode> list(String owner) {
-        return db.query("SELECT task_json FROM tasks WHERE owner_id=? ORDER BY sequence_no DESC", (rs, i) -> json.object(rs.getString(1)), owner);
+        return db.query("SELECT task_json FROM tasks WHERE owner_id=? AND (expires_at IS NULL OR expires_at>?) ORDER BY sequence_no DESC",
+                (rs, i) -> json.object(rs.getString(1)), owner, System.currentTimeMillis());
     }
     public ObjectNode get(String owner, String id) {
         StoredTask row = find(id);
-        if (row != null && row.owner.equals(owner)) return row.task;
+        if (row != null && row.owner.equals(owner)) {
+            if (row.expired()) throw gone();
+            return row.task;
+        }
         if (deleted(owner, id)) throw gone();
         throw ApiException.notFound();
     }
     public List<ImageRecord> gallery(String owner) {
-        return db.query("SELECT i.image_json FROM images i JOIN tasks t ON i.task_id=t.id WHERE i.owner_id=? ORDER BY t.sequence_no DESC,i.id", (rs, i) -> json.read(rs.getString(1), ImageRecord.class), owner);
+        return db.query("SELECT i.image_json FROM images i JOIN tasks t ON i.task_id=t.id WHERE i.owner_id=? " +
+                        "AND (t.expires_at IS NULL OR t.expires_at>?) ORDER BY t.sequence_no DESC,i.id",
+                (rs, i) -> json.read(rs.getString(1), ImageRecord.class), owner, System.currentTimeMillis());
     }
-    public ImageRecord image(String owner, String url) {
-        var matches = db.query("SELECT image_json FROM images WHERE owner_id=? AND url=?", (rs, i) -> json.read(rs.getString(1), ImageRecord.class), owner, url);
-        if (matches.isEmpty()) throw ApiException.notFound();
-        return matches.getFirst();
-    }
+    public Integer retentionDays() { return images.policy().retentionDays(); }
+    public GalleryFiles.Content readImage(String owner, String url) { return images.read(owner, url); }
     public Map<String, Long> stats(String owner) {
-        return Map.of("totalBytes", db.queryForObject("SELECT COALESCE(SUM(bytes),0) FROM images WHERE owner_id=?", Long.class, owner),
-                "imageCount", db.queryForObject("SELECT COUNT(*) FROM images WHERE owner_id=?", Long.class, owner));
+        return db.queryForObject("SELECT COALESCE(SUM(i.bytes),0),COUNT(*) FROM images i JOIN tasks t ON t.id=i.task_id " +
+                        "WHERE i.owner_id=? AND (t.expires_at IS NULL OR t.expires_at>?)",
+                (rs, n) -> Map.of("totalBytes", rs.getLong(1), "imageCount", rs.getLong(2)), owner, System.currentTimeMillis());
     }
     public Map<String, Integer> deleteTask(String owner, String id) { return delete(owner, List.of(id), List.of()); }
     public int deleteImages(String owner, List<String> ids) { return delete(owner, List.of(), ids).get("deletedImageCount"); }
 
     private Map<String, Integer> delete(String owner, List<String> taskIds, List<String> imageIds) {
-        Map<String, Integer> result = mutate(() -> {
+        DeletedGroups result = mutate(() -> {
             var selected = new LinkedHashSet<>(taskIds);
             for (String id : imageIds) {
                 selected.addAll(db.query("SELECT task_id FROM images WHERE owner_id=? AND id=?", (rs, i) -> rs.getString(1), owner, id));
@@ -220,19 +229,25 @@ public class TaskStore {
                 targets.add(task);
             }
             int count = 0;
-            for (StoredTask task : targets) {
-                var urls = db.query("SELECT url FROM images WHERE task_id=?", (rs, i) -> rs.getString(1), task.id);
-                for (String url : urls) db.update("INSERT INTO file_deletions(url) VALUES(?)", url);
-                count += urls.size();
-                db.update("DELETE FROM images WHERE task_id=?", task.id);
-                db.update("INSERT INTO deleted_tasks(id,owner_id) VALUES(?,?)", task.id, owner);
-                db.update("DELETE FROM tasks WHERE id=?", task.id);
-            }
-            return Map.of("deletedTaskCount", targets.size(), "deletedImageCount", count);
+            for (StoredTask task : targets) count += deleteGroup(task.id, task.owner, task.channelId);
+            return new DeletedGroups(targets.stream().map(StoredTask::id).toList(), count);
         });
-        for (String id : taskIds) if (deleted(owner, id)) removeReceipt(id);
-        cleanupFiles();
-        return result;
+        for (String id : result.ids) {
+            removeReceipt(id);
+            images.clean(true, id); // do not keep an HTTP request open for remote delete retries
+        }
+        return Map.of("deletedTaskCount", result.ids.size(), "deletedImageCount", result.count);
+    }
+    private record DeletedGroups(List<String> ids, int count) {}
+
+    /** Manual deletion and expiry have the same group boundary and never modify quota/usage history. */
+    private int deleteGroup(String id, String owner, String channelId) {
+        db.update("INSERT INTO file_deletions(url,bucket_id,task_id,owner_id,channel_id) " +
+                "SELECT url,bucket_id,task_id,owner_id,? FROM images WHERE task_id=?", channelId, id);
+        int count = db.update("DELETE FROM images WHERE task_id=?", id);
+        db.update("INSERT INTO deleted_tasks(id,owner_id) VALUES(?,?)", id, owner);
+        db.update("DELETE FROM tasks WHERE id=?", id);
+        return count;
     }
 
     @Scheduled(fixedDelayString = "${studio.worker-poll-ms:250}")
@@ -297,16 +312,21 @@ public class TaskStore {
                 fail(task.id, new ApiException("AUTH", "用户或渠道已停用，任务未请求上游，站内额度已返还。", 403, false));
                 return;
             }
+            var beforeBilling = images.policy(); // fallback retention if the database goes down during generation
             ProviderResult generated = provider.generate(request);
-            List<ImageRecord> saved = images.save(generated, request.prompt(), task.id);
+            var saved = images.save(generated, request.prompt(), new GalleryFiles.Context(task.id, task.owner, task.channelId), beforeBilling);
             ObjectNode result = json.object().put("provider", request.provider()).put("model", request.model()).put("createdAt", generated.createdAt());
             if (generated.text() != null && !generated.text().isBlank()) result.put("text", redact(generated.text(), request.apiKey()));
             var entries = result.putArray("images");
-            saved.forEach(image -> entries.addObject().put("mimeType", image.mimeType()).put("url", image.url()));
-            completion = new Completion(task.id, result, saved);
+            saved.images().forEach(image -> entries.addObject().put("mimeType", image.mimeType()).put("url", image.url())
+                    .put("retentionDays", image.retentionDays()).put("expiresAt", image.expiresAt()));
+            completion = new Completion(task.id, result, saved.images(), saved.remoteBuckets(), saved.fallbacks());
         } catch (Exception e) {
             ApiException failure = e instanceof ApiException api ? api : new ApiException("UNKNOWN", "生成或保存图片失败，请检查渠道与存储后手动重试。", 502, true);
             fail(task.id, failure);
+            if (!failure.code().equals("STORAGE"))
+                issues.record(OpsIssues.Kind.GENERATION_FAILED, task.id, task.owner, task.channelId, null, failure.code());
+            images.clean(true, task.id);
             return;
         }
         // A paid result must survive a database outage. Keep files and receipt on commit failure.
@@ -316,22 +336,26 @@ public class TaskStore {
     }
 
     private void finish(Completion completion) {
-        mutate(() -> {
+        GalleryFiles.Context committed = mutate(() -> {
             StoredTask task = find(completion.id);
             if (task == null || task.status.equals("succeeded") || task.status.equals("failed")) return null;
             if (!completion.id.equals(task.id) || completion.images == null || completion.images.isEmpty()) throw new IllegalStateException("Invalid completion receipt");
             task.task.put("status", "succeeded").put("updatedAt", now()).set("result", completion.result);
             task.task.remove("error");
-            db.update("UPDATE tasks SET status='succeeded',task_json=?,snapshot=NULL,quota_reserved=FALSE,updated_at=? WHERE id=?",
-                    json.write(task.task), task.task.path("updatedAt").asText(), task.id);
+            String expiry = completion.images.getFirst().expiresAt();
+            Long expiresAt = expiry == null ? null : Instant.parse(expiry).toEpochMilli();
+            db.update("UPDATE tasks SET status='succeeded',task_json=?,snapshot=NULL,write_bucket_id=NULL,expires_at=?,quota_reserved=FALSE,updated_at=? WHERE id=?",
+                    json.write(task.task), expiresAt, task.task.path("updatedAt").asText(), task.id);
             db.update("UPDATE task_usage SET status='succeeded',updated_at=? WHERE task_id=?", now(), task.id);
+            var context = new GalleryFiles.Context(task.id, task.owner, task.channelId);
             for (ImageRecord image : completion.images) {
                 if (!image.url().startsWith("/api/images/" + task.id + "_")) throw new IllegalStateException("Receipt image belongs to another task");
-                db.update("INSERT INTO images(id,task_id,owner_id,url,bytes,image_json) VALUES(?,?,?,?,?,?)",
-                        image.id(), task.id, task.owner, image.url(), image.bytes(), json.write(image));
+                images.publish(image, context, completion.remoteBuckets == null ? null : completion.remoteBuckets.get(image.url()));
             }
-            return null;
+            images.abandon(task.id); // leftover remote attempts may still need deletion after a fallback
+            return context;
         });
+        if (committed != null) images.reportFallbacks(committed, completion.fallbacks);
     }
 
     public void fail(String id, ApiException failure) {
@@ -349,7 +373,8 @@ public class TaskStore {
                 if (quotas == null) throw new IllegalStateException("Quota service required to release a reservation");
                 quotas.refund(task.owner, task.quotaDay);
             }
-            db.update("UPDATE tasks SET status='failed',task_json=?,snapshot=NULL,quota_reserved=FALSE,updated_at=? WHERE id=?",
+            images.abandon(id);
+            db.update("UPDATE tasks SET status='failed',task_json=?,snapshot=NULL,write_bucket_id=NULL,quota_reserved=FALSE,updated_at=? WHERE id=?",
                     json.write(task.task), task.task.path("updatedAt").asText(), id);
             db.update("UPDATE task_usage SET status='failed',updated_at=? WHERE task_id=?", now(), id);
             return null;
@@ -367,15 +392,27 @@ public class TaskStore {
                 removeReceipt(task.id);
             } else if (task.status.equals("running") || !task.hasSnapshot) {
                 fail(task.id, new ApiException("UNKNOWN", "后端重启中断了任务，供应商可能已经扣费；不会自动重复请求。", 502, false));
+                issues.record(OpsIssues.Kind.GENERATION_FAILED, task.id, task.owner, task.channelId, null, "UNKNOWN");
             }
         }
     }
-    private void cleanupFiles() {
-        for (String id : db.query("SELECT id FROM deleted_tasks", (rs, i) -> rs.getString(1))) removeReceipt(id);
-        var urls = db.query("SELECT url FROM file_deletions", (rs, i) -> rs.getString(1));
-        for (String url : urls) {
-            images.remove(List.of(new ImageRecord("", "", "", "", "", "", 0, url)));
-            db.update("DELETE FROM file_deletions WHERE url=?", url);
+    @Scheduled(fixedDelay = 300000)
+    public void maintainImages() {
+        if (!ready || stopping) return;
+        expireDueTasks();
+        images.clean(true, null);
+        images.clean(false, null);
+    }
+    private void expireDueTasks() {
+        while (true) {
+            var expired = mutate(() -> {
+                var batch = db.query("SELECT id,owner_id,channel_id FROM tasks WHERE expires_at<=? ORDER BY expires_at,id LIMIT 100",
+                        (rs, n) -> new GalleryFiles.Context(rs.getString(1), rs.getString(2), rs.getString(3)), System.currentTimeMillis());
+                for (var t : batch) deleteGroup(t.taskId(), t.ownerId(), t.channelId());
+                return batch;
+            });
+            for (var t : expired) removeReceipt(t.taskId());
+            if (expired.size() < 100) return;
         }
     }
     private void writeReceipt(Completion completion) throws IOException {
@@ -403,7 +440,7 @@ public class TaskStore {
     }
     private StoredTask find(String id) { return find(id, false); }
     private StoredTask find(String id, boolean includeSnapshot) {
-        String columns = includeSnapshot ? "*" : "id,owner_id,status,request_hash,task_json,channel_id,quota_day,quota_reserved,NULL AS snapshot";
+        String columns = includeSnapshot ? "*" : "id,owner_id,status,request_hash,task_json,channel_id,quota_day,quota_reserved,expires_at,NULL AS snapshot";
         var rows = db.query("SELECT " + columns + " FROM tasks WHERE id=?", this::row, id);
         return rows.isEmpty() ? null : rows.getFirst();
     }
@@ -411,7 +448,7 @@ public class TaskStore {
         return new PendingTask(rs.getString("id"), rs.getString("owner_id"), rs.getString("channel_id"), rs.getString("status"), rs.getBoolean("has_snapshot"));
     }
     private StoredTask row(ResultSet rs, int index) throws SQLException {
-        return new StoredTask(rs.getString("id"), rs.getString("owner_id"), rs.getString("status"), rs.getString("request_hash"), rs.getString("snapshot"), json.object(rs.getString("task_json")), rs.getString("channel_id"), rs.getString("quota_day"), rs.getBoolean("quota_reserved"));
+        return new StoredTask(rs.getString("id"), rs.getString("owner_id"), rs.getString("status"), rs.getString("request_hash"), rs.getString("snapshot"), json.object(rs.getString("task_json")), rs.getString("channel_id"), rs.getString("quota_day"), rs.getBoolean("quota_reserved"), (Long) rs.getObject("expires_at"));
     }
     private boolean deleted(String owner, String id) {
         return db.queryForObject("SELECT COUNT(*) FROM deleted_tasks WHERE id=? AND owner_id=?", Integer.class, id, owner) > 0;
@@ -440,6 +477,15 @@ public class TaskStore {
     }
     private record PendingTask(String id, String owner, String channelId, String status, boolean hasSnapshot) {}
     private record StoredTask(String id, String owner, String status, String hash, String snapshot, ObjectNode task,
-                              String channelId, String quotaDay, boolean quotaReserved) {}
-    public record Completion(String id, ObjectNode result, List<ImageRecord> images) {}
+                              String channelId, String quotaDay, boolean quotaReserved, Long expiresAt) {
+        boolean expired() { return expiresAt != null && expiresAt <= System.currentTimeMillis(); }
+    }
+    /** Internal recovery receipt. Only result and ImageRecord cross the public API boundary. */
+    public record Completion(String id, ObjectNode result, List<ImageRecord> images, Map<String,String> remoteBuckets,
+                             List<GalleryFiles.Fallback> fallbacks) {
+        public Completion(String id, ObjectNode result, List<ImageRecord> images) { this(id, result, images, null, null); }
+        public Completion(String id, ObjectNode result, List<ImageRecord> images, Map<String,String> remoteBuckets) {
+            this(id, result, images, remoteBuckets, null);
+        }
+    }
 }

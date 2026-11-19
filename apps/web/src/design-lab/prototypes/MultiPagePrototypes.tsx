@@ -9,6 +9,13 @@ import {
   SegmentedRail,
   StudioSelect,
 } from '../components/LabControls'
+import { RippleButton } from '../components/LabRipple'
+import {
+  ConnectedRatioSkeleton,
+  ShimmerImage,
+  SkeletonBlock,
+  SkeletonTextStack,
+} from '../components/LabSkeleton'
 import {
   buildContainerMorphKeyframes,
   isRectMostlyInViewport,
@@ -30,6 +37,7 @@ import {
 import styles from './MultiPagePrototypes.module.css'
 
 export type LabPageRoute = 'workbench' | 'gallery' | 'channels' | 'account' | 'admin'
+export type LabLoadMode = 'ready' | 'loading' | 'media-loading'
 
 /* ==========================================================================
    PAGE 2 · /gallery — 我的图库
@@ -47,11 +55,14 @@ function cancelAnimations(list: Animation[]) {
 export function GalleryPrototype({
   onGoWorkbench,
   onNotify,
+  loadMode = 'ready',
 }: {
   onGoWorkbench: () => void
   onNotify: (payload: SnackbarPayload) => void
+  loadMode?: LabLoadMode
 }) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(['srv-2'])
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [previewItem, setPreviewItem] = useState<MockGalleryItem | null>(null)
   const [openSeq, setOpenSeq] = useState(0)
   const [isClosing, setIsClosing] = useState(false)
@@ -76,8 +87,11 @@ export function GalleryPrototype({
   const stepAnimsRef = useRef<Animation[]>([])
   const closeAnimsRef = useRef<Animation[]>([])
   const closeTimerRef = useRef<number | null>(null)
+  const refreshTimerRef = useRef<number | null>(null)
 
   const items = MOCK_GALLERY_ITEMS
+  const showListSkeleton = loadMode === 'loading' || isRefreshing
+  const showMediaSkeleton = loadMode === 'media-loading'
   const allSelected = items.length > 0 && items.every((item) => selectedKeys.includes(item.key))
   const previewIndex = previewItem ? items.findIndex((i) => i.key === previewItem.key) : -1
 
@@ -439,6 +453,7 @@ export function GalleryPrototype({
   useEffect(() => {
     return () => {
       if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current)
+      if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
       cancelAnimations(openAnimsRef.current)
       cancelAnimations(openHudAnimsRef.current)
       cancelAnimations(stepAnimsRef.current)
@@ -483,145 +498,243 @@ export function GalleryPrototype({
         </div>
 
         <div className={styles.pageHeaderActions}>
-          <span className={styles.summaryPill}>已存 {items.length} 张 · 7.2 MiB</span>
-          <button
+          {showListSkeleton ? (
+            <SkeletonBlock variant="pill" width={132} height={30} />
+          ) : (
+            <span className={styles.summaryPill}>已存 {items.length} 张 · 7.2 MiB</span>
+          )}
+          <RippleButton
             type="button"
             className={styles.tonalBtn}
-            onClick={() =>
-              onNotify({
-                tone: 'info',
-                message: '已模拟刷新图库元数据（每 10 秒自动同步，不预下载大图）。',
-              })
-            }
+            disabled={showListSkeleton}
+            onClick={() => {
+              if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
+              setIsRefreshing(true)
+              refreshTimerRef.current = window.setTimeout(() => {
+                setIsRefreshing(false)
+                onNotify({
+                  tone: 'info',
+                  message: '已模拟刷新图库元数据（每 10 秒自动同步，不预下载大图）。',
+                })
+              }, 850)
+            }}
           >
             <Icon name="loader" size={14} />
-            <span>刷新图库</span>
-          </button>
-          <button type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
+            <span>{showListSkeleton ? '正在刷新…' : '刷新图库'}</span>
+          </RippleButton>
+          <RippleButton type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
             <Icon name="plus" size={15} />
             <span>创建新作品</span>
-          </button>
+          </RippleButton>
         </div>
       </header>
 
       {/* Batch Action Bar */}
       <div className={styles.toolbarCard}>
-        <div className={styles.toolbarLeft}>
-          <span className={styles.monoMeta}>共 {items.length} 张云端作品</span>
-        </div>
+        {showListSkeleton ? (
+          <>
+            <div className={styles.toolbarLeft}>
+              <SkeletonBlock variant="text" width={116} height={13} />
+            </div>
+            <div className={styles.toolbarRight}>
+              <SkeletonBlock variant="rect" width={92} height={38} radius={12} />
+              <SkeletonBlock variant="pill" width={76} height={28} staggerIndex={1} />
+              <SkeletonBlock variant="pill" width={104} height={38} radius={19} staggerIndex={2} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.toolbarLeft}>
+              <span className={styles.monoMeta}>共 {items.length} 张云端作品</span>
+            </div>
 
-        <div className={styles.toolbarRight}>
-          <button
-            type="button"
-            aria-pressed={allSelected}
-            className={`${styles.selectToggleBtn} ${allSelected ? styles.selectToggleActive : ''}`}
-            onClick={toggleAll}
-          >
-            <Icon name={allSelected ? 'check' : 'grid'} size={14} />
-            <span>{allSelected ? '取消全选' : '全选当前'}</span>
-          </button>
+            <div className={styles.toolbarRight}>
+              <RippleButton
+                type="button"
+                aria-pressed={allSelected}
+                className={`${styles.selectToggleBtn} ${allSelected ? styles.selectToggleActive : ''}`}
+                onClick={toggleAll}
+              >
+                <Icon name={allSelected ? 'check' : 'grid'} size={14} />
+                <span>{allSelected ? '取消全选' : '全选当前'}</span>
+              </RippleButton>
 
-          <span className={styles.countChip}>已选 {selectedKeys.length} 张</span>
+              <span className={styles.countChip}>已选 {selectedKeys.length} 张</span>
 
-          <button
-            type="button"
-            className={styles.dangerTonalBtn}
-            disabled={selectedKeys.length === 0}
-            onClick={() =>
-              onNotify({
-                tone: 'warning',
-                message: `Mock 提示：删除所选 ${selectedKeys.length} 张作品将按所属任务整组删除（含同组未选中图片），无法撤销。`,
-              })
-            }
-          >
-            <Icon name="trash" size={14} />
-            <span>删除所选</span>
-          </button>
-        </div>
+              <RippleButton
+                type="button"
+                className={styles.dangerTonalBtn}
+                disabled={selectedKeys.length === 0}
+                onClick={() =>
+                  onNotify({
+                    tone: 'warning',
+                    message: `Mock 提示：删除所选 ${selectedKeys.length} 张作品将按所属任务整组删除（含同组未选中图片），无法撤销。`,
+                  })
+                }
+              >
+                <Icon name="trash" size={14} />
+                <span>删除所选</span>
+              </RippleButton>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Contact-Sheet Grid */}
-      <div className={styles.galleryGrid}>
-        {items.map((item, idx) => {
-          const selected = selectedKeys.includes(item.key)
-          return (
-            <article
-              key={item.key}
-              className={`${styles.galleryCard} ${selected ? styles.galleryCardSelected : ''}`}
-            >
+      {showListSkeleton ? (
+        <div
+          className={styles.galleryGrid}
+          role="status"
+          aria-busy="true"
+          aria-label="正在加载图库作品"
+        >
+          {Array.from({ length: 5 }, (_, idx) => (
+            <article key={idx} className={styles.galleryCard} aria-hidden="true">
               <div className={styles.galleryCardTop}>
-                <span className={styles.frameCode}>{String(idx + 1).padStart(2, '0')}</span>
-                <span className={styles.modelChip}>{item.model}</span>
-                <button
-                  type="button"
-                  aria-pressed={selected}
-                  aria-label={`选择作品 ${idx + 1}`}
-                  className={`${styles.cardCheckBtn} ${selected ? styles.cardCheckBtnActive : ''}`}
-                  onClick={() => toggleSelect(item.key)}
-                >
-                  <Icon name="check" size={14} className={styles.checkGlyph} />
-                </button>
+                <SkeletonBlock variant="pill" width={22} height={12} staggerIndex={idx} />
+                <SkeletonBlock
+                  variant="text"
+                  width="54%"
+                  height={12}
+                  staggerIndex={idx}
+                  style={{ flex: 1 }}
+                />
+                <SkeletonBlock variant="rect" width={22} height={22} radius={7} staggerIndex={idx} />
               </div>
 
-              <button
-                ref={(el) => {
-                  thumbRefs.current[item.key] = el
-                }}
-                type="button"
-                className={`${styles.galleryThumbBtn} ${previewItem?.key === item.key ? styles.galleryThumbHidden : ''}`}
-                onClick={() => openPreview(item)}
-              >
-                <img src={item.url} alt={item.prompt} />
-                <span className={styles.thumbOverlay}>
-                  <Icon name="eye" size={15} />
-                  <span>查看大图</span>
-                </span>
-              </button>
+              <SkeletonBlock
+                variant="media"
+                aspectRatio="4 / 3"
+                radius={14}
+                icon="image"
+                iconSize={22}
+                staggerIndex={idx}
+              />
 
-              <p className={styles.galleryPrompt}>{item.prompt}</p>
+              <SkeletonTextStack widths={['94%', '66%']} lineHeight={13} staggerIndex={idx} />
 
               <div className={styles.galleryMeta}>
-                <span className={styles.sourceServer}>
-                  {item.groupCount > 1 ? `同组 ${item.groupCount} 张` : '单图作品'}
-                </span>
-                <span className={styles.monoMeta}>
-                  {item.dimensions} · {Math.round(item.bytes / 1024)} KiB
-                </span>
+                <SkeletonBlock
+                  variant="rect"
+                  width={68}
+                  height={22}
+                  radius="var(--md-sys-shape-corner-small)"
+                  staggerIndex={idx}
+                />
+                <SkeletonBlock variant="text" width={96} height={11} staggerIndex={idx + 1} />
               </div>
 
               <div className={styles.galleryCardActions}>
-                <button type="button" className={styles.cardGhostBtn} onClick={() => openPreview(item)}>
-                  <Icon name="eye" size={14} />
-                  <span>预览</span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.cardGhostBtn}
-                  onClick={() =>
-                    onNotify({ tone: 'info', message: `已模拟下载原图：${item.key}` })
-                  }
-                >
-                  <Icon name="download" size={14} />
-                  <span>下载</span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.cardDangerBtn}
-                  aria-label={`删除 ${item.key}`}
-                  onClick={() =>
-                    onNotify({
-                      tone: 'warning',
-                      message: `删除此作品将连带删除所属任务（共 ${item.groupCount} 张同组图片），无法撤销。`,
-                    })
-                  }
-                >
-                  <Icon name="trash" size={14} />
-                </button>
+                <SkeletonBlock
+                  variant="pill"
+                  height={32}
+                  radius={16}
+                  staggerIndex={idx}
+                  style={{ flex: 1 }}
+                />
+                <SkeletonBlock
+                  variant="pill"
+                  height={32}
+                  radius={16}
+                  staggerIndex={idx + 1}
+                  style={{ flex: 1 }}
+                />
+                <SkeletonBlock variant="pill" width={34} height={32} radius={16} staggerIndex={idx + 2} />
               </div>
             </article>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.galleryGrid}>
+          {items.map((item, idx) => {
+            const selected = selectedKeys.includes(item.key)
+            return (
+              <article
+                key={item.key}
+                className={`${styles.galleryCard} ${selected ? styles.galleryCardSelected : ''}`}
+              >
+                <div className={styles.galleryCardTop}>
+                  <span className={styles.frameCode}>{String(idx + 1).padStart(2, '0')}</span>
+                  <span className={styles.modelChip}>{item.model}</span>
+                  <RippleButton
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={`选择作品 ${idx + 1}`}
+                    className={`${styles.cardCheckBtn} ${selected ? styles.cardCheckBtnActive : ''}`}
+                    onClick={() => toggleSelect(item.key)}
+                  >
+                    <Icon name="check" size={14} className={styles.checkGlyph} />
+                  </RippleButton>
+                </div>
+
+                <RippleButton
+                  ref={(el) => {
+                    thumbRefs.current[item.key] = el
+                  }}
+                  type="button"
+                  rippleTone="light"
+                  className={`${styles.galleryThumbBtn} ${previewItem?.key === item.key ? styles.galleryThumbHidden : ''}`}
+                  onClick={() => openPreview(item)}
+                >
+                  <ShimmerImage
+                    src={item.url}
+                    alt={item.prompt}
+                    aspectRatio="4 / 3"
+                    radius={14}
+                    forceSkeleton={showMediaSkeleton}
+                    staggerIndex={idx}
+                  />
+                  <span className={styles.thumbOverlay}>
+                    <Icon name="eye" size={15} />
+                    <span>查看大图</span>
+                  </span>
+                </RippleButton>
+
+                <p className={styles.galleryPrompt}>{item.prompt}</p>
+
+                <div className={styles.galleryMeta}>
+                  <span className={styles.sourceServer}>
+                    {item.groupCount > 1 ? `同组 ${item.groupCount} 张` : '单图作品'}
+                  </span>
+                  <span className={styles.monoMeta}>
+                    {item.dimensions} · {Math.round(item.bytes / 1024)} KiB
+                  </span>
+                </div>
+
+                <div className={styles.galleryCardActions}>
+                  <RippleButton type="button" className={styles.cardGhostBtn} onClick={() => openPreview(item)}>
+                    <Icon name="eye" size={14} />
+                    <span>预览</span>
+                  </RippleButton>
+                  <RippleButton
+                    type="button"
+                    className={styles.cardGhostBtn}
+                    onClick={() =>
+                      onNotify({ tone: 'info', message: `已模拟下载原图：${item.key}` })
+                    }
+                  >
+                    <Icon name="download" size={14} />
+                    <span>下载</span>
+                  </RippleButton>
+                  <RippleButton
+                    type="button"
+                    className={styles.cardDangerBtn}
+                    aria-label={`删除 ${item.key}`}
+                    onClick={() =>
+                      onNotify({
+                        tone: 'warning',
+                        message: `删除此作品将连带删除所属任务（共 ${item.groupCount} 张同组图片），无法撤销。`,
+                      })
+                    }
+                  >
+                    <Icon name="trash" size={14} />
+                  </RippleButton>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
 
       <footer className={styles.safetyFooter}>
         <Icon name="shield" size={15} />
@@ -679,7 +792,7 @@ export function GalleryPrototype({
                     >
                       {items.length > 1 ? (
                         <div className={styles.hudNavGroup}>
-                          <button
+                          <RippleButton
                             type="button"
                             className={styles.hudIconBtn}
                             onClick={() => stepPreview(-1)}
@@ -687,8 +800,8 @@ export function GalleryPrototype({
                             title="上一张 (←)"
                           >
                             <Icon name="arrow-left" size={15} />
-                          </button>
-                          <button
+                          </RippleButton>
+                          <RippleButton
                             type="button"
                             className={styles.hudIconBtn}
                             onClick={() => stepPreview(1)}
@@ -696,11 +809,11 @@ export function GalleryPrototype({
                             title="下一张 (→)"
                           >
                             <Icon name="arrow-right" size={15} />
-                          </button>
+                          </RippleButton>
                         </div>
                       ) : null}
 
-                      <button
+                      <RippleButton
                         type="button"
                         className={styles.hudDownloadBtn}
                         onClick={() =>
@@ -709,10 +822,10 @@ export function GalleryPrototype({
                       >
                         <Icon name="download" size={15} />
                         <span>下载原图</span>
-                      </button>
+                      </RippleButton>
                     </div>
 
-                    <button
+                    <RippleButton
                       type="button"
                       className={styles.hudIconBtn}
                       onClick={() => setHudVisible((v) => !v)}
@@ -720,9 +833,9 @@ export function GalleryPrototype({
                       title={hudVisible ? '隐藏信息栏' : '显示信息栏'}
                     >
                       <Icon name={hudVisible ? 'eye-off' : 'eye'} size={15} />
-                    </button>
+                    </RippleButton>
 
-                    <button
+                    <RippleButton
                       type="button"
                       className={styles.hudIconBtn}
                       onClick={closePreview}
@@ -730,7 +843,7 @@ export function GalleryPrototype({
                       title="关闭 (Esc)"
                     >
                       <Icon name="close" size={17} />
-                    </button>
+                    </RippleButton>
                   </div>
                 </div>
 
@@ -769,9 +882,11 @@ export function GalleryPrototype({
 export function ChannelsPrototype({
   scope = 'private',
   onNotify,
+  loadMode = 'ready',
 }: {
   scope?: 'private' | 'shared'
   onNotify: (payload: SnackbarPayload) => void
+  loadMode?: LabLoadMode
 }) {
   const scopedChannels = MOCK_CHANNELS.filter((c) => c.scope === scope)
   const [selectedId, setSelectedId] = useState(scopedChannels[0]?.id ?? '')
@@ -782,7 +897,20 @@ export function ChannelsPrototype({
   const [editUrl, setEditUrl] = useState(activeChannel?.baseUrl ?? '')
   const [editEnabled, setEditEnabled] = useState(activeChannel?.enabled ?? true)
   const [enabledModelIds, setEnabledModelIds] = useState<string[]>(activeChannel?.enabledModels ?? [])
+  const [isRefreshingList, setIsRefreshingList] = useState(false)
+  const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false)
+  const listTimerRef = useRef<number | null>(null)
+  const catalogTimerRef = useRef<number | null>(null)
 
+  useEffect(() => {
+    return () => {
+      if (listTimerRef.current !== null) window.clearTimeout(listTimerRef.current)
+      if (catalogTimerRef.current !== null) window.clearTimeout(catalogTimerRef.current)
+    }
+  }, [])
+
+  const showChannelSkeleton = loadMode === 'loading' || isRefreshingList
+  const showCatalogSkeleton = isRefreshingCatalog
   const catalog = activeChannel ? MOCK_CATALOG_BY_CHANNEL[activeChannel.id] : null
 
   function selectChannel(chId: string) {
@@ -809,15 +937,23 @@ export function ChannelsPrototype({
             </p>
           </div>
           <div className={styles.pageHeaderActions}>
-            <button
+            <RippleButton
               type="button"
               className={styles.tonalBtn}
-              onClick={() => onNotify({ tone: 'info', message: '已模拟刷新私有渠道列表。' })}
+              disabled={showChannelSkeleton}
+              onClick={() => {
+                if (listTimerRef.current !== null) window.clearTimeout(listTimerRef.current)
+                setIsRefreshingList(true)
+                listTimerRef.current = window.setTimeout(() => {
+                  setIsRefreshingList(false)
+                  onNotify({ tone: 'info', message: '已模拟刷新私有渠道列表。' })
+                }, 850)
+              }}
             >
               <Icon name="loader" size={14} />
-              <span>刷新列表</span>
-            </button>
-            <button
+              <span>{showChannelSkeleton ? '正在刷新…' : '刷新列表'}</span>
+            </RippleButton>
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() => {
@@ -830,11 +966,95 @@ export function ChannelsPrototype({
             >
               <Icon name="plus" size={15} />
               <span>新增自定义渠道</span>
-            </button>
+            </RippleButton>
           </div>
         </header>
       ) : null}
 
+      {showChannelSkeleton ? (
+        <div
+          className={styles.splitWorkspace}
+          role="status"
+          aria-busy="true"
+          aria-label="正在加载渠道配置"
+        >
+          <section className={styles.masterRail} aria-hidden="true">
+            <div className={styles.masterHead}>
+              <SkeletonBlock variant="text" width={88} height={14} />
+              <SkeletonBlock variant="pill" width={36} height={16} />
+            </div>
+
+            <div className={styles.channelCardStack}>
+              {Array.from({ length: 3 }, (_, idx) => (
+                <div key={idx} className={styles.channelItemCard}>
+                  <div className={styles.channelItemTop}>
+                    <SkeletonBlock variant="text" width="58%" height={14} staggerIndex={idx} />
+                    <SkeletonBlock variant="pill" width={52} height={22} staggerIndex={idx + 1} />
+                  </div>
+                  <div className={styles.channelItemMeta}>
+                    <SkeletonBlock variant="rect" width={48} height={18} radius={6} staggerIndex={idx} />
+                    <SkeletonBlock variant="text" width={92} height={12} staggerIndex={idx + 1} />
+                  </div>
+                  <SkeletonBlock variant="text" width="84%" height={11} staggerIndex={idx + 2} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.detailCard} aria-hidden="true">
+            <div className={styles.detailHeader}>
+              <div className={styles.skeletonListStack} style={{ gap: 6, flex: 1 }}>
+                <SkeletonBlock variant="text" width={140} height={11} />
+                <SkeletonBlock variant="text" width={200} height={22} staggerIndex={1} />
+              </div>
+              <SkeletonBlock variant="pill" width={82} height={34} />
+            </div>
+
+            <div className={styles.formGrid}>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={68} height={12} />
+                <SkeletonBlock variant="field" staggerIndex={0} />
+              </div>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={68} height={12} />
+                <SkeletonBlock variant="pill" width="100%" height={38} radius={19} staggerIndex={1} />
+              </div>
+              <div className={`${styles.filledField} ${styles.fullSpan}`}>
+                <SkeletonBlock variant="text" width={120} height={12} />
+                <SkeletonBlock variant="field" staggerIndex={2} />
+              </div>
+              <div className={`${styles.filledField} ${styles.fullSpan}`}>
+                <SkeletonBlock variant="text" width={220} height={12} />
+                <SkeletonBlock variant="field" staggerIndex={3} />
+              </div>
+            </div>
+
+            <div className={styles.catalogBox}>
+              <div className={styles.catalogHead}>
+                <div className={styles.skeletonListStack} style={{ gap: 6 }}>
+                  <SkeletonBlock variant="text" width={140} height={14} />
+                  <SkeletonBlock variant="text" width={240} height={11} staggerIndex={1} />
+                </div>
+                <SkeletonBlock variant="pill" width={118} height={38} radius={19} />
+              </div>
+              <div className={styles.catalogGrid}>
+                {[126, 98, 114, 92, 134, 84].map((w, idx) => (
+                  <SkeletonBlock key={idx} variant="rect" width={w} height={32} radius={8} staggerIndex={idx} />
+                ))}
+              </div>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={170} height={12} />
+                <SkeletonBlock variant="field" height={82} staggerIndex={2} />
+              </div>
+            </div>
+
+            <div className={styles.detailFooter}>
+              <SkeletonBlock variant="pill" width={104} height={40} radius={20} />
+              <SkeletonBlock variant="pill" width={126} height={40} radius={20} staggerIndex={1} />
+            </div>
+          </section>
+        </div>
+      ) : (
       <div className={styles.splitWorkspace}>
         {/* Left List */}
         <section className={styles.masterRail} aria-label="渠道列表">
@@ -847,7 +1067,7 @@ export function ChannelsPrototype({
             {scopedChannels.map((ch) => {
               const active = ch.id === selectedId
               return (
-                <button
+                <RippleButton
                   key={ch.id}
                   type="button"
                   aria-pressed={active}
@@ -867,7 +1087,7 @@ export function ChannelsPrototype({
                     <span>{ch.hasApiKey ? '密钥已配置（只写）' : '未设密钥'}</span>
                   </div>
                   <code className={styles.urlSnippet}>{ch.baseUrl}</code>
-                </button>
+                </RippleButton>
               )
             })}
           </div>
@@ -880,7 +1100,7 @@ export function ChannelsPrototype({
               <span className={styles.pageEyebrow}>CHANNEL CONFIGURATION</span>
               <h2>{selectedId ? `编辑：${editName}` : '新建渠道'}</h2>
             </div>
-            <button
+            <RippleButton
               type="button"
               aria-pressed={editEnabled}
               className={`${styles.switchPill} ${editEnabled ? styles.switchPillOn : ''}`}
@@ -888,7 +1108,7 @@ export function ChannelsPrototype({
             >
               <span className={styles.switchThumb} />
               <span>{editEnabled ? '已启用' : '已停用'}</span>
-            </button>
+            </RippleButton>
           </div>
 
           <div className={styles.formGrid}>
@@ -940,27 +1160,39 @@ export function ChannelsPrototype({
                 <strong>模型目录与启用列表</strong>
                 <span>目录来自渠道 `/models`，不保证全部支持生图；{scope === 'shared' ? '普通用户仅可选中已启用模型' : '私有渠道也可在工作台手填 ID'}</span>
               </div>
-              <button
+              <RippleButton
                 type="button"
                 className={styles.tonalBtn}
-                onClick={() =>
-                  onNotify({
-                    tone: 'info',
-                    message: '已模拟拉取渠道 /models 目录（真实环境使用长超时独立预算）。',
-                  })
-                }
+                disabled={showCatalogSkeleton}
+                onClick={() => {
+                  if (catalogTimerRef.current !== null) window.clearTimeout(catalogTimerRef.current)
+                  setIsRefreshingCatalog(true)
+                  catalogTimerRef.current = window.setTimeout(() => {
+                    setIsRefreshingCatalog(false)
+                    onNotify({
+                      tone: 'info',
+                      message: '已模拟拉取渠道 /models 目录（真实环境使用长超时独立预算）。',
+                    })
+                  }, 850)
+                }}
               >
                 <Icon name="loader" size={14} />
-                <span>发现 / 刷新模型</span>
-              </button>
+                <span>{showCatalogSkeleton ? '正在发现…' : '发现 / 刷新模型'}</span>
+              </RippleButton>
             </div>
 
-            {catalog ? (
+            {showCatalogSkeleton ? (
+              <div className={styles.catalogGrid} role="status" aria-label="正在加载模型目录">
+                {[128, 96, 116, 88, 134].map((w, idx) => (
+                  <SkeletonBlock key={idx} variant="rect" width={w} height={32} radius={8} staggerIndex={idx} />
+                ))}
+              </div>
+            ) : catalog ? (
               <div className={styles.catalogGrid}>
                 {catalog.models.map((m) => {
                   const checked = enabledModelIds.includes(m.id)
                   return (
-                    <button
+                    <RippleButton
                       key={m.id}
                       type="button"
                       aria-pressed={checked}
@@ -973,7 +1205,7 @@ export function ChannelsPrototype({
                     >
                       <Icon name={checked ? 'check' : 'plus'} size={13} />
                       <span>{m.name || m.id}</span>
-                    </button>
+                    </RippleButton>
                   )
                 })}
               </div>
@@ -998,7 +1230,7 @@ export function ChannelsPrototype({
 
           <div className={styles.detailFooter}>
             {selectedId ? (
-              <button
+              <RippleButton
                 type="button"
                 className={styles.dangerTonalBtn}
                 onClick={() =>
@@ -1010,9 +1242,9 @@ export function ChannelsPrototype({
               >
                 <Icon name="trash" size={14} />
                 <span>删除此渠道</span>
-              </button>
+              </RippleButton>
             ) : <span />}
-            <button
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() =>
@@ -1024,10 +1256,11 @@ export function ChannelsPrototype({
             >
               <Icon name="check" size={15} />
               <span>保存渠道配置</span>
-            </button>
+            </RippleButton>
           </div>
         </section>
       </div>
+      )}
     </div>
   )
 }
@@ -1037,11 +1270,14 @@ export function ChannelsPrototype({
    ========================================================================== */
 export function AccountPrototype({
   onNotify,
+  loadMode = 'ready',
 }: {
   onNotify: (payload: SnackbarPayload) => void
+  loadMode?: LabLoadMode
 }) {
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'password'>('login')
   const [showPwd, setShowPwd] = useState(false)
+  const isAccountLoading = loadMode === 'loading'
 
   return (
     <div className={styles.pageWrap}>
@@ -1060,6 +1296,71 @@ export function AccountPrototype({
         />
       </div>
 
+      {isAccountLoading ? (
+        <div
+          className={styles.authSplitCard}
+          role="status"
+          aria-busy="true"
+          aria-label="正在连接会话"
+        >
+          <section className={styles.authShowcase} aria-hidden="true">
+            <div className={styles.authBrandBadge}>
+              <SkeletonBlock variant="rect" width={44} height={44} radius={14} />
+              <div className={styles.skeletonListStack} style={{ gap: 6 }}>
+                <SkeletonBlock variant="text" width={140} height={15} />
+                <SkeletonBlock variant="text" width={116} height={11} staggerIndex={1} />
+              </div>
+            </div>
+
+            <div className={styles.skeletonListStack} style={{ gap: 8 }}>
+              <SkeletonBlock variant="text" width="84%" height={26} staggerIndex={1} />
+              <SkeletonBlock variant="text" width="56%" height={26} staggerIndex={2} />
+            </div>
+
+            <SkeletonTextStack widths={['94%', '72%']} lineHeight={14} staggerIndex={2} />
+
+            <div className={styles.securityHighlights} style={{ gap: 12 }}>
+              {[76, 84, 70].map((pct, idx) => (
+                <div key={idx} className={styles.skeletonRow}>
+                  <SkeletonBlock variant="circle" width={16} height={16} staggerIndex={idx} />
+                  <SkeletonBlock variant="text" width={`${pct}%`} height={13} staggerIndex={idx + 1} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.authFormPane} aria-hidden="true">
+            <div className={styles.skeletonListStack} style={{ gap: 6 }}>
+              <SkeletonBlock variant="text" width={110} height={11} />
+              <SkeletonBlock variant="text" width={160} height={22} staggerIndex={1} />
+            </div>
+
+            <div className={styles.authForm}>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={146} height={12} />
+                <SkeletonBlock variant="field" staggerIndex={0} />
+              </div>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={128} height={12} />
+                <SkeletonBlock variant="field" staggerIndex={1} />
+              </div>
+              {authMode !== 'login' ? (
+                <div className={styles.filledField}>
+                  <SkeletonBlock variant="text" width={92} height={12} />
+                  <SkeletonBlock variant="field" staggerIndex={2} />
+                </div>
+              ) : null}
+
+              <div className={styles.authActions}>
+                <SkeletonBlock variant="pill" width="100%" height={44} radius={22} staggerIndex={2} />
+                {authMode !== 'password' ? (
+                  <SkeletonBlock variant="pill" width="100%" height={44} radius={22} staggerIndex={3} />
+                ) : null}
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : (
       <div key={authMode} className={`${styles.authSplitCard} ${styles.subPanelFade}`}>
         {/* Left Identity Showcase */}
         <section className={styles.authShowcase}>
@@ -1158,13 +1459,13 @@ export function AccountPrototype({
                   defaultValue="example-secure-passphrase"
                   required
                 />
-                <button
+                <RippleButton
                   type="button"
                   onClick={() => setShowPwd((v) => !v)}
                   aria-label={showPwd ? '隐藏密码' : '显示密码'}
                 >
                   <Icon name={showPwd ? 'eye-off' : 'eye'} size={16} />
-                </button>
+                </RippleButton>
               </div>
             </div>
 
@@ -1183,11 +1484,11 @@ export function AccountPrototype({
             ) : null}
 
             <div className={styles.authActions}>
-              <button type="submit" className={styles.primaryBtnFull}>
+              <RippleButton type="submit" className={styles.primaryBtnFull}>
                 {authMode === 'password' ? '更新密码并重新登录' : authMode === 'register' ? '注册并进入工作台' : '登录工作台'}
-              </button>
+              </RippleButton>
               {authMode !== 'password' ? (
-                <button
+                <RippleButton
                   type="button"
                   className={styles.tonalBtnFull}
                   onClick={() => {
@@ -1195,12 +1496,13 @@ export function AccountPrototype({
                   }}
                 >
                   {authMode === 'login' ? '还没有账号？使用邀请码注册' : '已有账号？返回登录'}
-                </button>
+                </RippleButton>
               ) : null}
             </div>
           </form>
         </section>
       </div>
+      )}
     </div>
   )
 }
@@ -1210,8 +1512,10 @@ export function AccountPrototype({
    ========================================================================== */
 export function AdminPrototype({
   onNotify,
+  loadMode = 'ready',
 }: {
   onNotify: (payload: SnackbarPayload) => void
+  loadMode?: LabLoadMode
 }) {
   const [adminTab, setAdminTab] = useState<
     'channels' | 'users' | 'invites' | 'settings' | 'templates' | 'usage'
@@ -1220,6 +1524,17 @@ export function AdminPrototype({
   const [tplQuality, setTplQuality] = useState('high')
   const [tplCount, setTplCount] = useState(1)
   const [tplFormat, setTplFormat] = useState('png')
+  const [isRefreshingUsage, setIsRefreshingUsage] = useState(false)
+  const usageTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (usageTimerRef.current !== null) window.clearTimeout(usageTimerRef.current)
+    }
+  }, [])
+
+  const isAdminLoading = loadMode === 'loading'
+  const showUsageSkeleton = isAdminLoading || isRefreshingUsage
 
   return (
     <div className={styles.pageWrap}>
@@ -1251,9 +1566,43 @@ export function AdminPrototype({
 
       <div key={adminTab} className={styles.subPanelFade}>
 
-      {adminTab === 'channels' ? <ChannelsPrototype scope="shared" onNotify={onNotify} /> : null}
+      {adminTab === 'channels' ? (
+        <ChannelsPrototype scope="shared" loadMode={loadMode} onNotify={onNotify} />
+      ) : null}
 
       {adminTab === 'users' ? (
+        isAdminLoading ? (
+          <div className={styles.adminSection} role="status" aria-busy="true" aria-label="正在加载用户列表">
+            <SkeletonBlock variant="rect" width="100%" height={42} radius={14} />
+            <div className={styles.adminGrid} aria-hidden="true">
+              {Array.from({ length: 4 }, (_, idx) => (
+                <article key={idx} className={styles.adminCard}>
+                  <div className={styles.adminCardHead}>
+                    <div className={styles.skeletonRow}>
+                      <SkeletonBlock variant="text" width={92} height={15} staggerIndex={idx} />
+                      <SkeletonBlock variant="rect" width={46} height={20} radius={6} staggerIndex={idx} />
+                    </div>
+                    <SkeletonBlock variant="pill" width={62} height={22} staggerIndex={idx + 1} />
+                  </div>
+                  <div className={styles.adminUserFields}>
+                    <div className={styles.filledField}>
+                      <SkeletonBlock variant="text" width={110} height={11} />
+                      <SkeletonBlock variant="field" staggerIndex={idx} />
+                    </div>
+                    <div className={styles.filledField}>
+                      <SkeletonBlock variant="text" width={120} height={11} />
+                      <SkeletonBlock variant="field" staggerIndex={idx + 1} />
+                    </div>
+                  </div>
+                  <div className={styles.adminCardFooter}>
+                    <SkeletonBlock variant="text" width={88} height={12} staggerIndex={idx} />
+                    <SkeletonBlock variant="pill" width={88} height={40} radius={20} staggerIndex={idx + 1} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : (
         <div className={styles.adminSection}>
           <div className={styles.sectionNote}>
             日额度留空继承全站默认（{MOCK_ADMIN_SETTINGS.defaultDailyLimit} 次），-1 为无限，0 为禁止共享调用；管理员不可查看用户提示词或图片。
@@ -1286,7 +1635,7 @@ export function AdminPrototype({
                   <span className={styles.monoMeta}>
                     {u.mustChangePassword ? '下次登录须改密' : '密码状态正常'}
                   </span>
-                  <button
+                  <RippleButton
                     type="button"
                     className={styles.tonalBtn}
                     onClick={() =>
@@ -1297,15 +1646,37 @@ export function AdminPrototype({
                     }
                   >
                     保存设置
-                  </button>
+                  </RippleButton>
                 </div>
               </article>
             ))}
           </div>
         </div>
+        )
       ) : null}
 
       {adminTab === 'invites' ? (
+        isAdminLoading ? (
+          <div className={styles.adminSection} role="status" aria-busy="true" aria-label="正在加载邀请码">
+            <div className={styles.toolbarCard} aria-hidden="true">
+              <SkeletonBlock variant="text" width="52%" height={14} />
+              <SkeletonBlock variant="pill" width={118} height={40} radius={20} staggerIndex={1} />
+            </div>
+            <div className={styles.inviteList} aria-hidden="true">
+              {Array.from({ length: 3 }, (_, idx) => (
+                <div key={idx} className={styles.inviteRow}>
+                  <SkeletonBlock variant="rect" width={148} height={28} radius={8} staggerIndex={idx} />
+                  <SkeletonBlock variant="pill" width={54} height={22} staggerIndex={idx + 1} />
+                  <SkeletonBlock variant="text" width={78} height={12} staggerIndex={idx + 2} />
+                  <div className={styles.inviteActions}>
+                    <SkeletonBlock variant="pill" width={76} height={40} radius={20} staggerIndex={idx} />
+                    <SkeletonBlock variant="pill" width={68} height={40} radius={20} staggerIndex={idx + 1} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
         <div className={styles.adminSection}>
           <div className={styles.toolbarCard}>
             <div className={styles.toolbarLeft}>
@@ -1313,7 +1684,7 @@ export function AdminPrototype({
                 无限次邀请码不过期，可反复注册普通用户；撤销后立即停止新注册。
               </span>
             </div>
-            <button
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() =>
@@ -1325,7 +1696,7 @@ export function AdminPrototype({
             >
               <Icon name="plus" size={15} />
               <span>创建邀请码</span>
-            </button>
+            </RippleButton>
           </div>
           <div className={styles.inviteList}>
             {MOCK_INVITES.map((inv) => (
@@ -1336,7 +1707,7 @@ export function AdminPrototype({
                 </span>
                 <span className={styles.monoMeta}>已注册 {inv.registrationCount} 人</span>
                 <div className={styles.inviteActions}>
-                  <button
+                  <RippleButton
                     type="button"
                     className={styles.tonalBtn}
                     onClick={() =>
@@ -1345,8 +1716,8 @@ export function AdminPrototype({
                   >
                     <Icon name="copy" size={14} />
                     <span>复制</span>
-                  </button>
-                  <button
+                  </RippleButton>
+                  <RippleButton
                     type="button"
                     className={styles.dangerTonalBtn}
                     disabled={!inv.enabled}
@@ -1358,15 +1729,39 @@ export function AdminPrototype({
                     }
                   >
                     撤销
-                  </button>
+                  </RippleButton>
                 </div>
               </div>
             ))}
           </div>
         </div>
+        )
       ) : null}
 
       {adminTab === 'settings' ? (
+        isAdminLoading ? (
+          <div className={styles.detailCard} role="status" aria-busy="true" aria-label="正在加载额度与队列设置">
+            <div className={styles.detailHeader} aria-hidden="true">
+              <div className={styles.skeletonListStack} style={{ gap: 6 }}>
+                <SkeletonBlock variant="text" width={148} height={11} />
+                <SkeletonBlock variant="text" width={210} height={22} staggerIndex={1} />
+              </div>
+              <SkeletonBlock variant="pill" width={168} height={30} />
+            </div>
+            <div className={styles.formGrid} aria-hidden="true">
+              {Array.from({ length: 4 }, (_, idx) => (
+                <div key={idx} className={styles.filledField}>
+                  <SkeletonBlock variant="text" width="68%" height={12} staggerIndex={idx} />
+                  <SkeletonBlock variant="field" staggerIndex={idx + 1} />
+                </div>
+              ))}
+            </div>
+            <div className={styles.detailFooter} aria-hidden="true">
+              <SkeletonBlock variant="text" width={240} height={12} />
+              <SkeletonBlock variant="pill" width={126} height={40} radius={20} staggerIndex={1} />
+            </div>
+          </div>
+        ) : (
         <div className={styles.detailCard}>
           <div className={styles.detailHeader}>
             <div>
@@ -1395,7 +1790,7 @@ export function AdminPrototype({
           </div>
           <div className={styles.detailFooter}>
             <span className={styles.monoMeta}>任务失败会自动退回原提交日额度；删除终态任务不退额。</span>
-            <button
+            <RippleButton
               type="button"
               className={styles.primaryBtn}
               onClick={() =>
@@ -1404,12 +1799,66 @@ export function AdminPrototype({
             >
               <Icon name="check" size={15} />
               <span>保存全站配置</span>
-            </button>
+            </RippleButton>
           </div>
         </div>
+        )
       ) : null}
 
       {adminTab === 'templates' ? (
+        isAdminLoading ? (
+          <div className={styles.splitWorkspace} role="status" aria-busy="true" aria-label="正在加载参数模板">
+            <section className={styles.masterRail} aria-hidden="true">
+              <div className={styles.masterHead}>
+                <SkeletonBlock variant="text" width={88} height={14} />
+                <SkeletonBlock variant="pill" width={36} height={16} />
+              </div>
+              <div className={styles.channelCardStack}>
+                {Array.from({ length: 3 }, (_, idx) => (
+                  <div key={idx} className={styles.channelItemCard}>
+                    <div className={styles.channelItemTop}>
+                      <SkeletonBlock variant="text" width="62%" height={14} staggerIndex={idx} />
+                      <SkeletonBlock variant="rect" width={48} height={18} radius={6} staggerIndex={idx + 1} />
+                    </div>
+                    <SkeletonBlock variant="text" width="88%" height={11} staggerIndex={idx + 2} />
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section className={styles.detailCard} aria-hidden="true">
+              <div className={styles.skeletonListStack} style={{ gap: 6 }}>
+                <SkeletonBlock variant="text" width={124} height={11} />
+                <SkeletonBlock variant="text" width={230} height={22} staggerIndex={1} />
+              </div>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={64} height={12} />
+                <SkeletonBlock variant="field" />
+              </div>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={82} height={12} />
+                <ConnectedRatioSkeleton />
+              </div>
+              <div className={styles.formGrid}>
+                <div className={styles.filledField}>
+                  <SkeletonBlock variant="text" width={64} height={12} />
+                  <SkeletonBlock variant="pill" width="100%" height={38} radius={19} staggerIndex={1} />
+                </div>
+                <div className={styles.filledField}>
+                  <SkeletonBlock variant="text" width={64} height={12} />
+                  <SkeletonBlock variant="pill" width="100%" height={38} radius={19} staggerIndex={2} />
+                </div>
+              </div>
+              <div className={styles.filledField}>
+                <SkeletonBlock variant="text" width={64} height={12} />
+                <SkeletonBlock variant="pill" width="100%" height={44} radius={22} staggerIndex={3} />
+              </div>
+              <div className={styles.detailFooter}>
+                <span />
+                <SkeletonBlock variant="pill" width={110} height={40} radius={20} staggerIndex={2} />
+              </div>
+            </section>
+          </div>
+        ) : (
         <div className={styles.splitWorkspace}>
           <section className={styles.masterRail}>
             <div className={styles.masterHead}>
@@ -1483,7 +1932,7 @@ export function AdminPrototype({
             </div>
             <div className={styles.detailFooter}>
               <span />
-              <button
+              <RippleButton
                 type="button"
                 className={styles.primaryBtn}
                 onClick={() =>
@@ -1492,86 +1941,130 @@ export function AdminPrototype({
               >
                 <Icon name="check" size={15} />
                 <span>保存模板</span>
-              </button>
+              </RippleButton>
             </div>
           </section>
         </div>
+        )
       ) : null}
 
       {adminTab === 'usage' ? (
-        <div className={styles.adminSection}>
-          <div className={styles.kpiRow}>
-            <div className={styles.kpiCard}>
-              <span>总任务计数</span>
-              <strong>115</strong>
-              <small>含历史所有终态任务</small>
-            </div>
-            <div className={styles.kpiCard}>
-              <span>成功任务</span>
-              <strong>107</strong>
-              <small>整体成功率 93.0%</small>
-            </div>
-            <div className={styles.kpiCard}>
-              <span>当前活跃队列</span>
-              <strong>1</strong>
-              <small>上限 {MOCK_ADMIN_SETTINGS.queueLimit} 条</small>
-            </div>
-          </div>
-
-          <div className={styles.detailCard}>
-            <div className={styles.detailHeader}>
-              <div>
-                <span className={styles.pageEyebrow}>NON-PRIVATE TELEMETRY</span>
-                <h2>渠道与最近任务状态（不含提示词或图片）</h2>
+        <div className={styles.adminSection} aria-busy={showUsageSkeleton}>
+          {showUsageSkeleton ? (
+            <>
+              <div className={styles.kpiRow} role="status" aria-label="正在加载统计指标">
+                {Array.from({ length: 3 }, (_, idx) => (
+                  <div key={idx} className={styles.kpiCard} aria-hidden="true">
+                    <SkeletonBlock variant="text" width={72} height={12} staggerIndex={idx} />
+                    <SkeletonBlock variant="pill" width={68} height={30} radius={12} staggerIndex={idx + 1} />
+                    <SkeletonBlock variant="text" width={104} height={11} staggerIndex={idx + 2} />
+                  </div>
+                ))}
               </div>
-              <button
-                type="button"
-                className={styles.tonalBtn}
-                onClick={() =>
-                  onNotify({ tone: 'info', message: '已模拟刷新站点使用统计。' })
-                }
-              >
-                <Icon name="loader" size={14} />
-                <span>刷新统计</span>
-              </button>
-            </div>
-            <div className={styles.tableWrap} data-no-swipe="true">
-              <table className={styles.dataTable}>
-                <thead>
-                  <tr>
-                    <th>任务 ID</th>
-                    <th>用户</th>
-                    <th>渠道</th>
-                    <th>状态</th>
-                    <th>创建时间</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MOCK_ADMIN_USAGE.tasks.map((task) => (
-                    <tr key={task.id}>
-                      <td><code>{task.id}</code></td>
-                      <td>{task.username}</td>
-                      <td>{task.channelId}</td>
-                      <td>
-                        <span
-                          className={
-                            task.status === 'succeeded'
-                              ? styles.statusOn
-                              : task.status === 'running'
-                                ? styles.statusRunningChip
-                                : styles.statusOff
-                          }
-                        >
-                          {task.status}
-                        </span>
-                      </td>
-                      <td>{task.createdAt}</td>
-                    </tr>
+
+              <div className={styles.detailCard} aria-hidden="true">
+                <div className={styles.detailHeader}>
+                  <div className={styles.skeletonListStack} style={{ gap: 6 }}>
+                    <SkeletonBlock variant="text" width={136} height={11} />
+                    <SkeletonBlock variant="text" width={240} height={22} staggerIndex={1} />
+                  </div>
+                  <SkeletonBlock variant="pill" width={104} height={40} radius={20} />
+                </div>
+                <div className={styles.skeletonListStack} style={{ gap: 10 }}>
+                  <SkeletonBlock variant="rect" width="100%" height={36} radius={10} />
+                  {Array.from({ length: 4 }, (_, idx) => (
+                    <div key={idx} className={styles.skeletonBetween} style={{ padding: '6px 4px' }}>
+                      <SkeletonBlock variant="text" width="22%" height={13} staggerIndex={idx} />
+                      <SkeletonBlock variant="text" width="16%" height={13} staggerIndex={idx + 1} />
+                      <SkeletonBlock variant="text" width="24%" height={13} staggerIndex={idx + 2} />
+                      <SkeletonBlock variant="pill" width={68} height={22} staggerIndex={idx + 1} />
+                      <SkeletonBlock variant="text" width="18%" height={12} staggerIndex={idx + 3} />
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.kpiRow}>
+                <div className={styles.kpiCard}>
+                  <span>总任务计数</span>
+                  <strong>115</strong>
+                  <small>含历史所有终态任务</small>
+                </div>
+                <div className={styles.kpiCard}>
+                  <span>成功任务</span>
+                  <strong>107</strong>
+                  <small>整体成功率 93.0%</small>
+                </div>
+                <div className={styles.kpiCard}>
+                  <span>当前活跃队列</span>
+                  <strong>1</strong>
+                  <small>上限 {MOCK_ADMIN_SETTINGS.queueLimit} 条</small>
+                </div>
+              </div>
+
+              <div className={styles.detailCard}>
+                <div className={styles.detailHeader}>
+                  <div>
+                    <span className={styles.pageEyebrow}>NON-PRIVATE TELEMETRY</span>
+                    <h2>渠道与最近任务状态（不含提示词或图片）</h2>
+                  </div>
+                  <RippleButton
+                    type="button"
+                    className={styles.tonalBtn}
+                    onClick={() => {
+                      if (usageTimerRef.current !== null) window.clearTimeout(usageTimerRef.current)
+                      setIsRefreshingUsage(true)
+                      usageTimerRef.current = window.setTimeout(() => {
+                        setIsRefreshingUsage(false)
+                        onNotify({ tone: 'info', message: '已模拟刷新站点使用统计。' })
+                      }, 850)
+                    }}
+                  >
+                    <Icon name="loader" size={14} />
+                    <span>刷新统计</span>
+                  </RippleButton>
+                </div>
+                <div className={styles.tableWrap} data-no-swipe="true">
+                  <table className={styles.dataTable}>
+                    <thead>
+                      <tr>
+                        <th>任务 ID</th>
+                        <th>用户</th>
+                        <th>渠道</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {MOCK_ADMIN_USAGE.tasks.map((task) => (
+                        <tr key={task.id}>
+                          <td><code>{task.id}</code></td>
+                          <td>{task.username}</td>
+                          <td>{task.channelId}</td>
+                          <td>
+                            <span
+                              className={
+                                task.status === 'succeeded'
+                                  ? styles.statusOn
+                                  : task.status === 'running'
+                                    ? styles.statusRunningChip
+                                    : styles.statusOff
+                              }
+                            >
+                              {task.status}
+                            </span>
+                          </td>
+                          <td>{task.createdAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       ) : null}
       </div>

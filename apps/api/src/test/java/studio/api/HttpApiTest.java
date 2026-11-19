@@ -83,6 +83,35 @@ class HttpApiTest {
         mvc.perform(with(user, get("/api/me/quota"))).andExpect(status().isOk()).andExpect(jsonPath("$.configured").value(false));
     }
 
+    @Test void galleryDisclosesOnlyRetentionWhileStorageAndIssueDataAreAdminOnly() throws Exception {
+        Client admin = admin(), user = register(admin);
+        String bucketBody = """
+                {"accountId":"abcdef0123456789abcdef0123456789","bucketName":"http-private-gallery",
+                 "accessKeyId":"hidden-access","secretAccessKey":"hidden-secret"}
+                """;
+        var created = mvc.perform(with(admin, post("/api/admin/storage/buckets")).content(bucketBody)).andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("hidden-")))).andReturn().getResponse();
+        String id = mapper.readTree(created.getContentAsByteArray()).path("bucket").path("id").asText();
+        try {
+            mvc.perform(with(admin, put("/api/admin/storage/settings")).content(mapper.writeValueAsString(Map.of("retentionDays", 7, "activeBucketId", id))))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.activeBucketId").value(id));
+            mvc.perform(with(user, get("/api/gallery"))).andExpect(status().isOk()).andExpect(jsonPath("$.retentionDays").value(7))
+                    .andExpect(jsonPath("$.images").isEmpty()).andExpect(content().string(not(containsString(id))))
+                    .andExpect(content().string(not(containsString("ucket"))));
+            for (String path : new String[]{"/api/admin/storage/settings", "/api/admin/storage/buckets", "/api/admin/storage/buckets/" + id + "/usage", "/api/admin/issues", "/api/admin/issues/summary"}) {
+                mvc.perform(with(user, get(path))).andExpect(status().isForbidden());
+            }
+            mvc.perform(with(admin, get("/api/admin/storage/buckets/" + id + "/usage"))).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.totalBytes").value(0)).andExpect(jsonPath("$.cloudflare.status").value("not_configured"))
+                    .andExpect(jsonPath("$.cloudflare.payloadBytes").value(nullValue()));
+            mvc.perform(with(admin, get("/api/admin/issues/summary"))).andExpect(jsonPath("$.openCount").isNumber());
+            mvc.perform(with(admin, delete("/api/admin/storage/buckets/" + id))).andExpect(status().isConflict());
+        } finally {
+            mvc.perform(with(admin, put("/api/admin/storage/settings")).content("{\"activeBucketId\":null,\"retentionDays\":null}" )).andExpect(status().isOk());
+            mvc.perform(with(admin, delete("/api/admin/storage/buckets/" + id))).andExpect(status().isOk());
+        }
+    }
+
     private Client admin() throws Exception {
         auth.bootstrap("test.admin", "administrator-test-password");
         Cookie csrf = csrf();
