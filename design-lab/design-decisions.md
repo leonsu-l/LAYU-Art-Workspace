@@ -75,6 +75,17 @@
 - **Context:** Previously, only a subset of controls in `LabControls.tsx` rendered M3 radial pointer ripples by manually duplicating `useRipple`, `<RippleOverlay>`, and CSS keyframes, leaving shell toggles, snackbars, gallery cards/actions, lightbox buttons, channel items, auth controls, and admin buttons without ripples.
 - **Decision:** Centralize `RippleOverlay` and `RippleButton` in `apps/web/src/design-lab/components/LabRipple.tsx` + `LabRipple.module.css` reusing the shared `useRipple` hook (`apps/web/src/components/ui/useRipple.ts`), remove the duplicated ripple JSX/CSS from `LabControls.tsx`/`LabControls.module.css`, use zero-specificity `:where(.rippleHost)` so absolute/custom-positioned buttons (e.g. password toggle) stay intact, and replace every interactive `<button>` across `DesignLabApp`, `LabControls`, `LabSnackbar`, `WorkbenchPrototypes`, and `MultiPagePrototypes` (with `rippleTone="light"` for gallery artwork thumbnails).
 
+## Decision: Image Retention, Private R2 Storage & Admin Issues Architecture (`dec-009-image-retention-storage-and-issues`)
+
+- **Date:** 2026-11-19
+- **Scope:** workbench (`/`), gallery (`/gallery`), and admin console (`/admin` storage & issues modules)
+- **Status:** experimental (browser-verified in Design Lab; pending user review)
+- **Context:** Backend added per-image/per-task retention expiry, independent admin storage policy & Cloudflare R2 private bucket configuration, dual-perspective bucket usage telemetry (application vs Cloudflare Analytics), and operational issue aggregation (`docs/IMAGE_STORAGE_FRONTEND_HANDOFF.md`).
+- **Decision:**
+  1. **User-Side Privacy & Retention Honesty (`/` & `/gallery`)**: Never expose storage location (`local` / `R2`), bucket identity, or fallback status to regular users. Display the top-level `retentionDays` policy even on an empty gallery, render each image/task's own `retentionDays` + local `expiresAt` promise (treating missing legacy fields as permanent without recalculating from `createdAt` or current policy), immediately drop stale previews upon image 404 while prompting list re-sync, and handle HTTP 410 on task recovery by clearing local pending submission without creating a new task.
+  2. **Admin Storage & Dual Usage (`AdminStorageModule.tsx`)**: Keep `/api/admin/storage/settings` strictly separate from `/api/admin/settings` (quota/concurrency). Registering a new R2 bucket never auto-activates it; credential rotation omits untouched fields (never sending empty strings or masks) while offering an explicit `analyticsToken: null` clear toggle; bucket usage separates `application` (`imageCount`, `totalBytes`) from `cloudflare` (`payloadBytes`, `metadataBytes`, `objectCount`, `sampledAt`), rendering `—` rather than `0` for `not_configured` / `forbidden` / `no_data` / `unavailable`; deletion never infers safety from `imageCount === 0` and distinguishes HTTP 409 reference conflicts from retryable network failures.
+  3. **Admin Operational Issues (`AdminIssuesModule.tsx`)**: Add live `openCount` badge on the `/admin` `问题日志` tab and header alert pill, filter by `open`/`resolved`/all with pagination, format Unix millisecond `firstSeen`/`lastSeen` timestamps, explain that `R2_FALLBACK` preserves user image access without retrying upstream, and make resolve/recurrence lifecycle interactive (`resolved` -> `open` with `occurrences + 1`).
+
 
 
 

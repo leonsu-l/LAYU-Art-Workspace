@@ -802,26 +802,36 @@ export function M3PrimaryTabs<T extends string>({
     syncIndicator()
   }, [syncIndicator])
 
+  const centerActiveScrollableTab = useCallback(
+    (behavior: ScrollBehavior = 'smooth') => {
+      if (variant !== 'scrollable') return
+      const trackEl = trackRef.current
+      const activeIdx = items.findIndex((item) => item.id === value)
+      const btnEl = btnRefs.current[activeIdx]
+      if (!trackEl || !btnEl) return
+      const desiredLeft = btnEl.offsetLeft - (trackEl.clientWidth - btnEl.offsetWidth) / 2
+      trackEl.scrollTo({ left: Math.max(0, desiredLeft), behavior })
+    },
+    [items, value, variant],
+  )
+
   useEffect(() => {
     const innerEl = innerRef.current
+    const trackEl = trackRef.current
     if (!innerEl || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
       syncIndicator()
+      centerActiveScrollableTab('auto')
     })
     observer.observe(innerEl)
+    if (trackEl) observer.observe(trackEl)
     return () => observer.disconnect()
-  }, [syncIndicator])
+  }, [centerActiveScrollableTab, syncIndicator])
 
   // Keep selected scrollable tab comfortably inside horizontal view without scrolling page
   useEffect(() => {
-    if (variant !== 'scrollable') return
-    const trackEl = trackRef.current
-    const activeIdx = items.findIndex((item) => item.id === value)
-    const btnEl = btnRefs.current[activeIdx]
-    if (!trackEl || !btnEl) return
-    const desiredLeft = btnEl.offsetLeft - (trackEl.clientWidth - btnEl.offsetWidth) / 2
-    trackEl.scrollTo({ left: Math.max(0, desiredLeft), behavior: 'smooth' })
-  }, [items, value, variant])
+    centerActiveScrollableTab('smooth')
+  }, [centerActiveScrollableTab])
 
   function handleTabKeyDown(idx: number, event: ReactKeyboardEvent<HTMLButtonElement>) {
     let nextIdx = -1

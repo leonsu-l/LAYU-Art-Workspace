@@ -524,7 +524,7 @@ export function AdminStorageModule({
         <div className={styles.policyGrid}>
           <div className={styles.policyField}>
             <div className={styles.policyFieldLabel}>
-              <span>默认写入位置 (`activeBucketId`)</span>
+              <span>默认写入位置</span>
               <span className={pageStyles.monoMeta}>
                 {draftBucketId ? '私有 R2 桶' : 'Local Disk'}
               </span>
@@ -542,7 +542,7 @@ export function AdminStorageModule({
 
           <div className={styles.policyField}>
             <div className={styles.policyFieldLabel}>
-              <span>新图默认保留期 (`retentionDays`)</span>
+              <span>新图默认保留期</span>
               <span className={pageStyles.monoMeta}>
                 {retentionValidation.valid
                   ? formatRetentionPolicyText(retentionValidation.value)
@@ -588,7 +588,7 @@ export function AdminStorageModule({
               <span className={styles.fieldErrorText}>{retentionValidation.error}</span>
             ) : (
               <span className={styles.policyFieldHint}>
-                按整组图片保存成功起算（每天 24 小时）。`null` 为出厂默认永久保存。
+                按整组图片保存成功起算（每天 24 小时）。留空（null）为出厂默认永久保存。
               </span>
             )}
           </div>
@@ -960,17 +960,17 @@ export function AdminStorageModule({
                       <div className={styles.usageCardTop}>
                         <span className={styles.usageCardTitle}>
                           <LabIcon name="database" size={15} />
-                          <span>本应用有效图库用量 (`application`)</span>
+                          <span>本应用有效图库用量</span>
                         </span>
                         <span className={pageStyles.statusOn}>始终可算</span>
                       </div>
                       <div className={styles.usageMetricRow}>
                         <div className={styles.usageMetric}>
-                          <span>有效图片数 (`imageCount`)</span>
+                          <span>有效图片数 (imageCount)</span>
                           <strong>{activeUsage.application.imageCount} 张</strong>
                         </div>
                         <div className={styles.usageMetric}>
-                          <span>占用总字节 (`totalBytes`)</span>
+                          <span>占用总字节 (totalBytes)</span>
                           <strong>{formatBytes(activeUsage.application.totalBytes)}</strong>
                         </div>
                       </div>
@@ -984,7 +984,7 @@ export function AdminStorageModule({
                       <div className={styles.usageCardTop}>
                         <span className={styles.usageCardTitle}>
                           <LabIcon name="cloud" size={15} />
-                          <span>Cloudflare 官方样本 (`cloudflare`)</span>
+                          <span>Cloudflare 官方样本</span>
                         </span>
                         <span
                           className={
@@ -1004,22 +1004,22 @@ export function AdminStorageModule({
                         <>
                           <div className={styles.usageMetricThree}>
                             <div className={styles.usageMetric}>
-                              <span>对象内容 `payloadBytes`</span>
+                              <span>对象内容 (payloadBytes)</span>
                               <strong>{formatBytes(effectiveCloudflare.payloadBytes)}</strong>
                             </div>
                             <div className={`${styles.usageMetric} ${styles.usageMetricMuted}`}>
-                              <span>元数据 `metadataBytes`</span>
+                              <span>元数据 (metadataBytes)</span>
                               <strong>{formatBytes(effectiveCloudflare.metadataBytes)}</strong>
                             </div>
                             <div className={`${styles.usageMetric} ${styles.usageMetricMuted}`}>
-                              <span>整桶对象 `objectCount`</span>
+                              <span>整桶对象 (objectCount)</span>
                               <strong>{effectiveCloudflare.objectCount} 个</strong>
                             </div>
                           </div>
                           <p className={styles.usageFootNote}>
-                            官方采样时间 (`sampledAt`)：
+                            官方采样时间（sampledAt）：
                             <strong>{formatLocalDateTime(effectiveCloudflare.sampledAt, true)}</strong>
-                            （最近 31 天内最新，非页面请求时间）。对比图片字节请使用 `payloadBytes`；其他应用对象、清理时差与指标延迟均可造成差异，勿把差值当作泄漏。
+                            （最近 31 天内最新，非页面请求时间）。对比图片字节请使用 <code>payloadBytes</code>；其他应用对象、清理时差与指标延迟均可造成差异，勿把差值当作泄漏。
                           </p>
                         </>
                       ) : (
@@ -1098,7 +1098,7 @@ export function AdminStorageModule({
 
                 <div className={styles.clearTokenRow}>
                   <div className={styles.clearTokenInfo}>
-                    <strong>显式清除可选统计令牌（`analyticsToken: null`）</strong>
+                    <strong>显式清除可选统计令牌（发送 analyticsToken: null）</strong>
                     <span>仅用于主动撤除 Cloudflare Analytics 查询；普通留空不会清除已有令牌。</span>
                   </div>
                   <RippleButton

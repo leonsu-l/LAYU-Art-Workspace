@@ -11,7 +11,8 @@
     "referenceAssets": [
       "docs/REFERENCE.md",
       "docs/API_V2.md",
-      "docs/M3_EXPRESSIVE_REFACTOR_HANDOFF.md"
+      "docs/M3_EXPRESSIVE_REFACTOR_HANDOFF.md",
+      "docs/IMAGE_STORAGE_FRONTEND_HANDOFF.md"
     ]
   },
   "artifacts": [
@@ -69,7 +70,31 @@
       "kind": "page",
       "status": "experimental",
       "location": "apps/web/src/design-lab/prototypes/MultiPagePrototypes.tsx",
-      "notes": "Full Direction A M3 Expressive designs for /gallery (with hover+selected blue deepen fix & shimmer image/grid skeletons), /channels, /login & /password, and /admin (all 6 tabs)."
+      "notes": "Full Direction A M3 Expressive designs for /gallery (policy + per-image retention + empty policy + 404 cleanup + hover/selected fix & shimmer skeletons), /channels, /login & /password, and /admin (8 tabs including Storage & Operational Issues)."
+    },
+    {
+      "id": "lab-admin-storage",
+      "name": "Admin Storage Policy, R2 Buckets & Dual-Usage Module",
+      "kind": "composition",
+      "status": "experimental",
+      "location": "apps/web/src/design-lab/prototypes/AdminStorageModule.tsx",
+      "notes": "Independent /api/admin/storage/settings policy, R2 bucket creation (non-auto-activating), write-only credential rotation with explicit analyticsToken:null clear, dual usage comparison with 5 Cloudflare states, and 409-vs-network deletion handling."
+    },
+    {
+      "id": "lab-admin-issues",
+      "name": "Admin Operational Issues Log Module",
+      "kind": "composition",
+      "status": "experimental",
+      "location": "apps/web/src/design-lab/prototypes/AdminIssuesModule.tsx",
+      "notes": "Operational issue triage with openCount badge, status filter, pagination, Unix ms local formatting, R2_FALLBACK safety reassurance, resolve action, and recurrence reopen demo."
+    },
+    {
+      "id": "lab-retention-utils",
+      "name": "Retention & Storage Validation Helpers",
+      "kind": "utility",
+      "status": "experimental",
+      "location": "apps/web/src/design-lab/utils/retentionFormat.ts",
+      "notes": "Pure helpers for per-image/legacy retention summaries, UTC->local formatting, byte formatting, and R2 account/bucket/credential/retention validation matching backend rules."
     }
   ],
   "experiments": [
@@ -107,11 +132,12 @@
     "dec-005-m3-snackbar-feedback",
     "dec-006-gallery-immersive-launch-transition",
     "dec-007-gallery-selected-hover-and-m3-shimmer-skeleton",
-    "dec-008-unified-m3-ripple-button-reuse"
+    "dec-008-unified-m3-ripple-button-reuse",
+    "dec-009-image-retention-storage-and-issues"
   ],
   "openQuestions": [
-    "Approve the 5-page M3 Expressive prototypes under Direction A so Stage 6 production integration can begin (shared header + tokens + Workbench /, followed by Gallery, Channels, Account, and Admin)?"
+    "Approve the 5-page M3 Expressive prototypes under Direction A (including image retention, R2 storage management, and admin issues log) so Stage 6 production integration can begin?"
   ],
-  "nextSuggestedAction": "Verify all 5 pages in /design-lab.html (desktop + 390px mobile, light + dark) and await user confirmation for Stage 6 production integration.",
-  "updatedAt": "2026-11-19T17:15:00+08:00"
+  "nextSuggestedAction": "Review /design-lab.html (Workbench retention + 410, Gallery mixed/empty/404, Admin Storage & Issues tabs) across desktop and 390px mobile, then confirm Stage 6 production integration.",
+  "updatedAt": "2026-11-19T21:23:00+08:00"
 }

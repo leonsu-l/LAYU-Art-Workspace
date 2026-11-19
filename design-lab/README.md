@@ -25,4 +25,5 @@
   - **图库 Hover + 选中状态叠加修正**：以 `:hover:not(.galleryCardSelected)`（同步修复工作台 `.filmCard`）与 `--md-sys-color-secondary-container-hover`（浅色 `#C3D1FC` / 深色 `#324477`）解决选中态被未选中 Hover 色覆盖问题，实现 Hover + 选中时蓝色略微加深。
   - **M3 Expressive Shimmer Skeleton 占位体系**：新增 `LabSkeleton.tsx` 与 `ShimmerImage`，以 GPU 合成的 `translate3d` 钴蓝微光扫掠按 M3 形态尺度占位（圆形、胶囊文本、填充输入框、6 联比例矩阵、Split CTA 与 `4:3` 媒体框，含 `prefers-reduced-motion` 降级），覆盖全部 5 页数据/图片加载态、模型目录刷新与组件沙盒第 7 面板。
   - **全局可复用点击晕开效果**：新建 `LabRipple.tsx`（`RippleButton` + `RippleOverlay`）统一复用 `useRipple.ts` 并清除 `LabControls` 中的重复实现，通过 `:where(.rippleHost)` 为全站所有按钮、列表卡片、缩略图（白色微光）、LightBox 控制条、Snackbar 与密码显隐开关提供一致的 M3 点击涟漪反馈。
-- **Stage 5–6（当前状态：待评审后落入生产）**：仍隔离于 `apps/web/src/design-lab/`，现有生产代码保持零入侵；获批后即可按「共用顶栏与令牌 → `/` 工作台 → 其余 4 页」顺序推进生产集成。
+  - **图片有效期、R2 存储治理与运维日志体系**：围绕 `docs/IMAGE_STORAGE_FRONTEND_HANDOFF.md` 完成三端原型补全——`/` 工作台（任务结果与胶卷独立有效期标签、遗留任务缺省字段按永久处理、HTTP 410 防重放清理）、`/gallery` 图库（空图库仍展示新图默认政策、永久/7天/30天混排独立到期日、404 即时丢弃失效预览并同步、严格隔离桶/本地/回退信息）以及 `/admin` 新增 **存储管理**（独立策略 `PUT /settings`、R2 桶创建与不自动启用、只写凭据轮换与显式 `analyticsToken: null` 清除、本应用/Cloudflare 双口径用量及非可用态显示 `—`、区分 409 引用阻断与网络失败删除）和 **问题日志**（`openCount` 徽标、5 类事件与 `R2_FALLBACK` 说明、Unix 毫秒本地时间、解决与复发重开闭环）。
+- **Stage 5–6（当前状态：待评审后落入生产）**：仍隔离于 `apps/web/src/design-lab/`，现有生产代码保持零入侵；获批后即可按「共用顶栏与令牌 → `/` 工作台 → 其余 4 页（含图库有效期及 `/admin` 存储/问题子模块）」顺序推进生产集成。

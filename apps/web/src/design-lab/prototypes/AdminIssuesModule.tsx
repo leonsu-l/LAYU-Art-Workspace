@@ -112,7 +112,7 @@ export function AdminIssuesModule({
         </div>
 
         <div className={styles.issuesRightControls}>
-          <div style={{ width: 124 }}>
+          <div style={{ minWidth: 146 }}>
             <StudioSelect<'3' | '10' | '20'>
               label="每页条数"
               value={pageSize}
