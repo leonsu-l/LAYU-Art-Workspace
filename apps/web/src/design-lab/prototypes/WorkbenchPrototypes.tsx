@@ -18,6 +18,7 @@ import {
   StudioSelect,
 } from '../components/LabControls'
 import { RippleButton } from '../components/LabRipple'
+import { LabIcon } from '../components/LabIcon'
 import {
   ConnectedRatioSkeleton,
   ShimmerImage,
@@ -34,17 +35,20 @@ import {
   MOCK_TASKS,
   MOCK_TEMPLATES,
 } from '../mockData'
+import { getImageRetentionSummary } from '../utils/retentionFormat'
 import {
   AccountPrototype,
   AdminPrototype,
   ChannelsPrototype,
   GalleryPrototype,
+  type LabAdminTab,
+  type LabGalleryScenario,
   type LabLoadMode,
   type LabPageRoute,
 } from './MultiPagePrototypes'
 import styles from './WorkbenchPrototypes.module.css'
 
-export type { LabLoadMode, LabPageRoute }
+export type { LabAdminTab, LabGalleryScenario, LabLoadMode, LabPageRoute }
 export type LabScenario =
   | 'succeeded'
   | 'multi'
@@ -66,9 +70,13 @@ interface WorkbenchPrototypeProps {
   pageTransition?: LabPageTransition | null
   scenario: LabScenario
   loadMode?: LabLoadMode
+  galleryScenario?: LabGalleryScenario
+  adminTab?: LabAdminTab
   viewportMode: 'desktop' | 'mobile'
   onPageChange: (page: LabPageRoute, enterOffsetX?: number) => void
   onScenarioChange: (scenario: LabScenario) => void
+  onGalleryScenarioChange?: (scenario: LabGalleryScenario) => void
+  onAdminTabChange?: (tab: LabAdminTab) => void
   onNotify: (payload: SnackbarPayload) => void
 }
 
@@ -103,11 +111,16 @@ export function WorkbenchPrototype({
   pageTransition = null,
   scenario,
   loadMode = 'ready',
+  galleryScenario = 'mixed',
+  adminTab,
   viewportMode,
   onPageChange,
   onScenarioChange,
+  onGalleryScenarioChange,
+  onAdminTabChange,
   onNotify,
 }: WorkbenchPrototypeProps) {
+  const [nowMs] = useState(() => Date.now())
   const [channelId, setChannelId] = useState(MOCK_CHANNELS[0].id)
   const [provider, setProvider] = useState<ProviderType>('openai-compatible')
   const [model, setModel] = useState('gpt-image-2.5-flare')
@@ -122,6 +135,7 @@ export function WorkbenchPrototype({
   const [imageOnly, setImageOnly] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState(MOCK_TASKS[0].id)
+  const [recoverySubMode, setRecoverySubMode] = useState<'pending' | 'gone-410'>('pending')
 
   const [isNarrowViewport, setIsNarrowViewport] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches,
@@ -194,39 +208,89 @@ export function WorkbenchPrototype({
         <div className={styles.recoveryAlert} role="alert">
           <div className={styles.recoveryAlertHead}>
             <Icon name="alert-circle" size={16} />
-            <strong>存在未确认提交（防重复扣费保护）</strong>
+            <strong>
+              {recoverySubMode === 'gone-410'
+                ? '原任务已删除或已到期清理（HTTP 410）'
+                : '存在未确认提交（防重复扣费保护）'}
+            </strong>
           </div>
-          <p>
-            断线前提交的任务 <code>9f4a81d2-7b30-4e92</code> 尚未确认接收，重试仅使用同一 ID。
-          </p>
-          <div className={styles.recoveryActions}>
+
+          <div className={styles.recoveryModeSwitch} role="group" aria-label="恢复分支演示">
             <RippleButton
               type="button"
-              className={styles.recoveryBtnPrimary}
-              onClick={() => {
-                onScenarioChange('generating')
-                onNotify({
-                  tone: 'info',
-                  message: '已沿用原幂等提交 ID 发起恢复重试（不重复扣费）。',
-                })
-              }}
+              aria-pressed={recoverySubMode === 'pending'}
+              className={`${styles.recoveryModeBtn} ${recoverySubMode === 'pending' ? styles.recoveryModeBtnActive : ''}`}
+              onClick={() => setRecoverySubMode('pending')}
             >
-              恢复 / 重试同一请求
+              待确认提交
             </RippleButton>
             <RippleButton
               type="button"
-              className={styles.recoveryBtnTonal}
-              onClick={() => {
-                onScenarioChange('succeeded')
-                onNotify({
-                  tone: 'success',
-                  message: '已同步后端最新任务状态，画布恢复就绪。',
-                })
-              }}
+              aria-pressed={recoverySubMode === 'gone-410'}
+              className={`${styles.recoveryModeBtn} ${recoverySubMode === 'gone-410' ? styles.recoveryModeBtnActive : ''}`}
+              onClick={() => setRecoverySubMode('gone-410')}
             >
-              刷新状态
+              410 已到期/删除
             </RippleButton>
           </div>
+
+          {recoverySubMode === 'gone-410' ? (
+            <>
+              <p>
+                重放/查询任务 <code>9f4a81d2-7b30-4e92</code> 返回 410：该任务已删除或已到期自动清理。已清除本地待确认记录，<strong>不会自动新建任务</strong>。
+              </p>
+              <div className={styles.recoveryActions}>
+                <RippleButton
+                  type="button"
+                  className={styles.recoveryBtnPrimary}
+                  onClick={() => {
+                    setRecoverySubMode('pending')
+                    onScenarioChange('empty')
+                    onNotify({
+                      tone: 'info',
+                      message: '已清除失效待确认记录并同步历史（未创建新任务）。',
+                    })
+                  }}
+                >
+                  清除记录并返回创作
+                </RippleButton>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>
+                断线前提交的任务 <code>9f4a81d2-7b30-4e92</code> 尚未确认接收，重试仅使用同一 ID。
+              </p>
+              <div className={styles.recoveryActions}>
+                <RippleButton
+                  type="button"
+                  className={styles.recoveryBtnPrimary}
+                  onClick={() => {
+                    onScenarioChange('generating')
+                    onNotify({
+                      tone: 'info',
+                      message: '已沿用原幂等提交 ID 发起恢复重试（不重复扣费）。',
+                    })
+                  }}
+                >
+                  恢复 / 重试同一请求
+                </RippleButton>
+                <RippleButton
+                  type="button"
+                  className={styles.recoveryBtnTonal}
+                  onClick={() => {
+                    onScenarioChange('succeeded')
+                    onNotify({
+                      tone: 'success',
+                      message: '已同步后端最新任务状态，画布恢复就绪。',
+                    })
+                  }}
+                >
+                  刷新状态
+                </RippleButton>
+              </div>
+            </>
+          )}
         </div>
       )
     }
@@ -242,17 +306,33 @@ export function WorkbenchPrototype({
   }
 
   function renderStageCanvas() {
-    const activeImages =
+    const selectedTask = MOCK_TASKS.find((t) => t.id === selectedTaskId)
+    const multiTask = MOCK_TASKS.find((t) => t.id === 'task-5c9e0b12')
+    const singleTask =
+      selectedTask && selectedTask.status === 'succeeded' && (selectedTask.result?.images.length ?? 0) === 1
+        ? selectedTask
+        : MOCK_TASKS[0]
+
+    const canvasTask =
       scenario === 'multi'
-        ? [
-            { src: MOCK_ARTWORKS.frame1, label: 'FRAME 01', size: '1024 × 1024' },
-            { src: MOCK_ARTWORKS.frame2, label: 'FRAME 02', size: '1024 × 1024' },
-            { src: MOCK_ARTWORKS.frame3, label: 'FRAME 03', size: '1024 × 1024' },
-            { src: MOCK_ARTWORKS.frame4, label: 'FRAME 04', size: '1024 × 1024' },
-          ]
+        ? multiTask
         : scenario === 'succeeded' || scenario === 'recovery'
-          ? [{ src: MOCK_ARTWORKS.single, label: 'FRAME 01', size: '1536 × 1024' }]
-          : []
+          ? singleTask
+          : undefined
+
+    const activeImages =
+      canvasTask?.result?.images.map((img, index) => ({
+        src: img.url ?? MOCK_ARTWORKS.single,
+        label: `FRAME 0${index + 1}`,
+        size: canvasTask.requestedSize ? canvasTask.requestedSize.replace('x', ' × ') : '1360 × 1024',
+        retentionDays: img.retentionDays,
+        expiresAt: img.expiresAt,
+      })) ?? []
+
+    const stageRetention =
+      activeImages.length > 0
+        ? getImageRetentionSummary(activeImages[0].retentionDays, activeImages[0].expiresAt, nowMs)
+        : null
 
     return (
       <div className={styles.stageCard}>
@@ -273,7 +353,9 @@ export function WorkbenchPrototype({
               {scenario === 'generating'
                 ? '正在显影 · 2 张'
                 : scenario === 'recovery'
-                  ? '待确认恢复'
+                  ? recoverySubMode === 'gone-410'
+                    ? '原提交已清理 (410)'
+                    : '待确认恢复'
                   : scenario === 'empty'
                     ? '画布就绪'
                     : scenario === 'blocker'
@@ -281,8 +363,23 @@ export function WorkbenchPrototype({
                       : `已完成 · ${activeImages.length} 张`}
             </span>
             <span className={styles.stageMetaMono}>
-              {effectiveModel || '未选模型'} · {ratio === 'auto' ? '自动比例' : ratio}
+              {canvasTask?.model || effectiveModel || '未选模型'} · {canvasTask?.expectedAspectRatio || (ratio === 'auto' ? '自动比例' : ratio)}
             </span>
+            {stageRetention ? (
+              <span
+                className={`${styles.stageRetentionPill} ${
+                  stageRetention.tone === 'urgent'
+                    ? styles.retentionUrgent
+                    : stageRetention.tone === 'timed'
+                      ? styles.retentionTimed
+                      : styles.retentionPermanent
+                }`}
+                title={stageRetention.detailLabel}
+              >
+                <LabIcon name="clock" size={12} />
+                <span>{stageRetention.shortLabel}</span>
+              </span>
+            ) : null}
           </div>
 
           {activeImages.length > 0 ? (
@@ -378,7 +475,12 @@ export function WorkbenchPrototype({
           <div className={styles.filmstripRow}>
             {MOCK_TASKS.map((task) => {
               const selected = task.id === selectedTaskId
-              const thumb = task.result?.images[0]?.url
+              const firstImage = task.result?.images[0]
+              const thumb = firstImage?.url
+              const taskRetention =
+                task.status === 'succeeded' && firstImage
+                  ? getImageRetentionSummary(firstImage.retentionDays, firstImage.expiresAt, nowMs)
+                  : null
               return (
                 <RippleButton
                   key={task.id}
@@ -415,13 +517,27 @@ export function WorkbenchPrototype({
                     )}
                   </span>
                   <span className={styles.filmMeta}>
-                    <strong data-status={task.status}>
-                      {task.status === 'succeeded'
-                        ? '已完成'
-                        : task.status === 'running'
-                          ? '生成中'
-                          : '失败'}
-                    </strong>
+                    <span className={styles.filmMetaHeader}>
+                      <strong data-status={task.status}>
+                        {task.status === 'succeeded'
+                          ? '已完成'
+                          : task.status === 'running'
+                            ? '生成中'
+                            : '失败'}
+                      </strong>
+                      {taskRetention ? (
+                        <span
+                          className={`${styles.filmRetentionTag} ${taskRetention.tone === 'urgent' ? styles.filmRetentionUrgent : ''}`}
+                          title={taskRetention.detailLabel}
+                        >
+                          {taskRetention.isPermanent
+                            ? '永久'
+                            : firstImage?.retentionDays
+                              ? `${firstImage.retentionDays}天`
+                              : '限时'}
+                        </span>
+                      ) : null}
+                    </span>
                     <span>{task.prompt}</span>
                   </span>
                 </RippleButton>
@@ -958,6 +1074,8 @@ export function WorkbenchPrototype({
       return (
         <GalleryPrototype
           loadMode={loadMode}
+          galleryScenario={galleryScenario}
+          onGalleryScenarioChange={onGalleryScenarioChange}
           onGoWorkbench={() => handleTabSwitch('workbench')}
           onNotify={onNotify}
         />
@@ -969,7 +1087,14 @@ export function WorkbenchPrototype({
     if (pageId === 'account') {
       return <AccountPrototype loadMode={loadMode} onNotify={onNotify} />
     }
-    return <AdminPrototype loadMode={loadMode} onNotify={onNotify} />
+    return (
+      <AdminPrototype
+        loadMode={loadMode}
+        activeTab={adminTab}
+        onTabChange={onAdminTabChange}
+        onNotify={onNotify}
+      />
+    )
   }
 
   return (

@@ -695,6 +695,57 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+.stageRetentionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.retentionPermanent {
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.retentionTimed {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.retentionUrgent {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.recoveryModeSwitch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: color-mix(in srgb, var(--md-sys-color-surface-container-lowest) 75%, transparent);
+}
+
+.recoveryModeBtn {
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-error-container);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recoveryModeBtnActive {
+  background-color: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface);
+}
+
 .stageBarActions {
   display: inline-flex;
   gap: 6px;
@@ -938,7 +989,7 @@
 
 .filmstripRow {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
   gap: 8px;
 }
 
@@ -999,8 +1050,30 @@
   gap: 2px;
 }
 
+.filmMetaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
 .filmMeta strong {
   font-size: 11px;
+}
+
+.filmRetentionTag {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: color-mix(in srgb, var(--md-sys-color-surface-container-lowest) 78%, transparent);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 10px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.filmRetentionUrgent {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
 }
 
 .filmMeta strong[data-status='succeeded'] { color: var(--md-sys-color-primary); }

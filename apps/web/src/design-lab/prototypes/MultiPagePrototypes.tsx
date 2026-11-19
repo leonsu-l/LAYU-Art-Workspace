@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import { Icon } from '../../components/Icon'
@@ -10,6 +10,7 @@ import {
   StudioSelect,
 } from '../components/LabControls'
 import { RippleButton } from '../components/LabRipple'
+import { LabIcon } from '../components/LabIcon'
 import {
   ConnectedRatioSkeleton,
   ShimmerImage,
@@ -24,20 +25,41 @@ import {
 } from '../components/lightboxTransition'
 import type { SnackbarPayload } from '../components/useSnackbar'
 import {
+  MOCK_ADMIN_ISSUES,
   MOCK_ADMIN_SETTINGS,
   MOCK_ADMIN_USAGE,
   MOCK_ADMIN_USERS,
   MOCK_CATALOG_BY_CHANNEL,
   MOCK_CHANNELS,
   MOCK_GALLERY_ITEMS,
+  MOCK_GALLERY_RETENTION_DAYS,
   MOCK_INVITES,
+  MOCK_R2_BUCKETS,
   MOCK_TEMPLATES,
+  type AdminIssueRecord,
   type MockGalleryItem,
 } from '../mockData'
+import {
+  formatBytes,
+  formatRetentionPolicyText,
+  getImageRetentionSummary,
+} from '../utils/retentionFormat'
+import { AdminIssuesModule } from './AdminIssuesModule'
+import { AdminStorageModule } from './AdminStorageModule'
 import styles from './MultiPagePrototypes.module.css'
 
 export type LabPageRoute = 'workbench' | 'gallery' | 'channels' | 'account' | 'admin'
 export type LabLoadMode = 'ready' | 'loading' | 'media-loading'
+export type LabGalleryScenario = 'mixed' | 'empty' | 'permanent-policy' | 'expired-404'
+export type LabAdminTab =
+  | 'channels'
+  | 'users'
+  | 'invites'
+  | 'settings'
+  | 'templates'
+  | 'usage'
+  | 'storage'
+  | 'issues'
 
 /* ==========================================================================
    PAGE 2 · /gallery — 我的图库
@@ -56,10 +78,14 @@ export function GalleryPrototype({
   onGoWorkbench,
   onNotify,
   loadMode = 'ready',
+  galleryScenario = 'mixed',
+  onGalleryScenarioChange,
 }: {
   onGoWorkbench: () => void
   onNotify: (payload: SnackbarPayload) => void
   loadMode?: LabLoadMode
+  galleryScenario?: LabGalleryScenario
+  onGalleryScenarioChange?: (next: LabGalleryScenario) => void
 }) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(['srv-2'])
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -68,6 +94,8 @@ export function GalleryPrototype({
   const [isClosing, setIsClosing] = useState(false)
   const [hudVisible, setHudVisible] = useState(true)
   const [promptExpanded, setPromptExpanded] = useState(false)
+  const [invalidated404Keys, setInvalidated404Keys] = useState<string[]>([])
+  const [nowMs] = useState(() => Date.now())
 
   const thumbRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const backdropRef = useRef<HTMLDivElement | null>(null)
@@ -89,11 +117,21 @@ export function GalleryPrototype({
   const closeTimerRef = useRef<number | null>(null)
   const refreshTimerRef = useRef<number | null>(null)
 
-  const items = MOCK_GALLERY_ITEMS
+  const siteRetentionDays =
+    galleryScenario === 'permanent-policy' ? null : MOCK_GALLERY_RETENTION_DAYS
+  const items = useMemo(() => {
+    if (galleryScenario === 'empty') return []
+    const hidden = galleryScenario === 'expired-404' ? invalidated404Keys : []
+    return MOCK_GALLERY_ITEMS.filter((item) => !hidden.includes(item.key))
+  }, [galleryScenario, invalidated404Keys])
+  const totalBytes = items.reduce((sum, item) => sum + item.bytes, 0)
   const showListSkeleton = loadMode === 'loading' || isRefreshing
   const showMediaSkeleton = loadMode === 'media-loading'
   const allSelected = items.length > 0 && items.every((item) => selectedKeys.includes(item.key))
   const previewIndex = previewItem ? items.findIndex((i) => i.key === previewItem.key) : -1
+  const previewRetention = previewItem
+    ? getImageRetentionSummary(previewItem.retentionDays, previewItem.expiresAt, nowMs)
+    : null
 
   const finalizeClose = useCallback((sessionId?: number) => {
     if (sessionId !== undefined && sessionId !== closeSessionRef.current) return
@@ -111,7 +149,36 @@ export function GalleryPrototype({
     setPreviewItem(null)
   }, [])
 
+  function triggerSimulated404(item: MockGalleryItem) {
+    // Never retain an invalid preview once 404 is encountered; prompt list re-sync.
+    setInvalidated404Keys((prev) =>
+      prev.includes(item.key) ? prev : [...prev, item.key],
+    )
+    setSelectedKeys((prev) => prev.filter((k) => k !== item.key))
+    if (previewItem?.key === item.key) {
+      finalizeClose()
+    }
+    onNotify({
+      tone: 'warning',
+      message:
+        '该作品资源返回 404（可能已到期清理或已被删除），已移除失效预览；请重新拉取图库与任务列表。',
+      actionLabel: '重新同步列表',
+      onAction: () => {
+        setInvalidated404Keys([])
+        onGalleryScenarioChange?.('mixed')
+        onNotify({
+          tone: 'info',
+          message: '已同步最新图库与任务历史，过期组已自动移除。',
+        })
+      },
+    })
+  }
+
   function openPreview(item: MockGalleryItem) {
+    if (galleryScenario === 'expired-404' && item.key === 'srv-1') {
+      triggerSimulated404(item)
+      return
+    }
     closeSessionRef.current += 1
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current)
@@ -499,9 +566,23 @@ export function GalleryPrototype({
 
         <div className={styles.pageHeaderActions}>
           {showListSkeleton ? (
-            <SkeletonBlock variant="pill" width={132} height={30} />
+            <>
+              <SkeletonBlock variant="pill" width={148} height={30} />
+              <SkeletonBlock variant="pill" width={132} height={30} staggerIndex={1} />
+            </>
           ) : (
-            <span className={styles.summaryPill}>已存 {items.length} 张 · 7.2 MiB</span>
+            <>
+              <span
+                className={styles.policyPill}
+                title="此为当前站点对新生成图片的默认保留政策；修改策略不会追溯更改既有作品的到期时间"
+              >
+                <LabIcon name="clock" size={14} />
+                <span>新图默认：{formatRetentionPolicyText(siteRetentionDays)}</span>
+              </span>
+              <span className={styles.summaryPill}>
+                已存 {items.length} 张 · {formatBytes(totalBytes)}
+              </span>
+            </>
           )}
           <RippleButton
             type="button"
@@ -512,9 +593,13 @@ export function GalleryPrototype({
               setIsRefreshing(true)
               refreshTimerRef.current = window.setTimeout(() => {
                 setIsRefreshing(false)
+                if (galleryScenario === 'expired-404') {
+                  setInvalidated404Keys([])
+                  onGalleryScenarioChange?.('mixed')
+                }
                 onNotify({
                   tone: 'info',
-                  message: '已模拟刷新图库元数据（每 10 秒自动同步，不预下载大图）。',
+                  message: '已模拟刷新图库元数据与有效期状态（每 10 秒自动同步，不预下载大图）。',
                 })
               }, 850)
             }}
@@ -529,12 +614,39 @@ export function GalleryPrototype({
         </div>
       </header>
 
+      {galleryScenario === 'expired-404' ? (
+        <div className={styles.galleryNoticeBanner} role="status">
+          <div className={styles.galleryNoticeText}>
+            <Icon name="alert-circle" size={16} />
+            <span>
+              <strong>图片失效演示（HTTP 404）：</strong>
+              点击第 1 张图或下方按钮可模拟读取到已清理/失效图片。404 不能单独证明已到期，界面会立即丢弃失效预览并提示重新拉取图库与任务列表。
+            </span>
+          </div>
+          <RippleButton
+            type="button"
+            className={styles.tonalBtn}
+            onClick={() => {
+              const first = items[0]
+              if (first) {
+                triggerSimulated404(first)
+              } else {
+                setInvalidated404Keys([])
+                onGalleryScenarioChange?.('mixed')
+              }
+            }}
+          >
+            {items.some((i) => i.key === 'srv-1') ? '模拟打开返回 404' : '重新拉取并恢复列表'}
+          </RippleButton>
+        </div>
+      ) : null}
+
       {/* Batch Action Bar */}
       <div className={styles.toolbarCard}>
         {showListSkeleton ? (
           <>
             <div className={styles.toolbarLeft}>
-              <SkeletonBlock variant="text" width={116} height={13} />
+              <SkeletonBlock variant="text" width={168} height={13} />
             </div>
             <div className={styles.toolbarRight}>
               <SkeletonBlock variant="rect" width={92} height={38} radius={12} />
@@ -545,13 +657,16 @@ export function GalleryPrototype({
         ) : (
           <>
             <div className={styles.toolbarLeft}>
-              <span className={styles.monoMeta}>共 {items.length} 张云端作品</span>
+              <span className={styles.monoMeta}>
+                共 {items.length} 张云端作品 · 各图以自身保存成功时承诺的到期日为准
+              </span>
             </div>
 
             <div className={styles.toolbarRight}>
               <RippleButton
                 type="button"
                 aria-pressed={allSelected}
+                disabled={items.length === 0}
                 className={`${styles.selectToggleBtn} ${allSelected ? styles.selectToggleActive : ''}`}
                 onClick={toggleAll}
               >
@@ -614,13 +729,22 @@ export function GalleryPrototype({
               <SkeletonTextStack widths={['94%', '66%']} lineHeight={13} staggerIndex={idx} />
 
               <div className={styles.galleryMeta}>
-                <SkeletonBlock
-                  variant="rect"
-                  width={68}
-                  height={22}
-                  radius="var(--md-sys-shape-corner-small)"
-                  staggerIndex={idx}
-                />
+                <div className={styles.galleryBadgeGroup}>
+                  <SkeletonBlock
+                    variant="rect"
+                    width={62}
+                    height={22}
+                    radius="var(--md-sys-shape-corner-small)"
+                    staggerIndex={idx}
+                  />
+                  <SkeletonBlock
+                    variant="rect"
+                    width={78}
+                    height={22}
+                    radius="var(--md-sys-shape-corner-small)"
+                    staggerIndex={idx + 1}
+                  />
+                </div>
                 <SkeletonBlock variant="text" width={96} height={11} staggerIndex={idx + 1} />
               </div>
 
@@ -644,10 +768,35 @@ export function GalleryPrototype({
             </article>
           ))}
         </div>
+      ) : items.length === 0 ? (
+        <div className={styles.galleryEmptyCard}>
+          <span className={styles.pageEyebrow}>EMPTY GALLERY</span>
+          <h2>云端图库暂无作品</h2>
+          <p>
+            当前站点对新生成图片的默认保存政策为{' '}
+            <strong>{formatRetentionPolicyText(siteRetentionDays)}</strong>
+            （自整组图片保存成功起算，每日 24 小时；到期后将连同所属任务整组清理）。
+          </p>
+          <span className={styles.policyPill}>
+            <LabIcon name="clock" size={14} />
+            <span>新图默认策略：{formatRetentionPolicyText(siteRetentionDays)}</span>
+          </span>
+          <RippleButton type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
+            <Icon name="sparkles" size={15} />
+            <span>前往创作工作台生成</span>
+          </RippleButton>
+        </div>
       ) : (
         <div className={styles.galleryGrid}>
           {items.map((item, idx) => {
             const selected = selectedKeys.includes(item.key)
+            const retention = getImageRetentionSummary(item.retentionDays, item.expiresAt, nowMs)
+            const retentionClass =
+              retention.tone === 'urgent'
+                ? styles.retentionChipUrgent
+                : retention.tone === 'timed'
+                  ? styles.retentionChipTimed
+                  : styles.retentionChipPermanent
             return (
               <article
                 key={item.key}
@@ -693,9 +842,18 @@ export function GalleryPrototype({
                 <p className={styles.galleryPrompt}>{item.prompt}</p>
 
                 <div className={styles.galleryMeta}>
-                  <span className={styles.sourceServer}>
-                    {item.groupCount > 1 ? `同组 ${item.groupCount} 张` : '单图作品'}
-                  </span>
+                  <div className={styles.galleryBadgeGroup}>
+                    <span className={styles.sourceServer}>
+                      {item.groupCount > 1 ? `同组 ${item.groupCount} 张` : '单图作品'}
+                    </span>
+                    <span
+                      className={`${styles.retentionChip} ${retentionClass}`}
+                      title={retention.detailLabel}
+                    >
+                      <LabIcon name="clock" size={11} />
+                      <span>{retention.shortLabel}</span>
+                    </span>
+                  </div>
                   <span className={styles.monoMeta}>
                     {item.dimensions} · {Math.round(item.bytes / 1024)} KiB
                   </span>
@@ -739,7 +897,7 @@ export function GalleryPrototype({
       <footer className={styles.safetyFooter}>
         <Icon name="shield" size={15} />
         <span>
-          作品与任务历史双向同步：删除任一作品将连带删除所属任务及同组全部图片，此操作无法撤销。
+          作品与任务历史双向同步：删除或到期清理均会作用于所属任务及同组全部图片（已消耗的额度不因删除而撤销，已下载的本地副本不受服务端到期影响）。
         </span>
       </footer>
 
@@ -861,7 +1019,8 @@ export function GalleryPrototype({
                   </p>
                   <div className={styles.lightboxSubMeta}>
                     <span>
-                      {previewItem.groupCount > 1 ? `同组 ${previewItem.groupCount} 张` : '云端单图保存'} ·{' '}
+                      {previewRetention?.detailLabel ?? '永久保存'} ·{' '}
+                      {previewItem.groupCount > 1 ? `同组 ${previewItem.groupCount} 张` : '单图作品'} ·{' '}
                       {Math.round(previewItem.bytes / 1024)} KiB
                     </span>
                     <span>点击画面切换信息遮罩 · Esc 关闭</span>
@@ -1508,18 +1667,27 @@ export function AccountPrototype({
 }
 
 /* ==========================================================================
-   PAGE 5 · /admin — 站点管理控制台（6 大模块）
+   PAGE 5 · /admin — 站点管理控制台（8 大模块：含存储与 R2 桶、问题日志）
    ========================================================================== */
 export function AdminPrototype({
   onNotify,
   loadMode = 'ready',
+  activeTab,
+  onTabChange,
 }: {
   onNotify: (payload: SnackbarPayload) => void
   loadMode?: LabLoadMode
+  activeTab?: LabAdminTab
+  onTabChange?: (tab: LabAdminTab) => void
 }) {
-  const [adminTab, setAdminTab] = useState<
-    'channels' | 'users' | 'invites' | 'settings' | 'templates' | 'usage'
-  >('users')
+  const [internalTab, setInternalTab] = useState<LabAdminTab>('storage')
+  const adminTab = activeTab ?? internalTab
+  const setAdminTab = (next: LabAdminTab) => {
+    setInternalTab(next)
+    onTabChange?.(next)
+  }
+
+  const [issues, setIssues] = useState<AdminIssueRecord[]>(MOCK_ADMIN_ISSUES)
   const [tplRatio, setTplRatio] = useState('16:9')
   const [tplQuality, setTplQuality] = useState('high')
   const [tplCount, setTplCount] = useState(1)
@@ -1535,6 +1703,45 @@ export function AdminPrototype({
 
   const isAdminLoading = loadMode === 'loading'
   const showUsageSkeleton = isAdminLoading || isRefreshingUsage
+  const openIssueCount = issues.filter((issue) => issue.status === 'open').length
+
+  function handleResolveIssue(id: string) {
+    setIssues((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: 'resolved' } : item)),
+    )
+    onNotify({
+      tone: 'success',
+      message: '已标记为已处理（未触发重绘或文件改动；若同一问题复发将自动重开）。',
+    })
+  }
+
+  function handleSimulateRecur(id: string) {
+    const now = Date.now()
+    setIssues((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: 'open',
+              occurrences: item.occurrences + 1,
+              lastSeen: now,
+            }
+          : item,
+      ),
+    )
+    onNotify({
+      tone: 'warning',
+      message: '模拟同指纹问题再次发生：累计次数 +1，状态已重新变回 open。',
+    })
+  }
+
+  function handleSimulate404Resolve(id: string) {
+    setIssues((prev) => prev.filter((item) => item.id !== id))
+    onNotify({
+      tone: 'warning',
+      message: 'POST /resolve 返回 HTTP 404：该告警已过期（超过 30 天）或已不存在，已从当前列表移除。',
+    })
+  }
 
   return (
     <div className={styles.pageWrap}>
@@ -1542,7 +1749,24 @@ export function AdminPrototype({
         <div className={styles.pageTitleGroup}>
           <span className={styles.pageEyebrow}>SITE ADMINISTRATION</span>
           <h1 className={styles.pageTitle}>站点管理台</h1>
-          <p className={styles.pageSub}>统一管理共享渠道、成员额度、邀请码、队列并发、参数模板与非私密统计</p>
+          <p className={styles.pageSub}>
+            统一管理共享渠道、成员额度、邀请码、队列并发、参数模板、存储策略与 R2 桶、待处理问题日志及非私密统计
+          </p>
+        </div>
+
+        <div className={styles.pageHeaderActions}>
+          {openIssueCount > 0 ? (
+            <RippleButton
+              type="button"
+              className={styles.dangerTonalBtn}
+              onClick={() => setAdminTab('issues')}
+            >
+              <LabIcon name="bell" size={14} />
+              <span>待处理告警 · {openIssueCount} 条</span>
+            </RippleButton>
+          ) : (
+            <span className={styles.summaryPill}>问题日志已全部处理</span>
+          )}
         </div>
       </header>
 
@@ -1559,12 +1783,35 @@ export function AdminPrototype({
             { id: 'settings', label: '额度与队列' },
             { id: 'templates', label: '参数模板' },
             { id: 'usage', label: '使用统计' },
+            { id: 'storage', label: '存储管理' },
+            {
+              id: 'issues',
+              label: '问题日志',
+              badge: openIssueCount > 0 ? openIssueCount : undefined,
+            },
           ]}
           onChange={setAdminTab}
         />
       </div>
 
       <div key={adminTab} className={styles.subPanelFade}>
+
+      {adminTab === 'storage' ? (
+        <AdminStorageModule loadMode={loadMode} onNotify={onNotify} />
+      ) : null}
+
+      {adminTab === 'issues' ? (
+        <AdminIssuesModule
+          issues={issues}
+          openCount={openIssueCount}
+          buckets={MOCK_R2_BUCKETS}
+          loadMode={loadMode}
+          onResolveIssue={handleResolveIssue}
+          onSimulateRecur={handleSimulateRecur}
+          onSimulate404Resolve={handleSimulate404Resolve}
+          onNotify={onNotify}
+        />
+      ) : null}
 
       {adminTab === 'channels' ? (
         <ChannelsPrototype scope="shared" loadMode={loadMode} onNotify={onNotify} />

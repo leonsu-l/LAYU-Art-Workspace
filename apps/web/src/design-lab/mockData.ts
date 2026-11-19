@@ -1,4 +1,4 @@
-import type { GenerationTask } from '@nanobanana/shared/types/generation'
+import type { GeneratedImage, GenerateImageResult, GenerationTask } from '@nanobanana/shared/types/generation'
 import type {
   AdminUser,
   Channel,
@@ -9,6 +9,14 @@ import type {
   Template,
   Usage,
 } from '@nanobanana/shared/types/studio'
+
+const LAB_NOW_MS = Date.now()
+const HOURS = 3_600_000
+const DAYS = 86_400_000
+
+function isoOffset(offsetMs: number): string {
+  return new Date(LAB_NOW_MS + offsetMs).toISOString()
+}
 
 function svgArtwork(title: string, bgStart: string, bgEnd: string, accent: string, shape: 'circle' | 'arch' | 'prism' | 'grid'): string {
   const motif =
@@ -40,6 +48,7 @@ export const MOCK_ARTWORKS = {
   frame2: svgArtwork('FRAME 02 · PRISM REFRACTION', '#1E2A38', '#11161E', '#F5B73B', 'prism'),
   frame3: svgArtwork('FRAME 03 · SOLAR ECLIPSE', '#2C1814', '#140D0B', '#FF6B47', 'circle'),
   frame4: svgArtwork('FRAME 04 · MODULAR FORM', '#172824', '#0C1412', '#34D399', 'grid'),
+  legacy: svgArtwork('ARCHIVE · CERAMIC STILL LIFE', '#211D38', '#100E1B', '#A78BFA', 'arch'),
 }
 
 export const MOCK_CHANNELS: Channel[] = [
@@ -136,7 +145,7 @@ export const MOCK_TEMPLATES: Template[] = [
 ]
 
 export const MOCK_QUOTA: Quota = {
-  date: '2026-11-18',
+  date: '2026-11-19',
   limit: 50,
   used: 12,
   remaining: 38,
@@ -144,15 +153,31 @@ export const MOCK_QUOTA: Quota = {
   unlimited: false,
 }
 
-export const MOCK_TASKS: GenerationTask[] = [
+export interface LabGeneratedImage extends GeneratedImage {
+  retentionDays?: number | null
+  expiresAt?: string | null
+}
+
+export interface LabGenerateImageResult extends Omit<GenerateImageResult, 'images'> {
+  images: LabGeneratedImage[]
+}
+
+export interface LabGenerationTask extends Omit<GenerationTask, 'result'> {
+  result?: LabGenerateImageResult
+}
+
+const EXPIRES_7D_SOON = isoOffset(18 * HOURS)
+const EXPIRES_30D = isoOffset(28 * DAYS)
+
+export const MOCK_TASKS: LabGenerationTask[] = [
   {
     id: 'task-8f2a1c40',
     status: 'succeeded',
     provider: 'openai-compatible',
     model: 'gpt-image-2.5-flare',
     prompt: '极简建筑美术馆中庭，清晨低角度阳光穿透磨砂玻璃天窗，地面形成几何光影，胶片质感',
-    createdAt: '2026-11-18T00:18:00Z',
-    updatedAt: '2026-11-18T00:18:24Z',
+    createdAt: isoOffset(-6 * DAYS - 6 * HOURS),
+    updatedAt: isoOffset(-6 * DAYS - 6 * HOURS),
     expectedImageCount: 1,
     expectedAspectRatio: '4:3',
     requestedSize: '1536x1024',
@@ -160,8 +185,15 @@ export const MOCK_TASKS: GenerationTask[] = [
     result: {
       provider: 'openai-compatible',
       model: 'gpt-image-2.5-flare',
-      createdAt: '2026-11-18T00:18:24Z',
-      images: [{ mimeType: 'image/webp', url: MOCK_ARTWORKS.single }],
+      createdAt: isoOffset(-6 * DAYS - 6 * HOURS),
+      images: [
+        {
+          mimeType: 'image/webp',
+          url: MOCK_ARTWORKS.single,
+          retentionDays: 7,
+          expiresAt: EXPIRES_7D_SOON,
+        },
+      ],
     },
   },
   {
@@ -170,8 +202,8 @@ export const MOCK_TASKS: GenerationTask[] = [
     provider: 'openai-compatible',
     model: 'gpt-image-2.5-flare',
     prompt: '四组现代工业设计材质探索：阳极氧化铝、磨砂玻璃与暖白陶瓷的光影构成',
-    createdAt: '2026-11-18T00:12:00Z',
-    updatedAt: '2026-11-18T00:12:40Z',
+    createdAt: isoOffset(-2 * DAYS),
+    updatedAt: isoOffset(-2 * DAYS),
     expectedImageCount: 4,
     expectedAspectRatio: '1:1',
     requestedSize: '1024x1024',
@@ -179,13 +211,32 @@ export const MOCK_TASKS: GenerationTask[] = [
     result: {
       provider: 'openai-compatible',
       model: 'gpt-image-2.5-flare',
-      createdAt: '2026-11-18T00:12:40Z',
+      createdAt: isoOffset(-2 * DAYS),
       images: [
-        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame1 },
-        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame2 },
-        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame3 },
-        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame4 },
+        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame1, retentionDays: 30, expiresAt: EXPIRES_30D },
+        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame2, retentionDays: 30, expiresAt: EXPIRES_30D },
+        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame3, retentionDays: 30, expiresAt: EXPIRES_30D },
+        { mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.frame4, retentionDays: 30, expiresAt: EXPIRES_30D },
       ],
+    },
+  },
+  {
+    id: 'task-legacy-01',
+    status: 'succeeded',
+    provider: 'gemini-compatible',
+    model: 'gemini-nano-banana-2.1',
+    prompt: '宋代青瓷茶具与粗陶托盘静物研究，柔和窗侧光（升级前旧任务，无过期字段按永久处理）',
+    createdAt: isoOffset(-45 * DAYS),
+    updatedAt: isoOffset(-45 * DAYS),
+    expectedImageCount: 1,
+    expectedAspectRatio: '4:3',
+    referenceImageCount: 0,
+    result: {
+      provider: 'gemini-compatible',
+      model: 'gemini-nano-banana-2.1',
+      createdAt: isoOffset(-45 * DAYS),
+      // Deliberately omit retentionDays & expiresAt to verify legacy permanent fallback
+      images: [{ mimeType: 'image/svg+xml', url: MOCK_ARTWORKS.legacy }],
     },
   },
   {
@@ -194,8 +245,8 @@ export const MOCK_TASKS: GenerationTask[] = [
     provider: 'gemini-compatible',
     model: 'gemini-nano-banana-2.1',
     prompt: '雨夜东京街角书店橱窗，暖色台灯与湿润沥青地面反光，35mm 纪实摄影',
-    createdAt: '2026-11-18T00:25:00Z',
-    updatedAt: '2026-11-18T00:25:10Z',
+    createdAt: isoOffset(-1 * HOURS),
+    updatedAt: isoOffset(-1 * HOURS),
     expectedImageCount: 2,
     expectedAspectRatio: '3:4',
     referenceImageCount: 0,
@@ -206,8 +257,8 @@ export const MOCK_TASKS: GenerationTask[] = [
     provider: 'openai-compatible',
     model: 'gpt-image-1',
     prompt: '高饱和度赛博霓虹商业海报设计',
-    createdAt: '2026-11-17T23:52:00Z',
-    updatedAt: '2026-11-17T23:52:12Z',
+    createdAt: isoOffset(-3 * HOURS),
+    updatedAt: isoOffset(-3 * HOURS),
     expectedImageCount: 1,
     expectedAspectRatio: '9:16',
     requestedSize: '1024x1792',
@@ -234,6 +285,10 @@ export const MOCK_PROMPT_PRESETS = [
   },
 ]
 
+/** Top-level default retention policy returned by GET /api/gallery */
+export const MOCK_GALLERY_RETENTION_DAYS: number | null = 7
+
+/** Public gallery item contract (no bucket / local / fallback source exposed to regular users). */
 export interface MockGalleryItem {
   key: string
   taskId: string
@@ -244,6 +299,8 @@ export interface MockGalleryItem {
   bytes: number
   dimensions: string
   groupCount: number
+  retentionDays?: number | null
+  expiresAt?: string | null
 }
 
 export const MOCK_GALLERY_ITEMS: MockGalleryItem[] = [
@@ -253,10 +310,12 @@ export const MOCK_GALLERY_ITEMS: MockGalleryItem[] = [
     url: MOCK_ARTWORKS.single,
     prompt: '极简建筑美术馆中庭，清晨低角度阳光穿透磨砂玻璃天窗，地面形成几何光影，中画幅胶片质感',
     model: 'gpt-image-2.5-flare',
-    createdAt: '2026-11-18T00:18:24Z',
+    createdAt: isoOffset(-6 * DAYS - 6 * HOURS),
     bytes: 1840 * 1024,
     dimensions: '1536 × 1024',
     groupCount: 1,
+    retentionDays: 7,
+    expiresAt: EXPIRES_7D_SOON,
   },
   {
     key: 'srv-2',
@@ -264,10 +323,12 @@ export const MOCK_GALLERY_ITEMS: MockGalleryItem[] = [
     url: MOCK_ARTWORKS.frame1,
     prompt: '四组现代工业设计材质探索：阳极氧化铝、磨砂玻璃与暖白陶瓷的光影构成',
     model: 'gpt-image-2.5-flare',
-    createdAt: '2026-11-18T00:12:40Z',
+    createdAt: isoOffset(-2 * DAYS),
     bytes: 1420 * 1024,
     dimensions: '1024 × 1024',
     groupCount: 4,
+    retentionDays: 30,
+    expiresAt: EXPIRES_30D,
   },
   {
     key: 'srv-3',
@@ -275,10 +336,12 @@ export const MOCK_GALLERY_ITEMS: MockGalleryItem[] = [
     url: MOCK_ARTWORKS.frame2,
     prompt: '四组现代工业设计材质探索：阳极氧化铝、磨砂玻璃与暖白陶瓷的光影构成',
     model: 'gpt-image-2.5-flare',
-    createdAt: '2026-11-18T00:12:40Z',
+    createdAt: isoOffset(-2 * DAYS),
     bytes: 1380 * 1024,
     dimensions: '1024 × 1024',
     groupCount: 4,
+    retentionDays: 30,
+    expiresAt: EXPIRES_30D,
   },
   {
     key: 'srv-4',
@@ -286,10 +349,12 @@ export const MOCK_GALLERY_ITEMS: MockGalleryItem[] = [
     url: MOCK_ARTWORKS.frame3,
     prompt: '四组现代工业设计材质探索：阳极氧化铝、磨砂玻璃与暖白陶瓷的光影构成',
     model: 'gpt-image-2.5-flare',
-    createdAt: '2026-11-18T00:12:40Z',
+    createdAt: isoOffset(-2 * DAYS),
     bytes: 1410 * 1024,
     dimensions: '1024 × 1024',
     groupCount: 4,
+    retentionDays: 30,
+    expiresAt: EXPIRES_30D,
   },
   {
     key: 'srv-5',
@@ -297,10 +362,25 @@ export const MOCK_GALLERY_ITEMS: MockGalleryItem[] = [
     url: MOCK_ARTWORKS.frame4,
     prompt: '四组现代工业设计材质探索：阳极氧化铝、磨砂玻璃与暖白陶瓷的光影构成',
     model: 'gpt-image-2.5-flare',
-    createdAt: '2026-11-18T00:12:40Z',
+    createdAt: isoOffset(-2 * DAYS),
     bytes: 1350 * 1024,
     dimensions: '1024 × 1024',
     groupCount: 4,
+    retentionDays: 30,
+    expiresAt: EXPIRES_30D,
+  },
+  {
+    key: 'srv-6',
+    taskId: 'task-legacy-01',
+    url: MOCK_ARTWORKS.legacy,
+    prompt: '宋代青瓷茶具与粗陶托盘静物研究，柔和窗侧光（升级前永久保留作品）',
+    model: 'gemini-nano-banana-2.1',
+    createdAt: isoOffset(-45 * DAYS),
+    bytes: 1620 * 1024,
+    dimensions: '1360 × 1024',
+    groupCount: 1,
+    retentionDays: null,
+    expiresAt: null,
   },
 ]
 
@@ -341,3 +421,262 @@ export const MOCK_ADMIN_USAGE: Usage = {
     { id: 'task-1a04f881', userId: 'u-3', username: 'studio.guest', channelId: 'ch-shared-openai', status: 'failed', createdAt: '2026-11-17T23:52:00Z' },
   ],
 }
+
+/* ==========================================================================
+   ADMIN STORAGE & CLOUDFLARE R2 BUCKETS (/api/admin/storage/*)
+   ========================================================================== */
+
+export type BucketJurisdiction = 'default' | 'eu' | 'fedramp'
+
+export interface StorageSettingsContract {
+  activeBucketId: string | null
+  retentionDays: number | null
+}
+
+export interface R2BucketInfo {
+  id: string
+  accountId: string
+  bucketName: string
+  jurisdiction: BucketJurisdiction
+  hasAccessKeyId: boolean
+  hasSecretAccessKey: boolean
+  hasAnalyticsToken: boolean
+}
+
+export type CloudflareUsageStatus =
+  | 'available'
+  | 'not_configured'
+  | 'forbidden'
+  | 'no_data'
+  | 'unavailable'
+
+export interface BucketUsageContract {
+  application: {
+    imageCount: number
+    totalBytes: number
+  }
+  cloudflare: {
+    status: CloudflareUsageStatus
+    payloadBytes: number | null
+    metadataBytes: number | null
+    objectCount: number | null
+    sampledAt: string | null
+  }
+}
+
+export const MOCK_STORAGE_SETTINGS: StorageSettingsContract = {
+  activeBucketId: 'bkt-00000001-4a2b-4c3d-8e1f-000000000001',
+  retentionDays: 7,
+}
+
+export const MOCK_R2_BUCKETS: R2BucketInfo[] = [
+  {
+    id: 'bkt-00000001-4a2b-4c3d-8e1f-000000000001',
+    accountId: '9f8e7d6c5b4a3210fedcba9876543210',
+    bucketName: 'nanobanana-prod-media',
+    jurisdiction: 'default',
+    hasAccessKeyId: true,
+    hasSecretAccessKey: true,
+    hasAnalyticsToken: true,
+  },
+  {
+    id: 'bkt-00000002-4a2b-4c3d-8e1f-000000000002',
+    accountId: '9f8e7d6c5b4a3210fedcba9876543210',
+    bucketName: 'studio-eu-archive',
+    jurisdiction: 'eu',
+    hasAccessKeyId: true,
+    hasSecretAccessKey: true,
+    hasAnalyticsToken: false,
+  },
+  {
+    id: 'bkt-00000003-4a2b-4c3d-8e1f-000000000003',
+    accountId: '11223344556677889900aabbccddeeff',
+    bucketName: 'r2-staging-verify',
+    jurisdiction: 'default',
+    hasAccessKeyId: true,
+    hasSecretAccessKey: true,
+    hasAnalyticsToken: true,
+  },
+  {
+    id: 'bkt-00000004-4a2b-4c3d-8e1f-000000000004',
+    accountId: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
+    bucketName: 'nanobanana-cold-spare',
+    jurisdiction: 'fedramp',
+    hasAccessKeyId: true,
+    hasSecretAccessKey: true,
+    hasAnalyticsToken: true,
+  },
+]
+
+export const MOCK_BUCKET_USAGE: Record<string, BucketUsageContract> = {
+  'bkt-00000001-4a2b-4c3d-8e1f-000000000001': {
+    application: { imageCount: 48, totalBytes: 124_800_000 },
+    cloudflare: {
+      status: 'available',
+      payloadBytes: 132_450_000,
+      metadataBytes: 540_200,
+      objectCount: 52,
+      sampledAt: isoOffset(-3 * HOURS),
+    },
+  },
+  'bkt-00000002-4a2b-4c3d-8e1f-000000000002': {
+    application: { imageCount: 12, totalBytes: 31_200_000 },
+    cloudflare: {
+      status: 'not_configured',
+      payloadBytes: null,
+      metadataBytes: null,
+      objectCount: null,
+      sampledAt: null,
+    },
+  },
+  'bkt-00000003-4a2b-4c3d-8e1f-000000000003': {
+    application: { imageCount: 0, totalBytes: 0 },
+    cloudflare: {
+      status: 'forbidden',
+      payloadBytes: null,
+      metadataBytes: null,
+      objectCount: null,
+      sampledAt: null,
+    },
+  },
+  'bkt-00000004-4a2b-4c3d-8e1f-000000000004': {
+    application: { imageCount: 0, totalBytes: 0 },
+    cloudflare: {
+      status: 'no_data',
+      payloadBytes: null,
+      metadataBytes: null,
+      objectCount: null,
+      sampledAt: null,
+    },
+  },
+}
+
+/**
+ * Even when `application.imageCount === 0` (see bkt-00000003), the backend can
+ * still reject DELETE with HTTP 409 because of pending deletions or in-flight
+ * uncertain writes waiting for a ~1-day re-verification pass.
+ */
+export const MOCK_BUCKET_DELETE_BLOCK_REASONS: Record<string, string> = {
+  'bkt-00000002-4a2b-4c3d-8e1f-000000000002':
+    '该桶仍有 12 张未过期图片正在提供读取服务，无法删除。',
+  'bkt-00000003-4a2b-4c3d-8e1f-000000000003':
+    '尽管本应用有效图片数为 0，该桶仍存在待清理对象或等待二次核查的在途写入记录（409），暂不能移除。',
+}
+
+/* ==========================================================================
+   ADMIN OPERATIONAL ISSUES (/api/admin/issues/*)
+   ========================================================================== */
+
+export type AdminIssueKind =
+  | 'GENERATION_FAILED'
+  | 'R2_FALLBACK'
+  | 'IMAGE_WRITE_FAILED'
+  | 'IMAGE_READ_FAILED'
+  | 'IMAGE_DELETE_FAILED'
+
+export type AdminIssueStatus = 'open' | 'resolved'
+
+export type AdminIssueErrorCode =
+  | 'AUTH'
+  | 'VALIDATION'
+  | 'CONFLICT'
+  | 'RATE_LIMIT'
+  | 'NETWORK'
+  | 'BAD_RESPONSE'
+  | 'STORAGE'
+  | 'UNSUPPORTED'
+  | 'UNKNOWN'
+
+export interface AdminIssueRecord {
+  id: string
+  kind: AdminIssueKind
+  taskId: string | null
+  ownerId: string | null
+  channelId: string | null
+  bucketId: string | null
+  errorCode: AdminIssueErrorCode
+  status: AdminIssueStatus
+  occurrences: number
+  firstSeen: number
+  lastSeen: number
+  impact: string
+  advice: string
+}
+
+export const MOCK_ADMIN_ISSUES: AdminIssueRecord[] = [
+  {
+    id: 'iss-10000001-4a2b-4c3d-8e1f-000000000001',
+    kind: 'R2_FALLBACK',
+    taskId: '8f2a1c40-7b30-4e92-910a-000000000101',
+    ownerId: 'u-2',
+    channelId: 'ch-shared-openai',
+    bucketId: 'bkt-00000001-4a2b-4c3d-8e1f-000000000001',
+    errorCode: 'NETWORK',
+    status: 'open',
+    occurrences: 4,
+    firstSeen: LAB_NOW_MS - 3 * HOURS,
+    lastSeen: LAB_NOW_MS - 14 * 60_000,
+    impact: '对象存储不可用，已尝试使用备用存储。',
+    advice: '检查对象存储配置和可用性，确认备用存储容量。',
+  },
+  {
+    id: 'iss-10000002-4a2b-4c3d-8e1f-000000000002',
+    kind: 'IMAGE_DELETE_FAILED',
+    taskId: null,
+    ownerId: 'u-3',
+    channelId: null,
+    bucketId: 'bkt-00000003-4a2b-4c3d-8e1f-000000000003',
+    errorCode: 'AUTH',
+    status: 'open',
+    occurrences: 11,
+    firstSeen: LAB_NOW_MS - 2 * DAYS,
+    lastSeen: LAB_NOW_MS - 42 * 60_000,
+    impact: '图片清理未完成，可能残留存储数据。',
+    advice: '检查存储权限和连接，保留并重试清理任务。',
+  },
+  {
+    id: 'iss-10000003-4a2b-4c3d-8e1f-000000000003',
+    kind: 'GENERATION_FAILED',
+    taskId: '1a04f881-2d11-4099-a2bc-000000000202',
+    ownerId: 'u-3',
+    channelId: 'ch-shared-openai',
+    bucketId: null,
+    errorCode: 'RATE_LIMIT',
+    status: 'open',
+    occurrences: 3,
+    firstSeen: LAB_NOW_MS - 5 * HOURS,
+    lastSeen: LAB_NOW_MS - 1 * HOURS,
+    impact: '生成任务未完成，可能已经产生上游费用。',
+    advice: '检查渠道及任务状态，确认费用后再手动重试。',
+  },
+  {
+    id: 'iss-10000004-4a2b-4c3d-8e1f-000000000004',
+    kind: 'IMAGE_READ_FAILED',
+    taskId: '5c9e0b12-901a-4b11-8011-000000000303',
+    ownerId: 'u-2',
+    channelId: 'ch-shared-gemini',
+    bucketId: 'bkt-00000002-4a2b-4c3d-8e1f-000000000002',
+    errorCode: 'STORAGE',
+    status: 'resolved',
+    occurrences: 2,
+    firstSeen: LAB_NOW_MS - 6 * DAYS,
+    lastSeen: LAB_NOW_MS - 5 * DAYS,
+    impact: '已保存图片暂时无法读取。',
+    advice: '检查存储连接、权限和文件完整性。',
+  },
+  {
+    id: 'iss-10000005-4a2b-4c3d-8e1f-000000000005',
+    kind: 'IMAGE_WRITE_FAILED',
+    taskId: '9c1e3a77-5541-4c22-9100-000000000404',
+    ownerId: 'u-admin',
+    channelId: 'ch-shared-openai',
+    bucketId: 'bkt-00000001-4a2b-4c3d-8e1f-000000000001',
+    errorCode: 'STORAGE',
+    status: 'resolved',
+    occurrences: 1,
+    firstSeen: LAB_NOW_MS - 12 * DAYS,
+    lastSeen: LAB_NOW_MS - 12 * DAYS,
+    impact: '生成图片未能完整保存。',
+    advice: '检查存储空间、权限和连接，确认费用后再手动重试。',
+  },
+]

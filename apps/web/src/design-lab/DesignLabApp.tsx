@@ -29,6 +29,8 @@ import {
 } from './mockData'
 import {
   WorkbenchPrototype,
+  type LabAdminTab,
+  type LabGalleryScenario,
   type LabLoadMode,
   type LabPageRoute,
   type LabPageTransition,
@@ -47,6 +49,8 @@ export function DesignLabApp() {
   const [pageTransition, setPageTransition] = useState<LabPageTransition | null>(null)
   const [theme, setTheme] = useState<'dark' | 'light'>('light')
   const [scenario, setScenario] = useState<LabScenario>('succeeded')
+  const [galleryScenario, setGalleryScenario] = useState<LabGalleryScenario>('mixed')
+  const [adminTab, setAdminTab] = useState<LabAdminTab>('storage')
   const [loadMode, setLoadMode] = useState<LabLoadMode>('ready')
   const [sandboxSkeleton, setSandboxSkeleton] = useState(true)
   const [demoCatalogLoading, setDemoCatalogLoading] = useState(false)
@@ -236,6 +240,12 @@ export function DesignLabApp() {
                   title: '全局复用点击涟漪 + 状态层优先级修正',
                   problem: '仅有少数控件实现点击晕开且存在代码重复；图库选中卡片 hover 时蓝色会被原色 hover 覆盖。',
                   solution: '抽离共用 RippleButton / RippleOverlay 复用 useRipple 覆盖全部可点击控件，并用 :not() 与 secondary-container-hover 修复叠加态。',
+                },
+                {
+                  id: '07',
+                  title: '图片有效期、R2 存储治理与运维日志解耦',
+                  problem: '普通用户易被存储后端或回退细节混淆，且管理员需对比本应用统计与 Cloudflare 整桶样本并区分 409 引用与网络失败。',
+                  solution: '用户侧仅展示新图默认政策与每张图的真实本地到期日（屏蔽桶/本地/回退）；管理侧在 /admin 新增「存储管理」与「问题日志」，严守只写凭据、非可用状态不显示 0 与安全排查边界。',
                 },
               ].map((item) => (
                 <article key={item.id} className={styles.auditCard}>
@@ -655,6 +665,52 @@ export function DesignLabApp() {
                   >
                     演示加载 1.2s
                   </RippleButton>
+                  {activePage === 'gallery' ? (
+                    <div className={styles.protoGroup} style={{ marginLeft: 8 }}>
+                      <span className={styles.protoLabel}>图库场景：</span>
+                      {(
+                        [
+                          { id: 'mixed', label: '多有效期混排' },
+                          { id: 'empty', label: '空图库 (含政策)' },
+                          { id: 'permanent-policy', label: '新图永久政策' },
+                          { id: 'expired-404', label: '图片 404 失效' },
+                        ] as const
+                      ).map((item) => (
+                        <RippleButton
+                          key={item.id}
+                          type="button"
+                          aria-pressed={galleryScenario === item.id}
+                          className={`${styles.scenarioBtn} ${galleryScenario === item.id ? styles.scenarioBtnActive : ''}`}
+                          onClick={() => setGalleryScenario(item.id)}
+                        >
+                          {item.label}
+                        </RippleButton>
+                      ))}
+                    </div>
+                  ) : null}
+                  {activePage === 'admin' ? (
+                    <div className={styles.protoGroup} style={{ marginLeft: 8 }}>
+                      <span className={styles.protoLabel}>管理直达：</span>
+                      {(
+                        [
+                          { id: 'storage', label: '存储与 R2 桶' },
+                          { id: 'issues', label: '待处理问题日志' },
+                          { id: 'users', label: '用户管理' },
+                          { id: 'settings', label: '额度与队列' },
+                        ] as const
+                      ).map((item) => (
+                        <RippleButton
+                          key={item.id}
+                          type="button"
+                          aria-pressed={adminTab === item.id}
+                          className={`${styles.scenarioBtn} ${adminTab === item.id ? styles.scenarioBtnActive : ''}`}
+                          onClick={() => setAdminTab(item.id)}
+                        >
+                          {item.label}
+                        </RippleButton>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               )}
 
@@ -689,9 +745,13 @@ export function DesignLabApp() {
               pageTransition={pageTransition}
               scenario={scenario}
               loadMode={loadMode}
+              galleryScenario={galleryScenario}
+              adminTab={adminTab}
               viewportMode={viewportMode}
               onPageChange={handleNavigatePage}
               onScenarioChange={setScenario}
+              onGalleryScenarioChange={setGalleryScenario}
+              onAdminTabChange={setAdminTab}
               onNotify={showSnackbar}
             />
           </section>
@@ -778,6 +838,15 @@ export function DesignLabApp() {
                   body: (
                     <>
                       抽离 <code>LabRipple</code>（<code>RippleButton</code> / <code>RippleOverlay</code>），直接复用共享 <code>useRipple</code> Hook 消除局部重复实现，以零优先级 <code>:where(.rippleHost)</code> 兼容绝对定位按钮，实现顶栏、标签页、卡片、缩略图（白色微光）、弹层、Snackbar 与表单控件全覆盖。
+                    </>
+                  ),
+                },
+                {
+                  code: 'D9',
+                  title: '图片有效期、R2 存储管理与站内待处理问题日志',
+                  body: (
+                    <>
+                      围绕 <code>docs/IMAGE_STORAGE_FRONTEND_HANDOFF.md</code> 完成端到端原型扩展：<code>/</code> 与 <code>/gallery</code> 严格隔离存储来源与回退信息，区分新图政策与单图真实有效期（含空图库、混排、404 清理与 410 防重放）；<code>/admin</code> 扩充 <strong>存储管理</strong>（独立策略、R2 桶创建与只写凭据轮换、双口径用量对比及 5 种官方状态、区分 409 与网络失败删除）与 <strong>问题日志</strong>（<code>openCount</code> 徽标、状态筛选、Unix 毫秒时间与重开周期）。
                     </>
                   ),
                 },

@@ -1,0 +1,741 @@
+/* ==========================================================================
+   Admin Storage & Operational Issues Modules (Direction A · M3 Expressive)
+   Uses 5-level tonal surface stepping, connected button groups, zero 1px
+   border cages, and full light/dark + 390px mobile container support.
+   ========================================================================== */
+
+.moduleStack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.policyCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 24px;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.policyHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.policyHeader h2 {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.policySub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.5;
+}
+
+.policyBadgeCluster {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activeTargetPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dirtyPill {
+  padding: 5px 11px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.policyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.policyField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.policyFieldLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.policyFieldHint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.customDaysRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.unitTag {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background-color: var(--md-sys-color-surface-container-high);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.policyFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.scopeNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.scopeNoticeHighlight {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+/* ---- Bucket Master-Detail & Dual Usage ---------------------------------- */
+.bucketTagRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.jurisdictionChip {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.activeWriteChip {
+  padding: 3px 9px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.standbyChip {
+  padding: 3px 9px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.credBoolRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.credTrueChip,
+.credFalseChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.credTrueChip {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.credFalseChip {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.identityBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.identityItem {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.identityItem span {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.identityItem code {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usageSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.usageHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.usageHead h3 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.usageHead p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.simBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.simBarLabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-right: 4px;
+}
+
+.simChipBtn {
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 13px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.simChipBtnActive {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 600;
+}
+
+.usageDualGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.usageCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background-color: var(--md-sys-color-surface-container-lowest);
+}
+
+.usageCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.usageCardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.usageMetricRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.usageMetricThree {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.usageMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.usageMetric span {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.usageMetric strong {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+}
+
+.usageMetricMuted strong {
+  color: var(--md-sys-color-on-surface);
+  font-size: 15px;
+}
+
+.usageFootNote {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.cfStateBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.cfStateBox strong {
+  font-size: 12.5px;
+}
+
+.cfStateBox p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.rotateSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.clearTokenRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.clearTokenInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clearTokenInfo strong {
+  font-size: 12.5px;
+}
+
+.clearTokenInfo span {
+  font-size: 11.5px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.patchPreviewStrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background-color: var(--md-sys-color-surface-container-lowest);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11.5px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background-color: color-mix(in srgb, var(--md-sys-color-error-container) 48%, var(--md-sys-color-surface-container));
+}
+
+.dangerZoneTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dangerZoneTop p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.fieldErrorText {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--md-sys-color-error);
+}
+
+.inlineErrorBanner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.inlineWarnBanner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* ---- Operational Issues Log --------------------------------------------- */
+.issuesToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.issuesFilterGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.issuesRightControls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.issueList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.issueCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background-color: var(--md-sys-color-surface-container-low);
+  transition: background-color 160ms var(--md-sys-motion-easing-standard);
+}
+
+.issueCardResolved {
+  background-color: var(--md-sys-color-surface-container);
+  opacity: 0.9;
+}
+
+.issueCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.issueKindCluster {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.issueKindBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.issueKindFallback,
+.issueKindDelete {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.issueKindCritical {
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.issueCodeChip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.occurrencePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.issueBodyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.issueFactBox {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background-color: var(--md-sys-color-surface-container-lowest);
+}
+
+.issueFactBox span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.issueFactBox p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface);
+}
+
+.issueContextRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.contextChipBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.contextChipBtn:hover {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.issueFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.issueTimeline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11.5px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.issueActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.paginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.paginationControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.smallTonalBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 16px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.smallTonalBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@container (max-width: 820px) {
+  .policyGrid,
+  .identityBar,
+  .usageDualGrid,
+  .issueBodyGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 880px) {
+  .policyGrid,
+  .identityBar,
+  .usageDualGrid,
+  .issueBodyGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
