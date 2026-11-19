@@ -524,6 +524,8 @@ export function DesignLabApp() {
         ) : null}
       </main>
 
+      <div id="lab-overlay-root" />
+
       <LabSnackbarHost
         snackbar={snackbar}
         onDismiss={dismissSnackbar}

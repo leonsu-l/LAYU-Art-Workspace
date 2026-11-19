@@ -147,7 +147,6 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  transform: translate3d(0, 0, 0);
   transition: transform 240ms var(--md-sys-motion-easing-emphasized-decelerate);
 }
 

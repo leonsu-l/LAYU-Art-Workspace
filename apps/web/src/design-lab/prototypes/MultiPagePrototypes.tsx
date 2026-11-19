@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import { Icon } from '../../components/Icon'
 import {
@@ -36,9 +37,52 @@ export function GalleryPrototype({
 }) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(['srv-2'])
   const [previewItem, setPreviewItem] = useState<MockGalleryItem | null>(null)
+  const [hudVisible, setHudVisible] = useState(true)
+  const [promptExpanded, setPromptExpanded] = useState(false)
 
   const items = MOCK_GALLERY_ITEMS
   const allSelected = items.length > 0 && items.every((item) => selectedKeys.includes(item.key))
+  const previewIndex = previewItem ? items.findIndex((i) => i.key === previewItem.key) : -1
+
+  function openPreview(item: MockGalleryItem) {
+    setHudVisible(true)
+    setPromptExpanded(false)
+    setPreviewItem(item)
+  }
+
+  function closePreview() {
+    setPreviewItem(null)
+  }
+
+  function stepPreview(delta: -1 | 1) {
+    if (previewIndex < 0) return
+    const nextIdx = (previewIndex + delta + items.length) % items.length
+    setPromptExpanded(false)
+    setPreviewItem(items[nextIdx])
+  }
+
+  useEffect(() => {
+    if (!previewItem) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPreviewItem(null)
+      } else if (event.key === 'ArrowLeft') {
+        const idx = items.findIndex((i) => i.key === previewItem.key)
+        if (idx >= 0) {
+          setPromptExpanded(false)
+          setPreviewItem(items[(idx - 1 + items.length) % items.length])
+        }
+      } else if (event.key === 'ArrowRight') {
+        const idx = items.findIndex((i) => i.key === previewItem.key)
+        if (idx >= 0) {
+          setPromptExpanded(false)
+          setPreviewItem(items[(idx + 1) % items.length])
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [items, previewItem])
 
   function toggleSelect(key: string) {
     setSelectedKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
@@ -145,7 +189,7 @@ export function GalleryPrototype({
               <button
                 type="button"
                 className={styles.galleryThumbBtn}
-                onClick={() => setPreviewItem(item)}
+                onClick={() => openPreview(item)}
               >
                 <img src={item.url} alt={item.prompt} />
                 <span className={styles.thumbOverlay}>
@@ -166,7 +210,7 @@ export function GalleryPrototype({
               </div>
 
               <div className={styles.galleryCardActions}>
-                <button type="button" className={styles.cardGhostBtn} onClick={() => setPreviewItem(item)}>
+                <button type="button" className={styles.cardGhostBtn} onClick={() => openPreview(item)}>
                   <Icon name="eye" size={14} />
                   <span>预览</span>
                 </button>
@@ -206,50 +250,131 @@ export function GalleryPrototype({
         </span>
       </footer>
 
-      {previewItem ? (
-        <div className={styles.modalScrim} role="dialog" aria-modal="true" aria-label="作品大图预览">
-          <div className={styles.modalCard}>
-            <div className={styles.modalHeader}>
-              <div>
-                <span className={styles.pageEyebrow}>LIGHTBOX PREVIEW</span>
-                <h2>作品详情预览</h2>
-              </div>
-              <button
-                type="button"
-                className={styles.iconCircleBtn}
-                onClick={() => setPreviewItem(null)}
-                aria-label="关闭预览"
+      {previewItem && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className={styles.lightboxScrim}
+              role="dialog"
+              aria-modal="true"
+              aria-label="作品大图预览"
+            >
+              <div
+                className={styles.lightboxSurface}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) closePreview()
+                }}
               >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-            <div className={styles.modalCanvas}>
-              <img src={previewItem.url} alt={previewItem.prompt} />
-            </div>
-            <div className={styles.modalFooter}>
-              <div className={styles.modalMeta}>
-                <p>{previewItem.prompt}</p>
-                <span>
-                  {previewItem.model} · {previewItem.dimensions} ·{' '}
-                  {previewItem.groupCount > 1 ? `同组 ${previewItem.groupCount} 张` : '云端持久保存'}
-                </span>
-              </div>
-              <div className={styles.modalActions}>
-                <button
-                  type="button"
-                  className={styles.primaryBtn}
-                  onClick={() =>
-                    onNotify({ tone: 'info', message: `已模拟下载原图：${previewItem.key}` })
-                  }
+                <div
+                  className={styles.lightboxCanvas}
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) closePreview()
+                  }}
                 >
-                  <Icon name="download" size={15} />
-                  <span>下载原图</span>
-                </button>
+                  <img
+                    className={styles.lightboxImg}
+                    src={previewItem.url}
+                    alt={previewItem.prompt}
+                    onClick={() => setHudVisible((v) => !v)}
+                    title={hudVisible ? '点击图片隐藏悬浮信息栏' : '点击图片显示信息栏'}
+                  />
+                </div>
+
+                {/* Top Floating Frosted Strip */}
+                <div className={styles.lightboxTopBar}>
+                  <div className={`${styles.hudGlassPill} ${!hudVisible ? styles.hudItemHidden : ''}`}>
+                    <span className={styles.hudIndexChip}>
+                      {String(previewIndex + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
+                    </span>
+                    <span className={styles.hudSpecText}>
+                      {previewItem.model} · {previewItem.dimensions}
+                    </span>
+                  </div>
+
+                  <div className={styles.hudActionCluster}>
+                    <div
+                      className={`${styles.hudSecondaryGroup} ${!hudVisible ? styles.hudItemHidden : ''}`}
+                    >
+                      {items.length > 1 ? (
+                        <div className={styles.hudNavGroup}>
+                          <button
+                            type="button"
+                            className={styles.hudIconBtn}
+                            onClick={() => stepPreview(-1)}
+                            aria-label="上一张作品"
+                            title="上一张 (←)"
+                          >
+                            <Icon name="arrow-left" size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.hudIconBtn}
+                            onClick={() => stepPreview(1)}
+                            aria-label="下一张作品"
+                            title="下一张 (→)"
+                          >
+                            <Icon name="arrow-right" size={15} />
+                          </button>
+                        </div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className={styles.hudDownloadBtn}
+                        onClick={() =>
+                          onNotify({ tone: 'info', message: `已模拟下载原图：${previewItem.key}` })
+                        }
+                      >
+                        <Icon name="download" size={15} />
+                        <span>下载原图</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={styles.hudIconBtn}
+                      onClick={() => setHudVisible((v) => !v)}
+                      aria-label={hudVisible ? '隐藏信息遮罩' : '显示信息遮罩'}
+                      title={hudVisible ? '隐藏信息栏' : '显示信息栏'}
+                    >
+                      <Icon name={hudVisible ? 'eye-off' : 'eye'} size={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.hudIconBtn}
+                      onClick={closePreview}
+                      aria-label="关闭预览"
+                      title="关闭 (Esc)"
+                    >
+                      <Icon name="close" size={17} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bottom Compact Frosted Caption Dock */}
+                <div
+                  className={`${styles.lightboxBottomDock} ${!hudVisible ? styles.hudBottomHidden : ''}`}
+                >
+                  <p
+                    className={`${styles.lightboxPrompt} ${promptExpanded ? styles.lightboxPromptExpanded : ''}`}
+                    onClick={() => setPromptExpanded((v) => !v)}
+                    title="点击展开或收起完整描述"
+                  >
+                    {previewItem.prompt}
+                  </p>
+                  <div className={styles.lightboxSubMeta}>
+                    <span>
+                      {previewItem.groupCount > 1 ? `同组 ${previewItem.groupCount} 张` : '云端单图保存'} ·{' '}
+                      {Math.round(previewItem.bytes / 1024)} KiB
+                    </span>
+                    <span>点击画面切换信息遮罩 · Esc 关闭</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.getElementById('lab-overlay-root') ?? document.body,
+          )
+        : null}
     </div>
   )
 }
