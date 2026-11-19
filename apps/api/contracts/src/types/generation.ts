@@ -98,25 +98,9 @@ export interface GeneratedImage {
     url?: string
 }
 
-export interface GalleryImageRecord {
-    id: string
-    createdAt: string
-    provider: ProviderType
-    model: string
-    prompt: string
-    mimeType: string
-    blob: Blob
-    bytes: number
-}
-
 export interface GalleryStorageStats {
     totalBytes: number
     imageCount: number
-}
-
-export interface GallerySaveSummary {
-    savedCount: number
-    skippedCount: number
 }
 
 export interface GenerateImageResult {
@@ -173,7 +157,14 @@ export interface TaskDeletionSummary {
     deletedImageCount: number
 }
 
-export interface ServerGalleryImage extends Omit<GalleryImageRecord, 'blob'> {
+export interface ServerGalleryImage {
+    id: string
+    createdAt: string
+    provider: ProviderType
+    model: string
+    prompt: string
+    mimeType: string
+    bytes: number
     url: string
 }
 

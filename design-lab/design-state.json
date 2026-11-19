@@ -85,7 +85,8 @@
     "dec-002-m3-expressive-rebuild",
     "dec-003-direction-a-and-multipage-system",
     "dec-004-m3-primary-tabs-and-swipe-pager",
-    "dec-005-m3-snackbar-feedback"
+    "dec-005-m3-snackbar-feedback",
+    "dec-006-gallery-immersive-launch-transition"
   ],
   "openQuestions": [
     "Approve the 5-page M3 Expressive prototypes under Direction A so Stage 6 production integration can begin (shared header + tokens + Workbench /, followed by Gallery, Channels, Account, and Admin)?"

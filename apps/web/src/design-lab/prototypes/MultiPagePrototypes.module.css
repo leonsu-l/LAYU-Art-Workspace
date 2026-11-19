@@ -330,6 +330,10 @@
   cursor: pointer;
 }
 
+.galleryThumbHidden {
+  opacity: 0;
+}
+
 .galleryThumbBtn img {
   display: block;
   width: 100%;
@@ -444,13 +448,23 @@
   position: fixed;
   inset: 0;
   z-index: 220;
+}
+
+.lightboxBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background-color: rgba(10, 12, 18, 0.88);
   backdrop-filter: blur(20px) saturate(130%);
-  animation: m3-scrim-fade 180ms var(--md-sys-motion-easing-standard) both;
+}
+
+.lightboxClosing {
+  pointer-events: none;
 }
 
 .lightboxSurface {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: grid;
@@ -672,11 +686,6 @@
   font-family: var(--md-ref-typeface-mono);
   font-size: 11px;
   color: rgba(227, 229, 236, 0.72);
-}
-
-@keyframes m3-scrim-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 @media (max-width: 640px) {

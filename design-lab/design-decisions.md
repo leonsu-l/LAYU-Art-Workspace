@@ -44,4 +44,15 @@
 - **Context:** Action notices across Gallery, Channels, Account, Admin, and Workbench previously rendered inline banners that pushed layout content down on click. User asked to move transient notifications/warnings to an M3 Snackbar where appropriate without forcing blocking/safety UI into auto-hiding toasts.
 - **Decision:** Add a unified Inverse-Surface `LabSnackbarHost` + `useSnackbar` controller (`info` / `success` / `warning` tones, hover/focus auto-dismiss pause, exit transition) for all transient operation results, downloads, template applications, task failure details, and cascade-deletion warnings. Deliberately keep persistent blocking/policy notices inline (`scenario === 'recovery'` deduplication banner, `scenario === 'blocker'` missing-channel alert, `/password` 12–1024 char security rule banner, and static footer policies).
 
+## Decision: Immersive Frosted Gallery Lightbox + App Launch Container Transform (`dec-006-gallery-immersive-launch-transition`)
+
+- **Date:** 2026-11-19
+- **Scope:** gallery lightbox preview
+- **Status:** accepted (pending Stage 6 production integration approval)
+- **Context:** Previous gallery preview dialog wrapped images in large solid headers/footers limiting visual ratio, and snapped open/closed in place. User asked for maximum image visual dominance with compact frosted edge overlays and a full-fidelity App Launch / Close container transform emerging from and collapsing back into the card thumbnail icon.
+- **Decision:**
+  1. **Immersive Viewport Lightbox**: Portal lightbox into `#lab-overlay-root` (`z-index: 220`, below Snackbar `z-index: 260` which lifts automatically above bottom caption dock), letting the artwork fill up to ~95% viewport height with translucent frosted top index/action pills and compact bottom caption dock (`hudVisible` click/eye toggle).
+  2. **60fps Uniform-Scale + Parabolic `clip-path` Container Transform**: Compute exact FLIP uniform `cover` scale + dynamic `inset(... round ...)` clip-path in `lightboxTransition.ts` (`buildContainerMorphKeyframes`) using 28 sampled keyframes driven by decoupled non-linear M3 Expressive cubic-bezier curves (`uPos` leading `uScale`) over an upward quadratic Bezier parabolic trajectory on open (`340ms`) and tight return arc on close (`260ms`, retargeting to the active card even after browsing `←` / `→`, cleanly reversing with `fill: 'both'` if closed mid-open, keeping close fill until portal unmount to prevent post-close flash, and allowing instant interruption by `openPreview` / `stepPreview` during rapid switching) while temporarily hiding the underlying card thumbnail.
+
+
 
