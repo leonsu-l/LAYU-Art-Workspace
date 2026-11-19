@@ -1,0 +1,1021 @@
+/* ==========================================================================
+   Authentic Material 3 Expressive Controls
+   Tonal elevation, connected shape morphing, state layers, and ripples
+   ========================================================================== */
+
+/* ---- Shared Ripple Layer ------------------------------------------------ */
+.rippleLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: currentColor;
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0;
+  animation: m3-ripple 520ms var(--md-sys-motion-easing-standard) forwards;
+}
+
+@keyframes m3-ripple {
+  0% { transform: scale(0); opacity: 0.11; }
+  55% { opacity: 0.06; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+.btnContent {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- 1. M3 Expressive Select (m3_example.html language) ------------------ */
+.selectRoot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.selectTrigger {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px 0 18px;
+  border: none;
+  border-radius: 22px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--md-sys-motion-easing-standard),
+    border-radius 200ms var(--md-sys-motion-easing-standard);
+}
+
+.selectTrigger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-high));
+}
+
+.selectOpen .selectTrigger {
+  border-radius: 16px;
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.selectTrigger:disabled {
+  opacity: 0.44;
+  cursor: not-allowed;
+}
+
+.selectValue {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectChevron {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--md-sys-color-on-surface-variant);
+  transition:
+    transform 260ms var(--md-sys-motion-easing-expressive-spring),
+    background-color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.selectOpen .selectChevron {
+  transform: rotate(180deg);
+  color: var(--md-sys-color-primary);
+}
+
+.selectMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  max-height: 248px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container);
+  box-shadow: var(--md-sys-elevation-level2);
+  transform-origin: top center;
+  animation: m3-menu-open 240ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+@keyframes m3-menu-open {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.selectOption {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 12px 8px 14px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  font-size: 13.5px;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  transition: background-color 120ms var(--md-sys-motion-easing-standard);
+}
+
+.selectOption + .selectOption {
+  margin-top: 2px;
+}
+
+.selectOptionActive:not(.selectOptionDisabled),
+.selectOption:hover:not(.selectOptionDisabled) {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.selectOption[aria-selected='true'] {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 500;
+}
+
+.selectOptionDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.selectOptionText {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.selectCheck {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 140ms var(--md-sys-motion-easing-standard),
+    transform 240ms var(--md-sys-motion-easing-expressive-spring);
+}
+
+.selectOption[aria-selected='true'] .selectCheck {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---- 2. M3 Expressive Connected Button Group (Shape Morphing) ----------- */
+.connectedGroup {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+  min-width: 0;
+}
+
+.connectedGroupWrap {
+  /* Collapses cleanly on narrow/mobile frames instead of forcing wide columns */
+}
+
+@container (max-width: 580px) {
+  .connectedGroupWrap {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .connectedGroupWrap .connectedBtn:first-child,
+  .connectedGroupWrap .connectedBtn:last-child {
+    border-radius: 6px;
+  }
+
+  .connectedGroupWrap .connectedBtnActive,
+  .connectedGroupWrap .connectedBtn:first-child.connectedBtnActive,
+  .connectedGroupWrap .connectedBtn:last-child.connectedBtnActive {
+    border-radius: 19px;
+  }
+}
+
+@media (max-width: 580px) {
+  .connectedGroupWrap {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .connectedGroupWrap .connectedBtn:first-child,
+  .connectedGroupWrap .connectedBtn:last-child {
+    border-radius: 6px;
+  }
+
+  .connectedGroupWrap .connectedBtnActive,
+  .connectedGroupWrap .connectedBtn:first-child.connectedBtnActive,
+  .connectedGroupWrap .connectedBtn:last-child.connectedBtnActive {
+    border-radius: 19px;
+  }
+}
+
+.connectedBtn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-radius 220ms var(--md-sys-motion-easing-standard),
+    background-color 160ms var(--md-sys-motion-easing-standard),
+    color 160ms var(--md-sys-motion-easing-standard),
+    transform 180ms var(--md-sys-motion-easing-expressive-spring);
+}
+
+.connectedBtn:hover:not(.connectedBtnActive) {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-high));
+  color: var(--md-sys-color-on-surface);
+}
+
+.connectedBtn:active:not(.connectedBtnActive) {
+  border-radius: 10px;
+  transform: scale(0.97);
+}
+
+/* Use exact half-height (19px) instead of 999px so transitions interpolate smoothly
+   without clamping lag or overshoot collapse. */
+.connectedBtnActive {
+  border-radius: 19px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 600;
+}
+
+.connectedBtn:first-child,
+.connectedBtn:first-child:active,
+.connectedBtn:first-child.connectedBtnActive {
+  border-top-left-radius: 19px;
+  border-bottom-left-radius: 19px;
+}
+
+.connectedBtn:last-child,
+.connectedBtn:last-child:active,
+.connectedBtn:last-child.connectedBtnActive {
+  border-top-right-radius: 19px;
+  border-bottom-right-radius: 19px;
+}
+
+/* ---- 3. M3 Expressive Connected Visual Ratio Tiles ---------------------- */
+.ratioGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.ratioTile {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 56px;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    border-radius 220ms var(--md-sys-motion-easing-standard),
+    background-color 160ms var(--md-sys-motion-easing-standard),
+    color 160ms var(--md-sys-motion-easing-standard),
+    transform 180ms var(--md-sys-motion-easing-expressive-spring);
+}
+
+.ratioTile:hover:not(.ratioTileActive) {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-high));
+  color: var(--md-sys-color-on-surface);
+}
+
+.ratioTile:active:not(.ratioTileActive) {
+  border-radius: 11px;
+  transform: scale(0.96);
+}
+
+.ratioTileActive {
+  border-radius: 16px;
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-weight: 600;
+}
+
+.ratioTile:first-child,
+.ratioTile:first-child:active,
+.ratioTile:first-child.ratioTileActive {
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+
+.ratioTile:last-child,
+.ratioTile:last-child:active,
+.ratioTile:last-child.ratioTileActive {
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
+}
+
+.ratioPreviewSlot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 18px;
+}
+
+.ratioFrame {
+  display: block;
+  border: 1.75px solid currentColor;
+  border-radius: 3px;
+}
+
+.ratioTileActive .ratioFrame {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent);
+}
+
+.ratioLabel {
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+}
+
+/* ---- 4. M3 Expressive Connected Count Stepper --------------------------- */
+.stepper {
+  display: grid;
+  grid-template-columns: 38px 1fr 38px;
+  gap: 3px;
+  height: 38px;
+}
+
+.stepperBtn {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: none;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-radius 200ms var(--md-sys-motion-easing-standard),
+    background-color 140ms var(--md-sys-motion-easing-standard),
+    transform 160ms var(--md-sys-motion-easing-expressive-spring);
+}
+
+.stepperStart {
+  border-radius: 19px 6px 6px 19px;
+}
+
+.stepperEnd {
+  border-radius: 6px 19px 19px 6px;
+}
+
+.stepperBtn:hover:not(:disabled) {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.stepperStart:active:not(:disabled) {
+  border-radius: 19px 11px 11px 19px;
+  transform: scale(0.95);
+}
+
+.stepperEnd:active:not(:disabled) {
+  border-radius: 11px 19px 19px 11px;
+  transform: scale(0.95);
+}
+
+.stepperBtn:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
+.stepperValue {
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-surface-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+/* ---- 5. M3 Expressive Split CTA Button ---------------------------------- */
+.splitWrap {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  gap: 3px;
+}
+
+.splitMain {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 50px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 25px 6px 6px 25px;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: var(--md-sys-elevation-level1);
+  cursor: pointer;
+  transition:
+    border-radius 200ms var(--md-sys-motion-easing-standard),
+    box-shadow 180ms var(--md-sys-motion-easing-standard),
+    transform 160ms var(--md-sys-motion-easing-expressive-spring);
+}
+
+.splitMain:hover:not(:disabled) {
+  box-shadow: var(--md-sys-elevation-level2);
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, var(--md-sys-color-on-primary));
+}
+
+.splitMain:active:not(:disabled) {
+  border-radius: 25px 14px 14px 25px;
+  transform: scale(0.985);
+}
+
+.splitMain:disabled {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 40%, transparent);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.splitSide {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  height: 50px;
+  border: none;
+  border-radius: 6px 25px 25px 6px;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  box-shadow: var(--md-sys-elevation-level1);
+  cursor: pointer;
+  transition:
+    border-radius 200ms var(--md-sys-motion-easing-standard),
+    background-color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.splitSide:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 88%, var(--md-sys-color-on-primary));
+}
+
+.splitSideOpen {
+  border-radius: 25px;
+}
+
+.splitSide:disabled {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 40%, transparent);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.splitChevronUp {
+  transform: rotate(180deg);
+}
+
+.splitMenu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 65;
+  min-width: 220px;
+  padding: 8px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-level3);
+  animation: m3-menu-open 200ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+.splitMenuLabel {
+  padding: 4px 10px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.splitMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.splitMenuItem:hover {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.spin {
+  animation: m3-spin 1s linear infinite;
+}
+
+@keyframes m3-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- 6. Compact Channel + Model Tonal Card Trigger & Popover ------------ */
+.channelBarRoot {
+  position: relative;
+}
+
+.channelTrigger {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--md-sys-motion-easing-standard),
+    border-radius 200ms var(--md-sys-motion-easing-standard);
+}
+
+.channelTriggerCompact {
+  padding: 6px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+.channelTrigger:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.channelTriggerWarn {
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.channelTriggerLeading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.channelAvatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.channelTriggerCompact .channelAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.channelTriggerWarn .channelAvatar {
+  background-color: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+}
+
+.channelTriggerMain {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.channelScopeBadge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+}
+
+.channelTriggerWarn .channelScopeBadge {
+  color: var(--md-sys-color-error);
+}
+
+.channelModelName {
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channelTriggerSide {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.quotaBadge {
+  padding: 4px 9px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.channelChevronWrap {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--md-sys-color-on-surface-variant);
+  transition: transform 240ms var(--md-sys-motion-easing-expressive-spring);
+}
+
+.channelChevronOpen {
+  transform: rotate(180deg);
+  color: var(--md-sys-color-primary);
+}
+
+.channelPopover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  min-width: 316px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-level3);
+  animation: m3-menu-open 220ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+.popoverHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.popoverHeader strong {
+  display: block;
+  font-size: 15px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.popoverSub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.popoverClose {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+}
+
+.popoverClose:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.popoverSplit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.popoverField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.popoverLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.modelChipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.modelChoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-radius 200ms var(--md-sys-motion-easing-standard),
+    background-color 140ms var(--md-sys-motion-easing-standard);
+}
+
+.modelChoice:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.modelChoiceActive {
+  border-radius: 17px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.popoverInput {
+  height: 42px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 12.5px;
+}
+
+.popoverEmpty {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.templateRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.templateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.templateBtn:hover {
+  filter: brightness(0.96);
+}
+
+/* ---- 7. M3 Primary Tabs (Underline Indicator + Hairline Divider) -------- */
+.primaryTabsTrack {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 68%, transparent);
+}
+
+.primaryTabsInHeader {
+  border-bottom: none;
+  height: 100%;
+}
+
+.primaryTabsFixed {
+  overflow: hidden;
+}
+
+.primaryTabsScrollable {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.primaryTabsScrollable::-webkit-scrollbar {
+  display: none;
+}
+
+.primaryTabsInner {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 100%;
+  width: max-content;
+}
+
+.primaryTabsFixed .primaryTabsInner {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.primaryTabsScrollable .primaryTabsInner {
+  gap: 6px;
+}
+
+.primaryTabsInHeader .primaryTabsInner {
+  height: 100%;
+}
+
+.primaryTabBtn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 180ms var(--md-sys-motion-easing-standard),
+    background-color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.primaryTabsFixed .primaryTabBtn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 6px;
+}
+
+.primaryTabsInHeader .primaryTabBtn {
+  min-height: 54px;
+  padding: 0 12px;
+}
+
+.primaryTabBtn:hover:not(.primaryTabBtnActive) {
+  color: var(--md-sys-color-on-surface);
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 5%, transparent);
+}
+
+.primaryTabBtnActive {
+  color: var(--md-sys-color-primary);
+  font-weight: 600;
+}
+
+.primaryTabLabel {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.2;
+}
+
+.primaryTabBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.primaryTabBtnActive .primaryTabBadge {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-weight: 600;
+}
+
+.primaryTabIndicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background-color: var(--md-sys-color-primary);
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, width;
+}
+
+@container (max-width: 440px) {
+  .primaryTabsFixed .primaryTabBtn {
+    min-height: 42px;
+    padding: 0 3px;
+    font-size: 12px;
+  }
+
+  .primaryTabsScrollable .primaryTabBtn {
+    min-height: 42px;
+    padding: 0 10px;
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 440px) {
+  .primaryTabsFixed .primaryTabBtn {
+    min-height: 42px;
+    padding: 0 3px;
+    font-size: 12px;
+  }
+
+  .primaryTabsScrollable .primaryTabBtn {
+    min-height: 42px;
+    padding: 0 10px;
+    font-size: 12.5px;
+  }
+}

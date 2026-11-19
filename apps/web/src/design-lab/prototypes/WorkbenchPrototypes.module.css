@@ -1,0 +1,1098 @@
+/* ==========================================================================
+   Material 3 Expressive Workbench Prototypes
+   Uses tonal surface hierarchy (--md-sys-color-surface-container-*) instead
+   of heavy 1px border cages, with expressive corner contrast & springs.
+   ========================================================================== */
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 700px;
+  container-type: inline-size;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-level2);
+  overflow: hidden;
+}
+
+.frameMobile {
+  width: 100%;
+  max-width: 390px;
+  margin-inline: auto;
+}
+
+/* ---- M3 Top App Bar & Primary Tabs Host --------------------------------- */
+.appHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 0 18px;
+  background-color: var(--md-sys-color-surface-container-low);
+  border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 68%, transparent);
+}
+
+.appBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.brandGlyph {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.brandWordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.brandWordmark strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.brandTag {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.desktopNavHost {
+  justify-self: center;
+  width: min(560px, 100%);
+  height: 56px;
+  margin-bottom: -1px;
+  min-width: 0;
+}
+
+.appHeaderRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.userPill {
+  border: none;
+  padding: 6px 11px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mobileTabsHost {
+  display: none;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+/* ---- Swipeable Primary Pager Stage -------------------------------------- */
+.pagerViewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.pagerViewportSwipeable {
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.pagerViewportSwipeable input,
+.pagerViewportSwipeable textarea {
+  touch-action: auto;
+  user-select: text;
+}
+
+.pagerStage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.pagerIdleSlide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  transform: translate3d(0, 0, 0);
+  transition: transform 240ms var(--md-sys-motion-easing-emphasized-decelerate);
+}
+
+.pagerDraggingSlide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  transition: none;
+  will-change: transform;
+}
+
+.pagerEnterSlide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  animation: m3-page-enter 320ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+  will-change: transform, opacity;
+}
+
+.pagerExitSlide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  animation: m3-page-exit 320ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+  will-change: transform, opacity;
+}
+
+.pagerPeekDragging,
+.pagerPeekSettling {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.pagerPeekDragging {
+  transition: none;
+}
+
+.pagerPeekSettling {
+  transition: transform 240ms var(--md-sys-motion-easing-emphasized-decelerate);
+}
+
+@keyframes m3-page-enter {
+  from {
+    transform: translate3d(calc(var(--slide-dir, 1) * 100% + var(--start-x, 0px)), 0, 0);
+    opacity: 0.78;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes m3-page-exit {
+  from {
+    transform: translate3d(var(--start-x, 0px), 0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(calc(var(--slide-dir, 1) * -100%), 0, 0);
+    opacity: 0.72;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagerEnterSlide,
+  .pagerExitSlide,
+  .pagerIdleSlide,
+  .pagerPeekSettling {
+    animation-duration: 1ms;
+    transition-duration: 1ms;
+  }
+}
+
+/* ---- Direction A: Tonal Rail + Expressive Stage ------------------------- */
+.proLayout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 386px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  min-height: 640px;
+}
+
+.proRail {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-low);
+  min-width: 0;
+}
+
+.proRailScroll {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.proRailFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-radius: 0 0 var(--md-sys-shape-corner-extra-large) var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.proStage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ---- Prompt Filled Card ------------------------------------------------- */
+.promptCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fieldTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.fieldMeta {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.promptTextarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 102px;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 2px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-extra-small) var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  line-height: 1.55;
+  outline: none;
+  transition:
+    background-color 150ms var(--md-sys-motion-easing-standard),
+    border-color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.promptTextarea:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.promptTextarea:focus {
+  border-bottom-color: var(--md-sys-color-primary);
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.promptToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.refAttachBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-radius 200ms var(--md-sys-motion-easing-standard),
+    background-color 140ms var(--md-sys-motion-easing-standard);
+}
+
+.refAttachBtn:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.refAttachActive {
+  border-radius: 15px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.presetMiniRow {
+  display: inline-flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.presetChip {
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.presetChip:hover {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.refMiniStrip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.refMiniStrip img {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--md-sys-shape-corner-small);
+  object-fit: cover;
+}
+
+.refMiniStrip div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.refMiniStrip strong {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.refMiniStrip span {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.refMiniStrip button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+}
+
+/* ---- Parameters --------------------------------------------------------- */
+.paramStack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.twoColStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toggleChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-radius 200ms var(--md-sys-motion-easing-standard);
+}
+
+.toggleChipActive {
+  border-radius: 19px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.advancedToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.advancedToggle:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+.advancedPanel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.readinessLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.readinessOk {
+  color: var(--md-sys-color-primary);
+  font-weight: 500;
+}
+
+.readinessErr {
+  color: var(--md-sys-color-error);
+  font-weight: 500;
+}
+
+.shortcutHint {
+  padding: 2px 7px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---- Alerts ------------------------------------------------------------- */
+.recoveryAlert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  font-size: 12.5px;
+}
+
+.recoveryAlertHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recoveryAlert p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.recoveryAlert code {
+  padding: 2px 6px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+}
+
+.recoveryActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recoveryBtnPrimary {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recoveryBtnTonal {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.blockerAlert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-size: 12.5px;
+}
+
+/* ---- M3 Expressive Result Stage Card ------------------------------------ */
+.stageCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-lowest);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.stageBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 18px;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.stageBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.statusDone {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.statusRunning {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.statusWarn {
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.statusIdle {
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.stageMetaMono {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11.5px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.stageBarActions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.stageTonalBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.stageTextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.stageTextBtn:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.stageBody {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  min-height: 370px;
+}
+
+.singleLightbox {
+  width: min(100%, 540px);
+}
+
+.multiGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: min(100%, 580px);
+}
+
+.artworkFigure {
+  margin: 0;
+  border-radius: var(--md-sys-shape-corner-large);
+  overflow: hidden;
+  background-color: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.artworkFigure img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.artworkCaption {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---- Generating / Empty States ------------------------------------------ */
+.generatingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: min(100%, 540px);
+}
+
+.developingCard {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container);
+  overflow: hidden;
+}
+
+.developingShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 24%,
+    color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent) 50%,
+    transparent 76%
+  );
+  background-size: 200% 100%;
+  animation: m3-sweep 1.8s linear infinite;
+}
+
+@keyframes m3-sweep {
+  from { background-position: 160% 0; }
+  to { background-position: -60% 0; }
+}
+
+.developingLabel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container-highest);
+  text-align: center;
+}
+
+.developingLabel strong {
+  font-size: 13px;
+}
+
+.developingLabel span {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.emptyStage {
+  width: min(100%, 580px);
+  padding: 26px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.emptyTag {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.emptyStage h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.emptyStage p {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.6;
+}
+
+.emptyStarterGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.starterCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--md-sys-motion-easing-standard),
+    transform 160ms var(--md-sys-motion-easing-expressive-spring);
+}
+
+.starterCard:hover {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  transform: translateY(-2px);
+}
+
+.starterCard strong {
+  font-size: 12.5px;
+}
+
+.starterCard span {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.45;
+}
+
+/* ---- Docked Filmstrip --------------------------------------------------- */
+.filmstripDock {
+  padding: 12px 16px;
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.filmstripHead {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.filmstripCount {
+  font-weight: 400;
+}
+
+.filmstripRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.filmCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-radius 200ms var(--md-sys-motion-easing-standard),
+    background-color 140ms var(--md-sys-motion-easing-standard);
+}
+
+.filmCard:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.filmCardSelected {
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  box-shadow: inset 0 0 0 2px var(--md-sys-color-primary);
+}
+
+.filmThumb {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container-lowest);
+  overflow: hidden;
+}
+
+.filmThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.filmMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filmMeta strong {
+  font-size: 11px;
+}
+
+.filmMeta strong[data-status='succeeded'] { color: var(--md-sys-color-primary); }
+.filmMeta strong[data-status='running'] { color: var(--md-sys-color-tertiary); }
+.filmMeta strong[data-status='failed'] { color: var(--md-sys-color-error); }
+
+.filmMeta span {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spin {
+  animation: m3-spin-proto 1s linear infinite;
+}
+
+@keyframes m3-spin-proto {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Mobile Prototype Mode (390px) & Responsive Header Switch ------------- */
+.frameMobile .appHeader {
+  grid-template-columns: auto auto;
+  min-height: 48px;
+  padding: 6px 14px;
+  border-bottom: none;
+}
+
+.frameMobile .desktopNavHost,
+.frameMobile .brandTag {
+  display: none;
+}
+
+.frameMobile .userPill {
+  padding: 4px 9px;
+  font-size: 10.5px;
+}
+
+.frameMobile .mobileTabsHost {
+  display: block;
+}
+
+.frameMobile .proLayout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.frameMobile .filmstripRow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.frameMobile .emptyStarterGrid,
+.frameMobile .twoCol,
+.frameMobile .advancedPanel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@container (max-width: 760px) {
+  .appHeader {
+    grid-template-columns: auto auto;
+    min-height: 48px;
+    padding: 6px 14px;
+    border-bottom: none;
+  }
+
+  .desktopNavHost,
+  .brandTag {
+    display: none;
+  }
+
+  .userPill {
+    padding: 4px 9px;
+    font-size: 10.5px;
+  }
+
+  .mobileTabsHost {
+    display: block;
+  }
+}
+
+@container (max-width: 440px) {
+  .twoCol,
+  .advancedPanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .appHeader {
+    grid-template-columns: auto auto;
+    min-height: 48px;
+    padding: 6px 14px;
+    border-bottom: none;
+  }
+
+  .desktopNavHost,
+  .brandTag {
+    display: none;
+  }
+
+  .mobileTabsHost {
+    display: block;
+  }
+
+  .emptyStarterGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .proLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filmstripRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

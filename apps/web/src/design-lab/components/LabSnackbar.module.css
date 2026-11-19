@@ -1,0 +1,134 @@
+/* ==========================================================================
+   Material 3 Expressive Floating Snackbar
+   Uses Inverse Surface tokens so toasts stay legible above both light & dark
+   surfaces without pushing or altering underlying page layout.
+   ========================================================================== */
+
+.viewportHost {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  z-index: 260;
+  transform: translateX(-50%);
+  width: min(468px, calc(100vw - 24px));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.snackbar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 14px;
+  background-color: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  box-shadow: var(--md-sys-elevation-level3);
+  animation: m3-snackbar-in 220ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+.snackbarClosing {
+  animation: m3-snackbar-out 180ms var(--md-sys-motion-easing-emphasized-accelerate) forwards;
+}
+
+.iconSlot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--md-sys-color-inverse-primary);
+}
+
+.snackbar[data-tone='warning'] .iconSlot {
+  color: var(--md-sys-color-inverse-warning);
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--md-sys-color-inverse-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.snackbar[data-tone='warning'] .actionBtn {
+  color: var(--md-sys-color-inverse-warning);
+}
+
+.actionBtn:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-inverse-on-surface) 10%, transparent);
+}
+
+.closeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: color-mix(in srgb, var(--md-sys-color-inverse-on-surface) 78%, transparent);
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-inverse-on-surface) 12%, transparent);
+  color: var(--md-sys-color-inverse-on-surface);
+}
+
+@keyframes m3-snackbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes m3-snackbar-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snackbar,
+  .snackbarClosing {
+    animation-duration: 1ms;
+  }
+}

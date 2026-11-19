@@ -1,0 +1,462 @@
+/* Design Lab Shell — Styled in authentic Material 3 Expressive */
+
+.labShell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.labBar {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  padding: 10px clamp(14px, 3vw, 28px);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.labBrand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.labBadge {
+  padding: 5px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.labBrand strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.labBrand span {
+  display: block;
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.labTabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 4px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.labTab {
+  height: 32px;
+  padding: 0 13px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--md-sys-motion-easing-standard),
+    color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.labTab:hover:not(.labTabActive) {
+  color: var(--md-sys-color-on-surface);
+}
+
+.labTabActive {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 600;
+}
+
+.labToggles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selectedDirTag {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.switchGroup {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.switchGroup button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-radius 220ms var(--md-sys-motion-easing-standard),
+    background-color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.switchGroup button[aria-pressed='true'] {
+  border-radius: 16px;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.switchGroup button:first-child,
+.switchGroup button:first-child[aria-pressed='true'] {
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.switchGroup button:last-child,
+.switchGroup button:last-child[aria-pressed='true'] {
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+.labContent {
+  flex: 1;
+  width: 100%;
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: clamp(16px, 2.4vw, 26px) clamp(14px, 3vw, 28px) 48px;
+}
+
+/* ---- Audit & Decisions -------------------------------------------------- */
+.sectionGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.introCard {
+  padding: 22px 26px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.introCard h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.introCard p {
+  margin: 0;
+  max-width: 78ch;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.auditGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.auditCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 22px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.auditNum {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.auditCard h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.auditPair,
+.decisionCopy {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.auditPair strong,
+.decisionCopy strong {
+  color: var(--md-sys-color-on-surface);
+}
+
+.decisionCopy code {
+  padding: 2px 6px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container-highest);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 12px;
+}
+
+/* ---- Components & Tokens ------------------------------------------------ */
+.labPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.primaryTabDemoSurface {
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface);
+  overflow: hidden;
+}
+
+.snackbarDemoRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.snackbarTriggerBtn {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 18px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms var(--md-sys-motion-easing-standard);
+}
+
+.snackbarTriggerBtn:hover {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.swipeHintChip {
+  margin-left: 6px;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 11.5px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.panelDesc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.swatchRow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.swatchCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.swatchChip {
+  display: grid;
+  place-items: center;
+  height: 50px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.swatchCard strong {
+  font-size: 12.5px;
+}
+
+.swatchCard code {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 10.5px;
+  color: var(--md-sys-color-primary);
+}
+
+.swatchCard span {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.componentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.sandboxStack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sandboxRow {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 10px;
+}
+
+.demoNotice {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---- Prototype Workspace ------------------------------------------------ */
+.prototypeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.protoToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.protoGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.protoLabel {
+  margin-right: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.scenarioBtn {
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-radius 220ms var(--md-sys-motion-easing-standard),
+    background-color 140ms var(--md-sys-motion-easing-standard);
+}
+
+.scenarioBtn:hover:not(.scenarioBtnActive) {
+  color: var(--md-sys-color-on-surface);
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.scenarioBtnActive {
+  border-radius: 15px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 600;
+}
+
+.scenarioBtn:first-of-type,
+.scenarioBtn:first-of-type.scenarioBtnActive {
+  border-top-left-radius: 15px;
+  border-bottom-left-radius: 15px;
+}
+
+.scenarioBtn:last-of-type,
+.scenarioBtn:last-of-type.scenarioBtnActive {
+  border-top-right-radius: 15px;
+  border-bottom-right-radius: 15px;
+}
+
+@media (max-width: 960px) {
+  .auditGrid,
+  .componentGrid,
+  .swatchRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
