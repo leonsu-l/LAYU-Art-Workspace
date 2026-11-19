@@ -453,10 +453,90 @@
   border-bottom-right-radius: 15px;
 }
 
+.labPanelWide {
+  grid-column: 1 / -1;
+}
+
+.skeletonSandboxGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.skeletonSubCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.skeletonSubHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.skeletonDemoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.skeletonDemoCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeletonMediaFrame {
+  width: min(100%, 300px);
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: var(--md-sys-color-surface-container-lowest);
+}
+
+.skeletonMediaCaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.protoDemoBtn {
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 15px;
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 140ms var(--md-sys-motion-easing-standard);
+}
+
+.protoDemoBtn:hover {
+  filter: brightness(0.95);
+}
+
 @media (max-width: 960px) {
   .auditGrid,
   .componentGrid,
-  .swatchRow {
+  .swatchRow,
+  .skeletonSandboxGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

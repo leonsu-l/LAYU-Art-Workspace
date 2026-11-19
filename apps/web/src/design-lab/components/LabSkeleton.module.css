@@ -1,0 +1,222 @@
+/* ==========================================================================
+   Material 3 Expressive Shimmer Skeleton Loading
+   Tonal surface placeholders matching M3 shape scale + GPU-composited
+   specular Cobalt-tinted shimmer wave with reduced-motion fallback.
+   ========================================================================== */
+
+.skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background-color: var(--md-sys-color-skeleton-base);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.toneSubtle {
+  background-color: var(--md-sys-color-skeleton-subtle);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translate3d(-115%, 0, 0);
+  background: linear-gradient(
+    108deg,
+    transparent 14%,
+    var(--md-sys-color-skeleton-tint) 36%,
+    var(--md-sys-color-skeleton-sheen) 50%,
+    var(--md-sys-color-skeleton-tint) 64%,
+    transparent 86%
+  );
+  animation: m3-shimmer-glide 1.65s var(--md-sys-motion-easing-standard) infinite;
+  animation-delay: var(--shimmer-delay, 0ms);
+  will-change: transform;
+  pointer-events: none;
+}
+
+@keyframes m3-shimmer-glide {
+  0% {
+    transform: translate3d(-115%, 0, 0);
+  }
+  74%,
+  100% {
+    transform: translate3d(118%, 0, 0);
+  }
+}
+
+/* ---- M3 Expressive Shape Scale Variants --------------------------------- */
+.variantText {
+  width: 100%;
+  height: 13px;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+.variantPill {
+  height: 28px;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+.variantCircle {
+  border-radius: 50%;
+}
+
+.variantRect {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.variantButton {
+  height: 36px;
+  border-radius: 18px;
+}
+
+.variantField {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px 12px 4px 4px;
+  border-bottom: 2px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 55%, transparent);
+}
+
+.variantMedia {
+  width: 100%;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.mediaGlyph {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--md-sys-color-surface-container-lowest) 32%, transparent);
+  color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) 42%, transparent);
+}
+
+.textStack {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+}
+
+/* ---- Progressive ShimmerImage ------------------------------------------- */
+.shimmerImageWrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background-color: var(--md-sys-color-skeleton-subtle);
+}
+
+.shimmerImageEl {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.018);
+  transition:
+    opacity 260ms var(--md-sys-motion-easing-emphasized-decelerate),
+    transform 320ms var(--md-sys-motion-easing-emphasized-decelerate);
+}
+
+.shimmerImageElLoaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.shimmerOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background-color: var(--md-sys-color-skeleton-base);
+  opacity: 1;
+  transition: opacity 240ms var(--md-sys-motion-easing-standard);
+  pointer-events: none;
+}
+
+.shimmerOverlayHidden {
+  opacity: 0;
+}
+
+.shimmerOverlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translate3d(-115%, 0, 0);
+  background: linear-gradient(
+    108deg,
+    transparent 14%,
+    var(--md-sys-color-skeleton-tint) 36%,
+    var(--md-sys-color-skeleton-sheen) 50%,
+    var(--md-sys-color-skeleton-tint) 64%,
+    transparent 86%
+  );
+  animation: m3-shimmer-glide 1.65s var(--md-sys-motion-easing-standard) infinite;
+  animation-delay: var(--shimmer-delay, 0ms);
+  will-change: transform;
+}
+
+.shimmerOverlayHidden::after {
+  animation: none;
+}
+
+/* ---- Connected Skeleton Helpers ----------------------------------------- */
+.connectedRatioSkeleton {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.connectedRatioTile {
+  height: 56px;
+  border-radius: 6px;
+}
+
+.connectedRatioTile:first-child {
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+
+.connectedRatioTile:last-child {
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
+}
+
+.splitCtaSkeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  gap: 3px;
+}
+
+.splitCtaMain {
+  height: 50px;
+  border-radius: 25px 6px 6px 25px;
+}
+
+.splitCtaSide {
+  height: 50px;
+  border-radius: 6px 25px 25px 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .shimmerOverlay::after {
+    animation: none;
+    transform: none;
+    opacity: 0;
+  }
+
+  .shimmerImageEl {
+    transition: opacity 120ms linear;
+    transform: none;
+  }
+}

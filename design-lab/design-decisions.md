@@ -27,7 +27,8 @@
 - **Scope:** global / multi-page architecture
 - **Status:** accepted (pending Stage 6 production integration approval)
 - **Context:** User selected Direction A (`Cobalt Studio` — cool slate neutral tonal ladder + Cobalt Primary + Warm Amber Tertiary), requested discarding Direction B, and asked for cohesive matching designs across all application pages.
-- **Decision:** Prune Direction B (`editorial-stage`) from tokens, prototypes, and lab shell; keep unified M3 Top App Bar navigation across `/` (Workbench), `/gallery` (Cloud-only Gallery with 1px fade selection frame, centered checkbox, task-group delete safety hint, dialog preview), `/channels` (Shared/Private channel split master-detail editor with write-only key handling & catalog fetch), `/login` · `/password` (Sign in, invite registration, forced password update with 12–1024 char guidance), and `/admin` (6 cohesive M3 admin sub-tabs covering shared channels, user management & quota reset, invite codes, quota & queue settings, templates, and non-private usage telemetry).
+- **Decision:** Prune Direction B (`editorial-stage`) from tokens, prototypes, and lab shell; keep unified M3 Top App Bar navigation across `/` (Workbench), `/gallery` (Cloud-only Gallery excluding legacy browser storage UI, with static `20px` corner radius, `1px` fade-in selection outline via `::after`, dead-centered `22×22` checkmark, task-group delete safety hint, and full-viewport preview), `/channels` (Shared/Private channel split master-detail editor with write-only key handling & catalog fetch), `/login` · `/password` (Sign in, invite registration, forced password update with 12–1024 char guidance), and `/admin` (6 cohesive M3 admin sub-tabs covering shared channels, user management & quota reset, invite codes, quota & queue settings, templates, and non-private usage telemetry).
+
 ## Decision: M3 Primary Underline Tabs + Mobile Swipe Pager (`dec-004-m3-primary-tabs-and-swipe-pager`)
 
 - **Date:** 2026-11-19
@@ -53,6 +54,19 @@
 - **Decision:**
   1. **Immersive Viewport Lightbox**: Portal lightbox into `#lab-overlay-root` (`z-index: 220`, below Snackbar `z-index: 260` which lifts automatically above bottom caption dock), letting the artwork fill up to ~95% viewport height with translucent frosted top index/action pills and compact bottom caption dock (`hudVisible` click/eye toggle).
   2. **60fps Uniform-Scale + Parabolic `clip-path` Container Transform**: Compute exact FLIP uniform `cover` scale + dynamic `inset(... round ...)` clip-path in `lightboxTransition.ts` (`buildContainerMorphKeyframes`) using 28 sampled keyframes driven by decoupled non-linear M3 Expressive cubic-bezier curves (`uPos` leading `uScale`) over an upward quadratic Bezier parabolic trajectory on open (`340ms`) and tight return arc on close (`260ms`, retargeting to the active card even after browsing `←` / `→`, cleanly reversing with `fill: 'both'` if closed mid-open, keeping close fill until portal unmount to prevent post-close flash, and allowing instant interruption by `openPreview` / `stepPreview` during rapid switching) while temporarily hiding the underlying card thumbnail.
+
+## Decision: Gallery Selected-Hover Color Harmony & M3 Expressive Shimmer Skeleton Loading (`dec-007-gallery-selected-hover-and-m3-shimmer-skeleton`)
+
+- **Date:** 2026-11-19
+- **Scope:** gallery card states + global loading/media placeholders
+- **Status:** accepted (pending Stage 6 production integration approval)
+- **Context:**
+  1. In `/gallery`, `.galleryCard:hover` (`(0,2,0)`) overrode `.galleryCardSelected` (`(0,1,0)`), causing selected blue cards to revert to the neutral unselected hover surface when hovered (same specificity issue existed on Workbench `.filmCard`).
+  2. Unloaded pages, channel catalogs, and progressive media thumbnails lacked a unified Material 3 Expressive skeleton placeholder system.
+- **Decision:**
+  1. **Hover + Selected State Separation**: Scope unselected hover with `:hover:not(.galleryCardSelected)` (and `.filmCard:hover:not(.filmCardSelected)`), and introduce `--md-sys-color-secondary-container-hover` (`color-mix(in srgb, primary 12%, secondary-container)` `#C3D1FC` in light; `color-mix(in srgb, primary-container 24%, secondary-container)` `#324477` in dark) so hovered selected items remain blue and deepen subtly across both themes.
+  2. **M3 Expressive Shimmer Skeleton Family (`LabSkeleton.tsx` / `LabSkeleton.module.css`)**: Implement GPU-composited (`translate3d`) Cobalt-tinted tonal shimmer skeletons (`SkeletonBlock`, `SkeletonTextStack`, `ShimmerImage`, `ConnectedRatioSkeleton`, `SplitCtaSkeleton`) matching M3 shape scales (circular avatars, pill text bars, M3 filled fields, connected matrices, Split CTAs, and `4:3` media frames with `prefers-reduced-motion` fallback), covering all 5 Design Lab pages, `ChannelModelBar` catalog discovery, and interactive Component Sandbox previews.
+
 
 
 

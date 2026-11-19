@@ -19,6 +19,7 @@ import {
   findSelectedEnabledIndex,
   type SelectOptionItem,
 } from '../../components/ui/selectNavigation'
+import { SkeletonBlock } from './LabSkeleton'
 import styles from './LabControls.module.css'
 
 function RippleOverlay({
@@ -500,6 +501,7 @@ export function ChannelModelBar({
   provider,
   model,
   catalog,
+  catalogLoading = false,
   templates,
   quota,
   onChannelChange,
@@ -513,6 +515,7 @@ export function ChannelModelBar({
   provider: ProviderType
   model: string
   catalog: ModelCatalog | null
+  catalogLoading?: boolean
   templates: Template[]
   quota: Quota | null
   onChannelChange: (id: string) => void
@@ -662,24 +665,41 @@ export function ChannelModelBar({
           <div className={styles.popoverField}>
             <span className={styles.popoverLabel}>模型目录</span>
             <div className={styles.modelChipList}>
-              {catalogModels.map((item) => {
-                const active = item.id === model
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-pressed={active}
-                    className={`${styles.modelChoice} ${active ? styles.modelChoiceActive : ''}`}
-                    onClick={() => onModelChange(item.id)}
-                  >
-                    {active ? <Icon name="check" size={14} /> : null}
-                    <span>{item.name || item.id}</span>
-                  </button>
-                )
-              })}
-              {catalogModels.length === 0 ? (
-                <span className={styles.popoverEmpty}>请先选择有效渠道以加载可用模型</span>
-              ) : null}
+              {catalogLoading ? (
+                <>
+                  {[128, 96, 114, 88].map((chipWidth, idx) => (
+                    <SkeletonBlock
+                      key={idx}
+                      variant="rect"
+                      width={chipWidth}
+                      height={34}
+                      radius="var(--md-sys-shape-corner-small)"
+                      staggerIndex={idx}
+                    />
+                  ))}
+                </>
+              ) : (
+                <>
+                  {catalogModels.map((item) => {
+                    const active = item.id === model
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        aria-pressed={active}
+                        className={`${styles.modelChoice} ${active ? styles.modelChoiceActive : ''}`}
+                        onClick={() => onModelChange(item.id)}
+                      >
+                        {active ? <Icon name="check" size={14} /> : null}
+                        <span>{item.name || item.id}</span>
+                      </button>
+                    )
+                  })}
+                  {catalogModels.length === 0 ? (
+                    <span className={styles.popoverEmpty}>请先选择有效渠道以加载可用模型</span>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
 
