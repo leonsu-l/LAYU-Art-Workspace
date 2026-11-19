@@ -670,10 +670,10 @@ export function DesignLabApp() {
                       <span className={styles.protoLabel}>图库场景：</span>
                       {(
                         [
-                          { id: 'mixed', label: '多有效期混排' },
-                          { id: 'empty', label: '空图库 (含政策)' },
-                          { id: 'permanent-policy', label: '新图永久政策' },
-                          { id: 'expired-404', label: '图片 404 失效' },
+                          { id: 'mixed', label: '混排有效期' },
+                          { id: 'empty', label: '空图库' },
+                          { id: 'permanent-policy', label: '新图永久' },
+                          { id: 'expired-404', label: '图片 404' },
                         ] as const
                       ).map((item) => (
                         <RippleButton
@@ -690,11 +690,11 @@ export function DesignLabApp() {
                   ) : null}
                   {activePage === 'admin' ? (
                     <div className={styles.protoGroup} style={{ marginLeft: 8 }}>
-                      <span className={styles.protoLabel}>管理直达：</span>
+                      <span className={styles.protoLabel}>直达：</span>
                       {(
                         [
-                          { id: 'storage', label: '存储与 R2 桶' },
-                          { id: 'issues', label: '待处理问题日志' },
+                          { id: 'storage', label: '存储管理' },
+                          { id: 'issues', label: '问题日志' },
                           { id: 'users', label: '用户管理' },
                           { id: 'settings', label: '额度与队列' },
                         ] as const

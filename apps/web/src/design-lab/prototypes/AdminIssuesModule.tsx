@@ -20,11 +20,11 @@ const ISSUE_KIND_META: Record<
   AdminIssueKind,
   { label: string; badgeTone: 'fallback' | 'delete' | 'critical' }
 > = {
-  GENERATION_FAILED: { label: '生图任务失败', badgeTone: 'critical' },
-  R2_FALLBACK: { label: 'R2 回退本地存储', badgeTone: 'fallback' },
-  IMAGE_WRITE_FAILED: { label: '图片保存未完成', badgeTone: 'critical' },
-  IMAGE_READ_FAILED: { label: '有效图片读取失败', badgeTone: 'critical' },
-  IMAGE_DELETE_FAILED: { label: '物理清理未完成', badgeTone: 'delete' },
+  GENERATION_FAILED: { label: '生图失败', badgeTone: 'critical' },
+  R2_FALLBACK: { label: 'R2 故障转存本地', badgeTone: 'fallback' },
+  IMAGE_WRITE_FAILED: { label: '图片保存失败', badgeTone: 'critical' },
+  IMAGE_READ_FAILED: { label: '图片读取失败', badgeTone: 'critical' },
+  IMAGE_DELETE_FAILED: { label: '清理未完成', badgeTone: 'delete' },
 }
 
 function shortUuid(id: string): string {
@@ -65,7 +65,6 @@ export function AdminIssuesModule({
 
   const showSkeleton = loadMode === 'loading' || isRefreshing
 
-  // Backend sorts by lastSeen DESC
   const filtered = issues
     .filter((issue) => (statusFilter === 'all' ? true : issue.status === statusFilter))
     .slice()
@@ -82,25 +81,24 @@ export function AdminIssuesModule({
     }
     onNotify({
       tone: 'info',
-      message: `已复制 ${label}：${value}`,
+      message: `已复制${label}：${value}`,
     })
   }
 
   return (
     <div className={styles.moduleStack}>
-      {/* Summary & Query Filter Bar (/api/admin/issues/summary + /api/admin/issues) */}
-      <section className={styles.issuesToolbar} aria-label="问题日志筛选与概览">
+      <section className={styles.issuesToolbar} aria-label="问题筛选">
         <div className={styles.issuesFilterGroup}>
           <span className={pageStyles.policyPill}>
             <LabIcon name="bell" size={14} />
-            <span>待处理问题：{openCount} 条（非累计次数）</span>
+            <span>待处理 {openCount} 条</span>
           </span>
 
           <SegmentedRail<'all' | AdminIssueStatus>
-            label="按处理状态筛选"
+            label="按状态筛选"
             value={statusFilter}
             options={[
-              { value: 'open', label: `未处理 (${openCount})` },
+              { value: 'open', label: `待处理 (${openCount})` },
               { value: 'resolved', label: `已处理 (${issues.length - openCount})` },
               { value: 'all', label: `全部 (${issues.length})` },
             ]}
@@ -140,26 +138,17 @@ export function AdminIssuesModule({
                 setIsRefreshing(false)
                 onNotify({
                   tone: 'info',
-                  message: '已刷新站内待处理问题摘要与分页列表。',
+                  message: '日志已刷新',
                 })
               }, 750)
             }}
           >
             <LabIcon name="refresh" size={14} />
-            <span>{showSkeleton ? '刷新中…' : '刷新日志'}</span>
+            <span>{showSkeleton ? '刷新中…' : '刷新'}</span>
           </RippleButton>
         </div>
       </section>
 
-      <div className={styles.scopeNotice}>
-        <Icon name="shield" size={15} />
-        <span>
-          <strong>安全与重试边界：</strong>
-          仅管理员可见站内日志；不含用户提示词、图片、上游原始响应或凭据。标记「已处理」<strong>不会</strong>触发重绘或文件改动，同一问题再次发生会自动累计次数并重开为 <code>open</code>（按最近发生时间保留 30 天）。
-        </span>
-      </div>
-
-      {/* Issues Feed */}
       {showSkeleton ? (
         <div className={styles.issueList} role="status" aria-busy="true" aria-label="正在加载问题日志">
           {Array.from({ length: 3 }, (_, idx) => (
@@ -185,11 +174,8 @@ export function AdminIssuesModule({
         </div>
       ) : pagedIssues.length === 0 ? (
         <div className={pageStyles.galleryEmptyCard}>
-          <span className={pageStyles.pageEyebrow}>OPERATIONAL ISSUES · CLEAR</span>
-          <h2>{statusFilter === 'open' ? '当前没有待处理问题' : '该筛选下暂无问题记录'}</h2>
-          <p>
-            当出现生图失败、R2 写入失败回退本地、保存失败、读图失败或清理未完成时，服务端会自动汇总指纹并呈现于此处；可切换筛选查看已处理历史记录。
-          </p>
+          <h2>{statusFilter === 'open' ? '没有待处理的问题' : '没有符合条件的问题记录'}</h2>
+          <p>近 30 天内的异常记录会汇总在这里。</p>
         </div>
       ) : (
         <div className={styles.issueList}>
@@ -213,19 +199,21 @@ export function AdminIssuesModule({
               >
                 <div className={styles.issueCardTop}>
                   <div className={styles.issueKindCluster}>
-                    <span className={`${styles.issueKindBadge} ${kindBadgeClass}`}>
+                    <span
+                      className={`${styles.issueKindBadge} ${kindBadgeClass}`}
+                      title={issue.kind}
+                    >
                       <Icon name="alert-circle" size={13} />
                       <span>{meta.label}</span>
-                      <code>{issue.kind}</code>
                     </span>
                     <span className={styles.issueCodeChip}>{issue.errorCode}</span>
                     <span className={styles.occurrencePill}>
-                      累计 {issue.occurrences} 次
+                      发生 {issue.occurrences} 次
                     </span>
                   </div>
 
                   <span className={isOpen ? pageStyles.statusOff : pageStyles.statusOn}>
-                    {isOpen ? 'OPEN · 待处理' : 'RESOLVED · 已处理'}
+                    {isOpen ? '待处理' : '已处理'}
                   </span>
                 </div>
 
@@ -233,68 +221,67 @@ export function AdminIssuesModule({
                   <div className={`${styles.scopeNotice} ${styles.scopeNoticeHighlight}`}>
                     <LabIcon name="check-circle" size={15} />
                     <span>
-                      回退告警不等于生图失败：若备用本地存储写入成功，用户仍可正常查看与下载作品；服务端不会因回退重新调用上游。
+                      已改存本地，用户可正常看图，不会重复扣费或重新生图。
                     </span>
                   </div>
                 ) : null}
 
                 <div className={styles.issueBodyGrid}>
                   <div className={styles.issueFactBox}>
-                    <span>业务影响（服务端安全摘要）</span>
+                    <span>影响</span>
                     <p>{issue.impact}</p>
                   </div>
                   <div className={styles.issueFactBox}>
-                    <span>排查建议</span>
+                    <span>建议</span>
                     <p>{issue.advice}</p>
                   </div>
                 </div>
 
-                {/* Nullable Context UUIDs */}
                 {(issue.taskId || issue.ownerId || issue.channelId || issue.bucketId) ? (
                   <div className={styles.issueContextRow}>
                     {issue.taskId ? (
                       <RippleButton
                         type="button"
                         className={styles.contextChipBtn}
-                        onClick={() => copyContextId('taskId', issue.taskId!)}
-                        title={`点击复制 taskId: ${issue.taskId}`}
+                        onClick={() => copyContextId('任务 ID', issue.taskId!)}
+                        title={issue.taskId}
                       >
                         <Icon name="copy" size={11} />
-                        <span>task: {shortUuid(issue.taskId)}</span>
+                        <span>任务 {shortUuid(issue.taskId)}</span>
                       </RippleButton>
                     ) : null}
                     {issue.ownerId ? (
                       <RippleButton
                         type="button"
                         className={styles.contextChipBtn}
-                        onClick={() => copyContextId('ownerId', issue.ownerId!)}
-                        title={`点击复制 ownerId: ${issue.ownerId}`}
+                        onClick={() => copyContextId('用户 ID', issue.ownerId!)}
+                        title={issue.ownerId}
                       >
                         <Icon name="copy" size={11} />
-                        <span>owner: {shortUuid(issue.ownerId)}</span>
+                        <span>用户 {shortUuid(issue.ownerId)}</span>
                       </RippleButton>
                     ) : null}
                     {issue.channelId ? (
                       <RippleButton
                         type="button"
                         className={styles.contextChipBtn}
-                        onClick={() => copyContextId('channelId', issue.channelId!)}
-                        title={`点击复制 channelId: ${issue.channelId}`}
+                        onClick={() => copyContextId('渠道 ID', issue.channelId!)}
+                        title={issue.channelId}
                       >
                         <Icon name="copy" size={11} />
-                        <span>channel: {shortUuid(issue.channelId)}</span>
+                        <span>渠道 {shortUuid(issue.channelId)}</span>
                       </RippleButton>
                     ) : null}
                     {issue.bucketId ? (
                       <RippleButton
                         type="button"
                         className={styles.contextChipBtn}
-                        onClick={() => copyContextId('bucketId', issue.bucketId!)}
-                        title={`点击复制 bucketId: ${issue.bucketId}`}
+                        onClick={() => copyContextId('桶 ID', issue.bucketId!)}
+                        title={issue.bucketId}
                       >
                         <LabIcon name="cloud" size={11} />
                         <span>
-                          bucket: {matchedBucket ? matchedBucket.bucketName : shortUuid(issue.bucketId)}
+                          桶 {matchedBucket ? matchedBucket.bucketName : shortUuid(issue.bucketId)}
                         </span>
                       </RippleButton>
                     ) : null}
@@ -303,12 +290,10 @@ export function AdminIssuesModule({
 
                 <div className={styles.issueFooter}>
                   <div className={styles.issueTimeline}>
-                    <span title={`Unix ms: ${issue.lastSeen}`}>
-                      最近发生：{formatLocalDateTime(issue.lastSeen, true)}（{formatRelativeAge(issue.lastSeen, nowMs)}）
+                    <span>
+                      最近：{formatLocalDateTime(issue.lastSeen, true)}（{formatRelativeAge(issue.lastSeen, nowMs)}）
                     </span>
-                    <span title={`Unix ms: ${issue.firstSeen}`}>
-                      首次：{formatLocalDateTime(issue.firstSeen, false)}
-                    </span>
+                    <span>首次：{formatLocalDateTime(issue.firstSeen, false)}</span>
                   </div>
 
                   <div className={styles.issueActions}>
@@ -318,9 +303,8 @@ export function AdminIssuesModule({
                           type="button"
                           className={styles.smallTonalBtn}
                           onClick={() => onSimulate404Resolve(issue.id)}
-                          title="演示该问题已过 30 天保留期或不存在时服务端返回 404"
                         >
-                          模拟 404 过期
+                          模拟已过期
                         </RippleButton>
                         <RippleButton
                           type="button"
@@ -336,10 +320,9 @@ export function AdminIssuesModule({
                         type="button"
                         className={pageStyles.tonalBtn}
                         onClick={() => onSimulateRecur(issue.id)}
-                        title="演示相同指纹问题再次发生时，occurrences +1 并重新变为 open"
                       >
                         <LabIcon name="refresh" size={14} />
-                        <span>模拟再次发生（重开）</span>
+                        <span>模拟再发一次</span>
                       </RippleButton>
                     )}
                   </div>
@@ -350,11 +333,9 @@ export function AdminIssuesModule({
         </div>
       )}
 
-      {/* Pagination Bar */}
       <div className={styles.paginationBar}>
         <span className={pageStyles.monoMeta}>
-          GET /api/admin/issues?page={safePage}&amp;size={pageSize}
-          {statusFilter !== 'all' ? `&status=${statusFilter}` : ''} · 第 {safePage + 1} / {totalPages} 页 · 共 {filtered.length} 条
+          第 {safePage + 1} / {totalPages} 页 · 共 {filtered.length} 条 · 记录保留 30 天，标记已处理不会重绘或删文件
         </span>
         <div className={styles.paginationControls}>
           <RippleButton

@@ -210,8 +210,8 @@ export function WorkbenchPrototype({
             <Icon name="alert-circle" size={16} />
             <strong>
               {recoverySubMode === 'gone-410'
-                ? '原任务已删除或已到期清理（HTTP 410）'
-                : '存在未确认提交（防重复扣费保护）'}
+                ? '原任务已过期或已删除'
+                : '上次提交还没确认'}
             </strong>
           </div>
 
@@ -222,7 +222,7 @@ export function WorkbenchPrototype({
               className={`${styles.recoveryModeBtn} ${recoverySubMode === 'pending' ? styles.recoveryModeBtnActive : ''}`}
               onClick={() => setRecoverySubMode('pending')}
             >
-              待确认提交
+              未确认提交
             </RippleButton>
             <RippleButton
               type="button"
@@ -230,14 +230,14 @@ export function WorkbenchPrototype({
               className={`${styles.recoveryModeBtn} ${recoverySubMode === 'gone-410' ? styles.recoveryModeBtnActive : ''}`}
               onClick={() => setRecoverySubMode('gone-410')}
             >
-              410 已到期/删除
+              已删除 (410)
             </RippleButton>
           </div>
 
           {recoverySubMode === 'gone-410' ? (
             <>
               <p>
-                重放/查询任务 <code>9f4a81d2-7b30-4e92</code> 返回 410：该任务已删除或已到期自动清理。已清除本地待确认记录，<strong>不会自动新建任务</strong>。
+                任务 <code>9f4a81d2-7b30-4e92</code> 已过期或被删除（410），已清理本地记录，不会自动重发。
               </p>
               <div className={styles.recoveryActions}>
                 <RippleButton
@@ -248,18 +248,18 @@ export function WorkbenchPrototype({
                     onScenarioChange('empty')
                     onNotify({
                       tone: 'info',
-                      message: '已清除失效待确认记录并同步历史（未创建新任务）。',
+                      message: '已清除失效记录',
                     })
                   }}
                 >
-                  清除记录并返回创作
+                  知道了
                 </RippleButton>
               </div>
             </>
           ) : (
             <>
               <p>
-                断线前提交的任务 <code>9f4a81d2-7b30-4e92</code> 尚未确认接收，重试仅使用同一 ID。
+                任务 <code>9f4a81d2-7b30-4e92</code> 断线前结果未知，重试会沿用原任务，不会重复扣费。
               </p>
               <div className={styles.recoveryActions}>
                 <RippleButton
@@ -269,11 +269,11 @@ export function WorkbenchPrototype({
                     onScenarioChange('generating')
                     onNotify({
                       tone: 'info',
-                      message: '已沿用原幂等提交 ID 发起恢复重试（不重复扣费）。',
+                      message: '已沿用原任务重试',
                     })
                   }}
                 >
-                  恢复 / 重试同一请求
+                  重试原任务
                 </RippleButton>
                 <RippleButton
                   type="button"
@@ -282,7 +282,7 @@ export function WorkbenchPrototype({
                     onScenarioChange('succeeded')
                     onNotify({
                       tone: 'success',
-                      message: '已同步后端最新任务状态，画布恢复就绪。',
+                      message: '任务状态已同步',
                     })
                   }}
                 >
@@ -354,7 +354,7 @@ export function WorkbenchPrototype({
                 ? '正在显影 · 2 张'
                 : scenario === 'recovery'
                   ? recoverySubMode === 'gone-410'
-                    ? '原提交已清理 (410)'
+                    ? '原任务已清理'
                     : '待确认恢复'
                   : scenario === 'empty'
                     ? '画布就绪'

@@ -28,7 +28,7 @@ const FULL_LOCAL_DATE_TIME_FMT = new Intl.DateTimeFormat('zh-CN', {
 
 export function formatRetentionPolicyText(retentionDays: number | null | undefined): string {
   if (retentionDays === null || retentionDays === undefined) {
-    return '永久保留'
+    return '永久保存'
   }
   return `保留 ${retentionDays} 天`
 }
@@ -68,7 +68,7 @@ export function getImageRetentionSummary(
     return {
       tone: 'permanent',
       shortLabel: '永久保存',
-      detailLabel: '永久保存 · 不会自动到期清理',
+      detailLabel: '永久保存',
       localExpiryText: null,
       isPermanent: true,
     }
@@ -78,11 +78,11 @@ export function getImageRetentionSummary(
   const localExpiryText = Number.isFinite(parsedMs) ? formatLocalDateTime(parsedMs, false) : null
 
   if (!Number.isFinite(parsedMs)) {
-    const daysText = retentionDays ? `${retentionDays} 天` : '限时'
+    const daysText = retentionDays ? `保留 ${retentionDays} 天` : '限时保存'
     return {
       tone: 'timed',
-      shortLabel: `保留 ${daysText}`,
-      detailLabel: `按保存成功起算保留 ${daysText}`,
+      shortLabel: daysText,
+      detailLabel: daysText,
       localExpiryText: null,
       isPermanent: false,
     }
@@ -91,13 +91,12 @@ export function getImageRetentionSummary(
   const remainingMs = parsedMs - referenceNowMs
   const remainingHours = Math.max(0, Math.ceil(remainingMs / 3_600_000))
   const remainingDays = Math.max(1, Math.ceil(remainingMs / 86_400_000))
-  const dayPrefix = retentionDays ? `${retentionDays}天` : '限时'
 
   if (remainingMs <= 0) {
     return {
       tone: 'urgent',
-      shortLabel: '即将自动清理',
-      detailLabel: `已到达本地清理时间 ${localExpiryText}`,
+      shortLabel: '即将过期',
+      detailLabel: `${localExpiryText} 过期`,
       localExpiryText,
       isPermanent: false,
     }
@@ -106,8 +105,8 @@ export function getImageRetentionSummary(
   if (remainingHours <= 24) {
     return {
       tone: 'urgent',
-      shortLabel: `${dayPrefix} · 剩 ${remainingHours} 小时`,
-      detailLabel: `保留 ${dayPrefix} · 本地 ${localExpiryText} 到期（不足 24 小时）`,
+      shortLabel: `${remainingHours} 小时后过期`,
+      detailLabel: `${localExpiryText} 过期`,
       localExpiryText,
       isPermanent: false,
     }
@@ -115,8 +114,8 @@ export function getImageRetentionSummary(
 
   return {
     tone: 'timed',
-    shortLabel: `${dayPrefix} · 剩 ${remainingDays} 天`,
-    detailLabel: `保留 ${dayPrefix} · 本地 ${localExpiryText} 到期`,
+    shortLabel: `剩 ${remainingDays} 天`,
+    detailLabel: `${localExpiryText} 过期`,
     localExpiryText,
     isPermanent: false,
   }
@@ -132,18 +131,18 @@ export function formatBytes(bytes: number | null | undefined): string {
 
 export function validateAccountId(value: string): string | null {
   const trimmed = value.trim()
-  if (!trimmed) return '请填写 32 位 Cloudflare Account ID。'
+  if (!trimmed) return '请输入 Account ID'
   if (!/^[0-9a-fA-F]{32}$/.test(trimmed)) {
-    return 'Account ID 必须为精确 32 位十六进制字符（0-9, a-f）。'
+    return 'Account ID 必须是 32 位十六进制字符'
   }
   return null
 }
 
 export function validateBucketName(value: string): string | null {
   const trimmed = value.trim()
-  if (!trimmed) return '请填写 R2 桶名称。'
+  if (!trimmed) return '请输入桶名称'
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(trimmed)) {
-    return '桶名称需为 3–63 位小写字母、数字与连字符，且首尾不能为连字符。'
+    return '桶名需 3–63 位，仅限小写字母、数字和连字符，首尾不能是连字符'
   }
   return null
 }
@@ -154,22 +153,22 @@ export function validateRetentionDays(raw: string): { valid: boolean; value: num
     return { valid: true, value: null, error: null }
   }
   if (!/^\d+$/.test(trimmed)) {
-    return { valid: false, value: null, error: '保留天数必须为 1–3650 的整数。' }
+    return { valid: false, value: null, error: '请输入 1–3650 之间的整数' }
   }
   const num = Number(trimmed)
   if (!Number.isInteger(num) || num < 1 || num > 3650) {
-    return { valid: false, value: null, error: '保留天数必须在 1 至 3650 天之间。' }
+    return { valid: false, value: null, error: '保留天数必须在 1 到 3650 天之间' }
   }
   return { valid: true, value: num, error: null }
 }
 
 export function validateCredentialInput(value: string, label: string): string | null {
-  if (!value) return `请填写 ${label}。`
-  if (value.length > 4096) return `${label} 长度不能超过 4096 个字符。`
+  if (!value) return `请输入 ${label}`
+  if (value.length > 4096) return `${label} 长度不能超过 4096 个字符`
   for (let i = 0; i < value.length; i += 1) {
     const code = value.charCodeAt(i)
     if (code < 33 || code > 126) {
-      return `${label} 不能包含空格、换行或非 ASCII 控制字符。`
+      return `${label} 不能包含空格或特殊字符`
     }
   }
   return null

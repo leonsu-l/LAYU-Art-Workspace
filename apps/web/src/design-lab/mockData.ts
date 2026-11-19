@@ -225,7 +225,7 @@ export const MOCK_TASKS: LabGenerationTask[] = [
     status: 'succeeded',
     provider: 'gemini-compatible',
     model: 'gemini-nano-banana-2.1',
-    prompt: '宋代青瓷茶具与粗陶托盘静物研究，柔和窗侧光（升级前旧任务，无过期字段按永久处理）',
+    prompt: '宋代青瓷茶具与粗陶托盘静物研究，柔和窗侧光',
     createdAt: isoOffset(-45 * DAYS),
     updatedAt: isoOffset(-45 * DAYS),
     expectedImageCount: 1,
@@ -373,7 +373,7 @@ export const MOCK_GALLERY_ITEMS: MockGalleryItem[] = [
     key: 'srv-6',
     taskId: 'task-legacy-01',
     url: MOCK_ARTWORKS.legacy,
-    prompt: '宋代青瓷茶具与粗陶托盘静物研究，柔和窗侧光（升级前永久保留作品）',
+    prompt: '宋代青瓷茶具与粗陶托盘静物研究，柔和窗侧光',
     model: 'gemini-nano-banana-2.1',
     createdAt: isoOffset(-45 * DAYS),
     bytes: 1620 * 1024,
@@ -558,9 +558,9 @@ export const MOCK_BUCKET_USAGE: Record<string, BucketUsageContract> = {
  */
 export const MOCK_BUCKET_DELETE_BLOCK_REASONS: Record<string, string> = {
   'bkt-00000002-4a2b-4c3d-8e1f-000000000002':
-    '该桶仍有 12 张未过期图片正在提供读取服务，无法删除。',
+    '这个桶里还有 12 张未过期图片，暂时不能删。',
   'bkt-00000003-4a2b-4c3d-8e1f-000000000003':
-    '尽管本应用有效图片数为 0，该桶仍存在待清理对象或等待二次核查的在途写入记录（409），暂不能移除。',
+    '虽然有效图片数为 0，但还有待清理的旧文件或未确认任务，暂时不能删。',
 }
 
 /* ==========================================================================

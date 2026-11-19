@@ -34,38 +34,34 @@ const LOCAL_BUCKET_VALUE = '__local__'
 type RetentionPreset = 'permanent' | '7' | '30' | '90' | 'custom'
 
 const JURISDICTION_LABELS: Record<BucketJurisdiction, string> = {
-  default: '默认 (default)',
-  eu: '欧盟 (eu)',
-  fedramp: 'FedRAMP (fedramp)',
+  default: '默认',
+  eu: '欧盟 (EU)',
+  fedramp: 'FedRAMP',
 }
 
 const CF_STATUS_META: Record<
   Exclude<CloudflareUsageStatus, 'available'>,
-  { label: string; tone: 'muted' | 'warn'; title: string; desc: string }
+  { label: string; title: string; desc: string }
 > = {
   not_configured: {
-    label: 'not_configured',
-    tone: 'muted',
-    title: '未配置独立的 Analytics Token',
-    desc: '不配置统计令牌完全不影响图片的正常读写与删除。如需查看 Cloudflare 官方整桶用量，请在下方补充具有 Account → Account Analytics → Read 权限的令牌。',
+    label: '未配令牌',
+    title: '未配置统计令牌',
+    desc: '不影响存图和读图；填了统计令牌才能看 Cloudflare 官方桶大小。',
   },
   forbidden: {
-    label: 'forbidden',
-    tone: 'warn',
-    title: '官方查询身份或权限被拒绝',
-    desc: '请核对令牌是否具备 Account → Account Analytics → Read 权限，以及 Account ID 是否匹配。本应用自有统计与图片存取不受影响。',
+    label: '无权限',
+    title: '令牌没有读取权限',
+    desc: '需要 Account Analytics Read 权限；不影响正常存取图片。',
   },
   no_data: {
-    label: 'no_data',
-    tone: 'muted',
-    title: '最近 31 天内暂无采样样本',
-    desc: 'Cloudflare Analytics API 未返回最近 31 天样本（新建桶或刚写入对象可能存在指标延迟）。此状态不代表实际为 0。',
+    label: '暂无数据',
+    title: '近 31 天暂无统计数据',
+    desc: '新桶或刚上传的文件会有统计延迟，不代表实际为 0。',
   },
   unavailable: {
-    label: 'unavailable',
-    tone: 'warn',
-    title: '官方接口暂不可用',
-    desc: '因网络超时、限流或返回格式异常暂时无法取得 Cloudflare 采样。请稍后重试；本应用图片数量与字节统计仍可正常查看。',
+    label: '暂不可用',
+    title: '暂时查不到官方数据',
+    desc: '连接 Cloudflare 超时或受限，稍后再试；不影响正常存图。',
   },
 }
 
@@ -86,7 +82,6 @@ export function AdminStorageModule({
   onNotify: (payload: SnackbarPayload) => void
   onPolicySaved?: (policy: StorageSettingsContract) => void
 }) {
-  // Committed & draft policy (GET/PUT /api/admin/storage/settings)
   const [committedPolicy, setCommittedPolicy] = useState<StorageSettingsContract>(MOCK_STORAGE_SETTINGS)
   const [draftBucketId, setDraftBucketId] = useState<string | null>(MOCK_STORAGE_SETTINGS.activeBucketId)
   const [retentionPreset, setRetentionPreset] = useState<RetentionPreset>(() =>
@@ -96,7 +91,6 @@ export function AdminStorageModule({
     MOCK_STORAGE_SETTINGS.retentionDays ? String(MOCK_STORAGE_SETTINGS.retentionDays) : '14',
   )
 
-  // Buckets & dual usage state (/api/admin/storage/buckets*)
   const [buckets, setBuckets] = useState<R2BucketInfo[]>(MOCK_R2_BUCKETS)
   const [selectedBucketId, setSelectedBucketId] = useState<string | 'new'>(MOCK_R2_BUCKETS[0].id)
   const [justCreatedBucketId, setJustCreatedBucketId] = useState<string | null>(null)
@@ -105,7 +99,7 @@ export function AdminStorageModule({
   const [cfStatusOverride, setCfStatusOverride] = useState<CloudflareUsageStatus | null>(null)
   const [fallbackSampledAt, setFallbackSampledAt] = useState(() => new Date().toISOString())
 
-  // Create bucket form state (POST /api/admin/storage/buckets)
+  // Create bucket form state
   const [newAccountId, setNewAccountId] = useState('')
   const [newBucketName, setNewBucketName] = useState('')
   const [newJurisdiction, setNewJurisdiction] = useState<BucketJurisdiction>('default')
@@ -115,7 +109,7 @@ export function AdminStorageModule({
   const [showCreateSecrets, setShowCreateSecrets] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
-  // Credential rotation form state (PATCH /api/admin/storage/buckets/{id})
+  // Credential rotation form state
   const [rotAccessKeyId, setRotAccessKeyId] = useState('')
   const [rotSecretAccessKey, setRotSecretAccessKey] = useState('')
   const [rotAnalyticsToken, setRotAnalyticsToken] = useState('')
@@ -123,7 +117,7 @@ export function AdminStorageModule({
   const [showRotateSecrets, setShowRotateSecrets] = useState(false)
   const [rotateError, setRotateError] = useState<string | null>(null)
 
-  // Safe deletion state (DELETE /api/admin/storage/buckets/{id})
+  // Safe deletion state
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [simulateDeleteNetworkError, setSimulateDeleteNetworkError] = useState(false)
   const [deleteFeedback, setDeleteFeedback] = useState<{
@@ -141,13 +135,12 @@ export function AdminStorageModule({
 
   const isLoading = loadMode === 'loading'
 
-  // Compute draft retention days + validation
   const retentionValidation =
     retentionPreset === 'permanent'
       ? { valid: true, value: null, error: null }
       : retentionPreset === 'custom'
         ? customDaysInput.trim() === ''
-          ? { valid: false, value: null, error: '请输入 1–3650 之间的保留天数。' }
+          ? { valid: false, value: null, error: '请输入 1–3650 之间的天数' }
           : validateRetentionDays(customDaysInput)
         : { valid: true, value: Number(retentionPreset), error: null }
 
@@ -213,7 +206,7 @@ export function AdminStorageModule({
 
   function handleSavePolicy() {
     if (!retentionValidation.valid) {
-      onNotify({ tone: 'warning', message: retentionValidation.error ?? '保留天数配置无效。' })
+      onNotify({ tone: 'warning', message: retentionValidation.error ?? '保留天数无效' })
       return
     }
     const next: StorageSettingsContract = {
@@ -223,11 +216,11 @@ export function AdminStorageModule({
     setCommittedPolicy(next)
     onPolicySaved?.(next)
     const targetLabel = draftBucketId
-      ? `R2 私有桶「${buckets.find((b) => b.id === draftBucketId)?.bucketName ?? draftBucketId}」`
-      : '服务器本地存储'
+      ? buckets.find((b) => b.id === draftBucketId)?.bucketName ?? draftBucketId
+      : '服务器本地'
     onNotify({
       tone: 'success',
-      message: `已保存新图写入策略：${targetLabel} · ${formatRetentionPolicyText(next.retentionDays)}（不影响旧图）。`,
+      message: `已保存：新图存到 ${targetLabel}，${formatRetentionPolicyText(next.retentionDays)}`,
     })
   }
 
@@ -253,7 +246,7 @@ export function AdminStorageModule({
       return
     }
     if (newAnalyticsToken.length > 0) {
-      const tokenErr = validateCredentialInput(newAnalyticsToken, 'Analytics Token')
+      const tokenErr = validateCredentialInput(newAnalyticsToken, '统计令牌')
       if (tokenErr) {
         setCreateError(tokenErr)
         return
@@ -269,7 +262,7 @@ export function AdminStorageModule({
         b.jurisdiction === newJurisdiction,
     )
     if (duplicate) {
-      setCreateError('HTTP 409：该账户、桶名与辖区组合的 R2 桶已存在，不可重复登记。')
+      setCreateError('这个 R2 桶已经添加过了，不用重复登记。')
       return
     }
 
@@ -311,42 +304,42 @@ export function AdminStorageModule({
 
     onNotify({
       tone: 'success',
-      message: `已登记 R2 桶「${created.bucketName}」（不会自动启用为新图目标）。`,
+      message: `已添加「${created.bucketName}」（暂未启用，如需使用请在上方设为写入位置）`,
     })
   }
 
   function handleRotateCredentials() {
     if (!selectedBucket) return
-    const patchKeys: string[] = []
+    const updatedLabels: string[] = []
     if (rotAccessKeyId.length > 0) {
-      const err = validateCredentialInput(rotAccessKeyId, '新 Access Key ID')
+      const err = validateCredentialInput(rotAccessKeyId, 'Access Key ID')
       if (err) {
         setRotateError(err)
         return
       }
-      patchKeys.push('accessKeyId')
+      updatedLabels.push('Access Key ID')
     }
     if (rotSecretAccessKey.length > 0) {
-      const err = validateCredentialInput(rotSecretAccessKey, '新 Secret Access Key')
+      const err = validateCredentialInput(rotSecretAccessKey, 'Secret Access Key')
       if (err) {
         setRotateError(err)
         return
       }
-      patchKeys.push('secretAccessKey')
+      updatedLabels.push('Secret Access Key')
     }
     if (clearAnalyticsToken) {
-      patchKeys.push('analyticsToken: null')
+      updatedLabels.push('清除统计令牌')
     } else if (rotAnalyticsToken.length > 0) {
-      const err = validateCredentialInput(rotAnalyticsToken, '新 Analytics Token')
+      const err = validateCredentialInput(rotAnalyticsToken, '统计令牌')
       if (err) {
         setRotateError(err)
         return
       }
-      patchKeys.push('analyticsToken')
+      updatedLabels.push('统计令牌')
     }
 
-    if (patchKeys.length === 0) {
-      setRotateError('请至少填写一项待轮换的凭据，或选择清除统计令牌；留空字段将被省略且保持原值不变。')
+    if (updatedLabels.length === 0) {
+      setRotateError('至少填一项要更新的密钥，或者选择清除统计令牌。')
       return
     }
 
@@ -395,7 +388,7 @@ export function AdminStorageModule({
 
     onNotify({
       tone: 'success',
-      message: `已模拟 PATCH 轮换桶「${selectedBucket.bucketName}」凭据（仅发送：${patchKeys.join(', ')}）。`,
+      message: `已保存「${selectedBucket.bucketName}」密钥更改（${updatedLabels.join('、')}）`,
     })
   }
 
@@ -403,7 +396,7 @@ export function AdminStorageModule({
     if (simulateDeleteNetworkError) {
       setDeleteFeedback({
         kind: 'network',
-        message: 'NETWORK (502)：连接存储管理接口超时或暂不可用，请检查网络后重试（并非引用冲突）。',
+        message: '请求超时或网络异常，请稍后重试。',
       })
       return
     }
@@ -411,7 +404,7 @@ export function AdminStorageModule({
     if (bucket.id === committedPolicy.activeBucketId) {
       setDeleteFeedback({
         kind: '409',
-        message: 'HTTP 409 引用冲突：该桶当前被设为新图默认写入目标，请先在上方策略切换为本地或其他桶再删除。',
+        message: '无法删除：这个桶当前正用于保存新图，请先在上方切换写入位置。',
       })
       return
     }
@@ -420,7 +413,7 @@ export function AdminStorageModule({
     if (blockReason) {
       setDeleteFeedback({
         kind: '409',
-        message: `HTTP 409 引用冲突：${blockReason}`,
+        message: `无法删除：${blockReason}`,
       })
       return
     }
@@ -434,7 +427,7 @@ export function AdminStorageModule({
     setSelectedBucketId(remaining[0]?.id ?? 'new')
     onNotify({
       tone: 'success',
-      message: `已移除空闲桶配置「${bucket.bucketName}」（Cloudflare 桶本身未被删除）。`,
+      message: `已移除「${bucket.bucketName}」配置`,
     })
   }
 
@@ -482,75 +475,72 @@ export function AdminStorageModule({
     )
   }
 
-  const patchKeysPreview: string[] = []
-  if (rotAccessKeyId.length > 0) patchKeysPreview.push('accessKeyId')
-  if (rotSecretAccessKey.length > 0) patchKeysPreview.push('secretAccessKey')
-  if (clearAnalyticsToken) patchKeysPreview.push('analyticsToken: null')
-  else if (rotAnalyticsToken.length > 0) patchKeysPreview.push('analyticsToken')
+  const pendingChangeSummary: string[] = []
+  if (rotAccessKeyId.length > 0) pendingChangeSummary.push('Access Key ID')
+  if (rotSecretAccessKey.length > 0) pendingChangeSummary.push('Secret Access Key')
+  if (clearAnalyticsToken) pendingChangeSummary.push('清除统计令牌')
+  else if (rotAnalyticsToken.length > 0) pendingChangeSummary.push('统计令牌')
 
   const bucketSelectOptions = [
-    { value: LOCAL_BUCKET_VALUE, label: '服务器本地存储（出厂默认 · activeBucketId: null）' },
+    { value: LOCAL_BUCKET_VALUE, label: '服务器本地存储' },
     ...buckets.map((b) => ({
       value: b.id,
-      label: `Cloudflare R2 · ${b.bucketName} (${b.jurisdiction})`,
+      label: `R2 · ${b.bucketName} (${b.jurisdiction})`,
     })),
   ]
 
   return (
     <div className={styles.moduleStack}>
-      {/* 1. Independent New-Image Write Policy (/api/admin/storage/settings) */}
-      <section className={styles.policyCard} aria-label="新图默认写入策略">
+      {/* 1. New-Image Storage Policy */}
+      <section className={styles.policyCard} aria-label="新图默认存储">
         <div className={styles.policyHeader}>
           <div>
-            <span className={pageStyles.pageEyebrow}>STORAGE POLICY · /api/admin/storage/settings</span>
-            <h2>新生成图片默认写入策略</h2>
+            <span className={pageStyles.pageEyebrow}>STORAGE POLICY</span>
+            <h2>新图默认存储</h2>
             <p className={styles.policySub}>
-              独立于「额度与队列」设置，仅控制保存<strong>新生成</strong>图片的写入目标与保留天数。
+              只影响之后新生成的图片，不会迁移或改期已有图片。
             </p>
           </div>
           <div className={styles.policyBadgeCluster}>
             <span className={styles.activeTargetPill}>
               <LabIcon name={activePolicyBucket ? 'cloud' : 'hard-drive'} size={14} />
               <span>
-                当前生效：
+                当前：
                 {activePolicyBucket ? activePolicyBucket.bucketName : '本地存储'} ·{' '}
                 {formatRetentionPolicyText(committedPolicy.retentionDays)}
               </span>
             </span>
-            {isPolicyDirty ? <span className={styles.dirtyPill}>有未保存更改</span> : null}
+            {isPolicyDirty ? <span className={styles.dirtyPill}>未保存</span> : null}
           </div>
         </div>
 
         <div className={styles.policyGrid}>
           <div className={styles.policyField}>
             <div className={styles.policyFieldLabel}>
-              <span>默认写入位置</span>
+              <span>写入位置</span>
               <span className={pageStyles.monoMeta}>
-                {draftBucketId ? '私有 R2 桶' : 'Local Disk'}
+                {draftBucketId ? 'R2 私有桶' : '本地磁盘'}
               </span>
             </div>
             <StudioSelect
-              label="默认写入位置"
+              label="写入位置"
               value={draftBucketId ?? LOCAL_BUCKET_VALUE}
               options={bucketSelectOptions}
               onChange={(val) => setDraftBucketId(val === LOCAL_BUCKET_VALUE ? null : val)}
             />
-            <span className={styles.policyFieldHint}>
-              切回本地不会停用旧桶的读取、删除与密钥轮换；若 R2 写入失败，后端会尝试回退本地并上报问题日志。
-            </span>
           </div>
 
           <div className={styles.policyField}>
             <div className={styles.policyFieldLabel}>
-              <span>新图默认保留期</span>
+              <span>保留时间</span>
               <span className={pageStyles.monoMeta}>
                 {retentionValidation.valid
                   ? formatRetentionPolicyText(retentionValidation.value)
-                  : '待修正'}
+                  : '格式有误'}
               </span>
             </div>
             <SegmentedRail<RetentionPreset>
-              label="默认保留期限"
+              label="默认保留时间"
               wrapOnMobile
               value={retentionPreset}
               options={[
@@ -577,36 +567,21 @@ export function AdminStorageModule({
                     step={1}
                     value={customDaysInput}
                     onChange={(e) => setCustomDaysInput(e.target.value)}
-                    placeholder="输入 1–3650 的整数"
+                    placeholder="输入 1–3650"
                     aria-label="自定义保留天数"
                   />
                 </label>
-                <span className={styles.unitTag}>天 (1–3650)</span>
+                <span className={styles.unitTag}>天</span>
               </div>
             ) : null}
             {!retentionValidation.valid ? (
               <span className={styles.fieldErrorText}>{retentionValidation.error}</span>
-            ) : (
-              <span className={styles.policyFieldHint}>
-                按整组图片保存成功起算（每天 24 小时）。留空（null）为出厂默认永久保存。
-              </span>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className={styles.scopeNotice}>
-          <Icon name="shield" size={15} />
-          <span>
-            <strong>安全边界：</strong>
-            策略切换不迁移已有文件、不追溯变更已保存图片的过期日期；普通用户图库与任务界面只展示有效期，绝不暴露桶或本地/回退状态。
-          </span>
-        </div>
-
         <div className={styles.policyFooter}>
-          <span className={pageStyles.monoMeta}>
-            PUT 请求体必含 activeBucketId 与 retentionDays（当前草稿：
-            {draftBucketId ? `UUID` : 'null'}, {retentionValidation.valid ? String(retentionValidation.value) : 'invalid'}）
-          </span>
+          <span className={pageStyles.monoMeta}>切回本地不影响旧桶图片读取和删图</span>
           <div className={pageStyles.toolbarRight}>
             <RippleButton
               type="button"
@@ -618,7 +593,7 @@ export function AdminStorageModule({
                 setCustomDaysInput(committedPolicy.retentionDays ? String(committedPolicy.retentionDays) : '14')
               }}
             >
-              还原更改
+              还原
             </RippleButton>
             <RippleButton
               type="button"
@@ -627,19 +602,18 @@ export function AdminStorageModule({
               onClick={handleSavePolicy}
             >
               <Icon name="check" size={15} />
-              <span>保存写入策略</span>
+              <span>保存设置</span>
             </RippleButton>
           </div>
         </div>
       </section>
 
-      {/* 2. R2 Buckets Master-Detail (/api/admin/storage/buckets*) */}
+      {/* 2. R2 Buckets Master-Detail */}
       <div className={pageStyles.splitWorkspace}>
-        {/* Left Bucket List */}
-        <section className={pageStyles.masterRail} aria-label="已登记 R2 私有桶列表">
+        <section className={pageStyles.masterRail} aria-label="R2 私有桶列表">
           <div className={pageStyles.masterHead}>
-            <strong>Cloudflare R2 私有桶</strong>
-            <span>{buckets.length} 个已登记</span>
+            <strong>R2 私有桶</strong>
+            <span>{buckets.length} 个</span>
           </div>
 
           <RippleButton
@@ -648,7 +622,7 @@ export function AdminStorageModule({
             onClick={() => handleSelectBucket('new')}
           >
             <Icon name="plus" size={15} />
-            <span>登记新 R2 私有桶</span>
+            <span>添加私有桶</span>
           </RippleButton>
 
           <div className={pageStyles.channelCardStack}>
@@ -667,7 +641,7 @@ export function AdminStorageModule({
                   <div className={pageStyles.channelItemTop}>
                     <strong>{bucket.bucketName}</strong>
                     <span className={isActiveTarget ? styles.activeWriteChip : styles.standbyChip}>
-                      {isActiveTarget ? '当前写入目标' : '存量 / 备用'}
+                      {isActiveTarget ? '当前使用' : '备用'}
                     </span>
                   </div>
                   <div className={styles.bucketTagRow}>
@@ -681,24 +655,19 @@ export function AdminStorageModule({
                       </span>
                     ) : null}
                   </div>
-                  <div className={pageStyles.channelItemMeta}>
-                    <span>{bucket.hasAnalyticsToken ? '已配统计令牌' : '未配统计令牌'}</span>
-                    <span>· 凭据只写</span>
-                  </div>
                 </RippleButton>
               )
             })}
           </div>
         </section>
 
-        {/* Right Detail / Create / Dual Usage / Key Rotation */}
-        <section className={pageStyles.detailCard} aria-label="私有桶详情与操作">
+        <section className={pageStyles.detailCard} aria-label="私有桶详情">
           {selectedBucketId === 'new' || !selectedBucket ? (
             <>
               <div className={pageStyles.detailHeader}>
                 <div>
-                  <span className={pageStyles.pageEyebrow}>POST /api/admin/storage/buckets</span>
-                  <h2>登记已有 Cloudflare R2 私有桶</h2>
+                  <span className={pageStyles.pageEyebrow}>ADD R2 BUCKET</span>
+                  <h2>添加 R2 私有桶</h2>
                 </div>
                 {buckets.length > 0 ? (
                   <RippleButton
@@ -706,7 +675,7 @@ export function AdminStorageModule({
                     className={pageStyles.tonalBtn}
                     onClick={() => handleSelectBucket(buckets[0].id)}
                   >
-                    返回桶列表
+                    返回列表
                   </RippleButton>
                 ) : null}
               </div>
@@ -714,7 +683,7 @@ export function AdminStorageModule({
               <div className={`${styles.scopeNotice} ${styles.scopeNoticeHighlight}`}>
                 <Icon name="alert-circle" size={16} />
                 <span>
-                  此处登记你在 Cloudflare 已创建的私有桶，系统<strong>不会代建或删除 Cloudflare 桶本身</strong>。新登记的配置<strong>不会自动启用</strong>，需在上方策略中显式切换。
+                  请先在 Cloudflare 建好私有桶。添加后不会自动启用，需要在上方切换并保存才会写入新图。
                 </span>
               </div>
 
@@ -726,69 +695,69 @@ export function AdminStorageModule({
 
               <div className={pageStyles.formGrid}>
                 <label className={pageStyles.filledField}>
-                  <span>Account ID（必填 · 32 位十六进制）</span>
+                  <span>Account ID</span>
                   <input
                     value={newAccountId}
                     onChange={(e) => setNewAccountId(e.target.value)}
-                    placeholder="例如：9f8e7d6c5b4a3210fedcba9876543210"
+                    placeholder="32 位十六进制字符"
                     maxLength={32}
                   />
                 </label>
 
                 <label className={pageStyles.filledField}>
-                  <span>Bucket Name（必填 · 3–63 位小写字母/数字/连字符）</span>
+                  <span>桶名称</span>
                   <input
                     value={newBucketName}
                     onChange={(e) => setNewBucketName(e.target.value)}
-                    placeholder="例如：nanobanana-prod-media"
+                    placeholder="例如：nanobanana-media"
                     maxLength={63}
                   />
                 </label>
 
                 <div className={`${pageStyles.filledField} ${pageStyles.fullSpan}`}>
-                  <span>辖区 Jurisdiction（可选 · 默认 default）</span>
+                  <span>区域 (Jurisdiction)</span>
                   <SegmentedRail<BucketJurisdiction>
-                    label="R2 辖区"
+                    label="R2 区域"
                     value={newJurisdiction}
                     options={[
-                      { value: 'default', label: 'default (默认)' },
-                      { value: 'eu', label: 'eu (欧盟)' },
-                      { value: 'fedramp', label: 'fedramp' },
+                      { value: 'default', label: '默认' },
+                      { value: 'eu', label: '欧盟 (EU)' },
+                      { value: 'fedramp', label: 'FedRAMP' },
                     ]}
                     onChange={setNewJurisdiction}
                   />
                 </div>
 
                 <label className={pageStyles.filledField}>
-                  <span>R2 Access Key ID（必填 · 只写加密）</span>
+                  <span>Access Key ID</span>
                   <input
                     type={showCreateSecrets ? 'text' : 'password'}
                     autoComplete="off"
                     value={newAccessKeyId}
                     onChange={(e) => setNewAccessKeyId(e.target.value)}
-                    placeholder="输入 S3 Access Key ID"
+                    placeholder="S3 访问密钥 ID"
                   />
                 </label>
 
                 <label className={pageStyles.filledField}>
-                  <span>R2 Secret Access Key（必填 · 只写加密）</span>
+                  <span>Secret Access Key</span>
                   <input
                     type={showCreateSecrets ? 'text' : 'password'}
                     autoComplete="off"
                     value={newSecretAccessKey}
                     onChange={(e) => setNewSecretAccessKey(e.target.value)}
-                    placeholder="输入 S3 Secret Access Key"
+                    placeholder="S3 访问密钥"
                   />
                 </label>
 
                 <label className={`${pageStyles.filledField} ${pageStyles.fullSpan}`}>
-                  <span>Analytics Token（可选 · 需 Account → Account Analytics → Read 权限）</span>
+                  <span>Analytics Token（选填 · 用于查看官方桶统计）</span>
                   <input
                     type={showCreateSecrets ? 'text' : 'password'}
                     autoComplete="off"
                     value={newAnalyticsToken}
                     onChange={(e) => setNewAnalyticsToken(e.target.value)}
-                    placeholder="留空仍可正常读写图片，仅暂不查询 Cloudflare 官方整桶用量"
+                    placeholder="不填也能正常存取图片"
                   />
                 </label>
               </div>
@@ -800,7 +769,7 @@ export function AdminStorageModule({
                   onClick={() => setShowCreateSecrets((v) => !v)}
                 >
                   <Icon name={showCreateSecrets ? 'eye-off' : 'eye'} size={14} />
-                  <span>{showCreateSecrets ? '隐藏凭据输入' : '明文核对输入'}</span>
+                  <span>{showCreateSecrets ? '隐藏密钥' : '显示密钥'}</span>
                 </RippleButton>
                 <RippleButton
                   type="button"
@@ -808,7 +777,7 @@ export function AdminStorageModule({
                   onClick={handleCreateBucket}
                 >
                   <Icon name="check" size={15} />
-                  <span>登记 R2 私有桶</span>
+                  <span>确认添加</span>
                 </RippleButton>
               </div>
             </>
@@ -816,7 +785,7 @@ export function AdminStorageModule({
             <>
               <div className={pageStyles.detailHeader}>
                 <div>
-                  <span className={pageStyles.pageEyebrow}>BUCKET CONFIGURATION &amp; TELEMETRY</span>
+                  <span className={pageStyles.pageEyebrow}>R2 BUCKET</span>
                   <h2>{selectedBucket.bucketName}</h2>
                 </div>
                 <div className={pageStyles.toolbarRight}>
@@ -828,15 +797,15 @@ export function AdminStorageModule({
                         setDraftBucketId(selectedBucket.id)
                         onNotify({
                           tone: 'info',
-                          message: `已将「${selectedBucket.bucketName}」填入上方写入策略草稿，请确认并点击「保存写入策略」使其生效。`,
+                          message: `已选为新图写入位置草稿，请在上方点「保存设置」生效`,
                         })
                       }}
                     >
                       <LabIcon name="cloud" size={14} />
-                      <span>设为写入目标草稿</span>
+                      <span>设为写入目标</span>
                     </RippleButton>
                   ) : (
-                    <span className={styles.activeWriteChip}>当前正在接收新图写入</span>
+                    <span className={styles.activeWriteChip}>当前写入中</span>
                   )}
                 </div>
               </div>
@@ -845,49 +814,42 @@ export function AdminStorageModule({
                 <div className={`${styles.scopeNotice} ${styles.scopeNoticeHighlight}`} role="status">
                   <Icon name="sparkles" size={15} />
                   <span>
-                    新桶已登记完成但<strong>尚未启用</strong>。如需新生成的图片写入此桶，请点击右侧「设为写入目标草稿」并在上方策略卡片保存。
+                    已添加但暂未启用。如需用它保存新图，点右侧「设为写入目标」并在上方保存。
                   </span>
                 </div>
               ) : null}
 
-              {/* Immutable Bucket Identity */}
               <div className={styles.identityBar}>
                 <div className={styles.identityItem}>
-                  <span>Account ID（不可修改）</span>
+                  <span>Account ID（不可改）</span>
                   <code title={selectedBucket.accountId}>{selectedBucket.accountId}</code>
                 </div>
                 <div className={styles.identityItem}>
-                  <span>Bucket Name（不可修改）</span>
+                  <span>桶名称（不可改）</span>
                   <code>{selectedBucket.bucketName}</code>
                 </div>
                 <div className={styles.identityItem}>
-                  <span>Jurisdiction（不可修改）</span>
+                  <span>区域（不可改）</span>
                   <code>{JURISDICTION_LABELS[selectedBucket.jurisdiction]}</code>
                 </div>
               </div>
 
-              {/* Credential Existence Booleans */}
               <div className={styles.credBoolRow}>
-                <span className={selectedBucket.hasAccessKeyId ? styles.credTrueChip : styles.credFalseChip}>
-                  <Icon name={selectedBucket.hasAccessKeyId ? 'check' : 'close'} size={12} />
-                  <span>hasAccessKeyId: {String(selectedBucket.hasAccessKeyId)}</span>
-                </span>
-                <span className={selectedBucket.hasSecretAccessKey ? styles.credTrueChip : styles.credFalseChip}>
-                  <Icon name={selectedBucket.hasSecretAccessKey ? 'check' : 'close'} size={12} />
-                  <span>hasSecretAccessKey: {String(selectedBucket.hasSecretAccessKey)}</span>
+                <span className={styles.credTrueChip}>
+                  <Icon name="check" size={12} />
+                  <span>S3 密钥：已配置</span>
                 </span>
                 <span className={selectedBucket.hasAnalyticsToken ? styles.credTrueChip : styles.credFalseChip}>
                   <Icon name={selectedBucket.hasAnalyticsToken ? 'check' : 'close'} size={12} />
-                  <span>hasAnalyticsToken: {String(selectedBucket.hasAnalyticsToken)}</span>
+                  <span>统计令牌：{selectedBucket.hasAnalyticsToken ? '已配置' : '未配置'}</span>
                 </span>
               </div>
 
-              {/* Dual-Perspective Bucket Usage (/api/admin/storage/buckets/{id}/usage) */}
+              {/* Dual Usage */}
               <div className={styles.usageSection}>
                 <div className={styles.usageHead}>
                   <div>
-                    <h3>同桶双口径用量对照</h3>
-                    <p>区分「本应用有效图库统计」与「Cloudflare 官方整桶最近 31 天样本」，互不替代。</p>
+                    <h3>存储用量</h3>
                   </div>
                   <RippleButton
                     type="button"
@@ -899,21 +861,21 @@ export function AdminStorageModule({
                       usageTimerRef.current = window.setTimeout(() => {
                         setFallbackSampledAt(new Date().toISOString())
                         setIsRefreshingUsage(false)
-                        onNotify({ tone: 'info', message: `已刷新「${selectedBucket.bucketName}」双口径用量。` })
+                        onNotify({ tone: 'info', message: '用量已刷新' })
                       }, 750)
                     }}
                   >
                     <LabIcon name="refresh" size={14} />
-                    <span>{isRefreshingUsage ? '正在查询…' : '刷新用量'}</span>
+                    <span>{isRefreshingUsage ? '刷新中…' : '刷新用量'}</span>
                   </RippleButton>
                 </div>
 
-                {/* Design Lab Demo Switcher for all 5 Cloudflare Usage Statuses */}
-                <div className={styles.simBar} role="group" aria-label="模拟 Cloudflare 官方状态">
-                  <span className={styles.simBarLabel}>Lab 状态模拟：</span>
+                {/* Lab simulator for the 5 Cloudflare statuses */}
+                <div className={styles.simBar} role="group" aria-label="模拟官方状态">
+                  <span className={styles.simBarLabel}>模拟官方状态：</span>
                   {(
                     [
-                      { id: null, label: '桶默认状态' },
+                      { id: null, label: '默认' },
                       { id: 'available', label: 'available' },
                       { id: 'not_configured', label: 'not_configured' },
                       { id: 'forbidden', label: 'forbidden' },
@@ -936,55 +898,53 @@ export function AdminStorageModule({
                 {isRefreshingUsage ? (
                   <div className={styles.usageDualGrid} role="status" aria-busy="true">
                     <div className={styles.usageCard}>
-                      <SkeletonBlock variant="text" width={140} height={14} />
+                      <SkeletonBlock variant="text" width={120} height={14} />
                       <div className={styles.usageMetricRow}>
                         <SkeletonBlock variant="pill" width={88} height={28} />
                         <SkeletonBlock variant="pill" width={106} height={28} staggerIndex={1} />
                       </div>
-                      <SkeletonTextStack widths={['92%', '70%']} lineHeight={11} />
+                      <SkeletonTextStack widths={['80%']} lineHeight={11} />
                     </div>
                     <div className={styles.usageCard}>
-                      <SkeletonBlock variant="text" width={168} height={14} />
+                      <SkeletonBlock variant="text" width={140} height={14} />
                       <div className={styles.usageMetricThree}>
                         <SkeletonBlock variant="pill" width="90%" height={26} />
                         <SkeletonBlock variant="pill" width="90%" height={26} staggerIndex={1} />
                         <SkeletonBlock variant="pill" width="90%" height={26} staggerIndex={2} />
                       </div>
-                      <SkeletonTextStack widths={['88%', '64%']} lineHeight={11} />
+                      <SkeletonTextStack widths={['84%']} lineHeight={11} />
                     </div>
                   </div>
                 ) : activeUsage && effectiveCloudflare ? (
                   <div className={styles.usageDualGrid}>
-                    {/* Card A: Application Effective Usage */}
                     <div className={styles.usageCard}>
                       <div className={styles.usageCardTop}>
                         <span className={styles.usageCardTitle}>
                           <LabIcon name="database" size={15} />
-                          <span>本应用有效图库用量</span>
+                          <span>本应用图片</span>
                         </span>
-                        <span className={pageStyles.statusOn}>始终可算</span>
+                        <span className={pageStyles.statusOn}>实时</span>
                       </div>
                       <div className={styles.usageMetricRow}>
                         <div className={styles.usageMetric}>
-                          <span>有效图片数 (imageCount)</span>
+                          <span>图片数</span>
                           <strong>{activeUsage.application.imageCount} 张</strong>
                         </div>
                         <div className={styles.usageMetric}>
-                          <span>占用总字节 (totalBytes)</span>
+                          <span>占用空间</span>
                           <strong>{formatBytes(activeUsage.application.totalBytes)}</strong>
                         </div>
                       </div>
                       <p className={styles.usageFootNote}>
-                        仅计算本应用在该桶仍有效的图库图；不含回退本地、已过期或待清理对象。
+                        只算本应用在这个桶里还没过期的图片。
                       </p>
                     </div>
 
-                    {/* Card B: Cloudflare Official Bucket Sample */}
                     <div className={styles.usageCard}>
                       <div className={styles.usageCardTop}>
                         <span className={styles.usageCardTitle}>
                           <LabIcon name="cloud" size={15} />
-                          <span>Cloudflare 官方样本</span>
+                          <span>Cloudflare 官方统计</span>
                         </span>
                         <span
                           className={
@@ -995,8 +955,11 @@ export function AdminStorageModule({
                                 ? pageStyles.statusOff
                                 : styles.standbyChip
                           }
+                          title={effectiveCloudflare.status}
                         >
-                          {effectiveCloudflare.status}
+                          {effectiveCloudflare.status === 'available'
+                            ? '正常'
+                            : CF_STATUS_META[effectiveCloudflare.status].label}
                         </span>
                       </div>
 
@@ -1004,29 +967,25 @@ export function AdminStorageModule({
                         <>
                           <div className={styles.usageMetricThree}>
                             <div className={styles.usageMetric}>
-                              <span>对象内容 (payloadBytes)</span>
+                              <span>文件大小</span>
                               <strong>{formatBytes(effectiveCloudflare.payloadBytes)}</strong>
                             </div>
                             <div className={`${styles.usageMetric} ${styles.usageMetricMuted}`}>
-                              <span>元数据 (metadataBytes)</span>
+                              <span>元数据</span>
                               <strong>{formatBytes(effectiveCloudflare.metadataBytes)}</strong>
                             </div>
                             <div className={`${styles.usageMetric} ${styles.usageMetricMuted}`}>
-                              <span>整桶对象 (objectCount)</span>
+                              <span>对象数</span>
                               <strong>{effectiveCloudflare.objectCount} 个</strong>
                             </div>
                           </div>
                           <p className={styles.usageFootNote}>
-                            官方采样时间（sampledAt）：
-                            <strong>{formatLocalDateTime(effectiveCloudflare.sampledAt, true)}</strong>
-                            （最近 31 天内最新，非页面请求时间）。对比图片字节请使用 <code>payloadBytes</code>；其他应用对象、清理时差与指标延迟均可造成差异，勿把差值当作泄漏。
+                            采样时间：{formatLocalDateTime(effectiveCloudflare.sampledAt, true)}（对比图片大小看“文件大小”，受统计延迟或其他文件影响可能有差异）。
                           </p>
                         </>
                       ) : (
                         <div className={styles.cfStateBox}>
-                          <strong>
-                            {CF_STATUS_META[effectiveCloudflare.status].title}（数值为 —，不显示为 0）
-                          </strong>
+                          <strong>{CF_STATUS_META[effectiveCloudflare.status].title}（—）</strong>
                           <p>{CF_STATUS_META[effectiveCloudflare.status].desc}</p>
                         </div>
                       )}
@@ -1035,12 +994,11 @@ export function AdminStorageModule({
                 ) : null}
               </div>
 
-              {/* Credential Rotation & Analytics Token (PATCH /api/admin/storage/buckets/{id}) */}
+              {/* Credential Rotation */}
               <div className={styles.rotateSection}>
                 <div className={pageStyles.detailHeader}>
                   <div>
-                    <span className={pageStyles.pageEyebrow}>PATCH /api/admin/storage/buckets/{'{id}'}</span>
-                    <h3 style={{ margin: '2px 0 0', fontSize: 15 }}>凭据轮换与统计令牌管理（只写不回显）</h3>
+                    <h3 style={{ margin: 0, fontSize: 15 }}>更新密钥</h3>
                   </div>
                   <RippleButton
                     type="button"
@@ -1060,27 +1018,27 @@ export function AdminStorageModule({
 
                 <div className={pageStyles.formGrid}>
                   <label className={pageStyles.filledField}>
-                    <span>新 Access Key ID（留空保持不变，不回显旧值）</span>
+                    <span>新 Access Key ID</span>
                     <input
                       type={showRotateSecrets ? 'text' : 'password'}
                       autoComplete="off"
                       value={rotAccessKeyId}
                       onChange={(e) => setRotAccessKeyId(e.target.value)}
-                      placeholder="留空 = 请求体省略 accessKeyId"
+                      placeholder="留空不改"
                     />
                   </label>
                   <label className={pageStyles.filledField}>
-                    <span>新 Secret Access Key（留空保持不变）</span>
+                    <span>新 Secret Access Key</span>
                     <input
                       type={showRotateSecrets ? 'text' : 'password'}
                       autoComplete="off"
                       value={rotSecretAccessKey}
                       onChange={(e) => setRotSecretAccessKey(e.target.value)}
-                      placeholder="留空 = 请求体省略 secretAccessKey"
+                      placeholder="留空不改"
                     />
                   </label>
                   <label className={`${pageStyles.filledField} ${pageStyles.fullSpan}`}>
-                    <span>新 Analytics Token（可选 · 需 Account Analytics Read 权限）</span>
+                    <span>新 Analytics Token（选填）</span>
                     <input
                       type={showRotateSecrets ? 'text' : 'password'}
                       autoComplete="off"
@@ -1088,9 +1046,7 @@ export function AdminStorageModule({
                       value={clearAnalyticsToken ? '' : rotAnalyticsToken}
                       onChange={(e) => setRotAnalyticsToken(e.target.value)}
                       placeholder={
-                        clearAnalyticsToken
-                          ? '已勾选显式清除，将发送 analyticsToken: null'
-                          : '留空 = 保持现有统计令牌不变'
+                        clearAnalyticsToken ? '保存后将清除统计令牌' : '留空不改'
                       }
                     />
                   </label>
@@ -1098,8 +1054,8 @@ export function AdminStorageModule({
 
                 <div className={styles.clearTokenRow}>
                   <div className={styles.clearTokenInfo}>
-                    <strong>显式清除可选统计令牌（发送 analyticsToken: null）</strong>
-                    <span>仅用于主动撤除 Cloudflare Analytics 查询；普通留空不会清除已有令牌。</span>
+                    <strong>清除统计令牌</strong>
+                    <span>仅停用官方桶统计，不影响图片读写。</span>
                   </div>
                   <RippleButton
                     type="button"
@@ -1108,42 +1064,36 @@ export function AdminStorageModule({
                     onClick={() => setClearAnalyticsToken((v) => !v)}
                   >
                     <span className={pageStyles.switchThumb} />
-                    <span>{clearAnalyticsToken ? '将清除令牌' : '保持 / 轮换'}</span>
+                    <span>{clearAnalyticsToken ? '将清除' : '保持不变'}</span>
                   </RippleButton>
                 </div>
 
-                <div className={styles.patchPreviewStrip}>
-                  <LabIcon name="key" size={13} />
-                  <span>
-                    {patchKeysPreview.length > 0
-                      ? `本次 PATCH 将提交字段：${patchKeysPreview.join(' · ')}（绝不传入空串或掩码）`
-                      : '尚未填写待轮换字段（未填项将从 PATCH 中省略）'}
-                  </span>
-                </div>
+                {pendingChangeSummary.length > 0 ? (
+                  <div className={styles.patchPreviewStrip}>
+                    <LabIcon name="key" size={13} />
+                    <span>本次将更新：{pendingChangeSummary.join('、')}</span>
+                  </div>
+                ) : null}
 
                 <div className={pageStyles.detailFooter}>
-                  <span className={pageStyles.monoMeta}>
-                    凭据不写入 URL、本地缓存或日志；切回本地后仍支持对旧桶轮换密钥。
-                  </span>
+                  <span className={pageStyles.monoMeta}>留空项保持原样不变</span>
                   <RippleButton
                     type="button"
                     className={pageStyles.primaryBtn}
                     onClick={handleRotateCredentials}
                   >
                     <Icon name="check" size={15} />
-                    <span>保存凭据变更</span>
+                    <span>保存密钥</span>
                   </RippleButton>
                 </div>
               </div>
 
-              {/* Safe Deletion Zone (DELETE /api/admin/storage/buckets/{id}) */}
+              {/* Safe Deletion Zone */}
               <div className={styles.dangerZone}>
                 <div className={styles.dangerZoneTop}>
                   <div>
-                    <strong style={{ fontSize: 13.5 }}>移除此 R2 桶配置</strong>
-                    <p>
-                      即使本应用有效图片数为 0，仍可能有待删对象或等待二次核查的写入（约 1 天复查）；是否可删以服务端 409 校验为准，勿仅凭用量预判。
-                    </p>
+                    <strong style={{ fontSize: 13.5 }}>移除这个桶配置</strong>
+                    <p>仅从系统移除配置，不会删掉 Cloudflare 里的桶和文件；若仍有使用或待删文件将无法移除。</p>
                   </div>
                   <div className={pageStyles.toolbarRight}>
                     <RippleButton
@@ -1155,7 +1105,7 @@ export function AdminStorageModule({
                         setDeleteFeedback(null)
                       }}
                     >
-                      {simulateDeleteNetworkError ? '已开启：模拟网络 502' : '模拟网络失败'}
+                      {simulateDeleteNetworkError ? '模拟网络失败中' : '模拟网络失败'}
                     </RippleButton>
                     {confirmDeleteId === selectedBucket.id ? (
                       <>
@@ -1172,7 +1122,7 @@ export function AdminStorageModule({
                           onClick={() => handleDeleteBucket(selectedBucket)}
                         >
                           <Icon name="trash" size={14} />
-                          <span>确认删除配置</span>
+                          <span>确认移除</span>
                         </RippleButton>
                       </>
                     ) : (
@@ -1185,7 +1135,7 @@ export function AdminStorageModule({
                         }}
                       >
                         <Icon name="trash" size={14} />
-                        <span>删除桶配置</span>
+                        <span>移除配置</span>
                       </RippleButton>
                     )}
                   </div>
@@ -1207,7 +1157,7 @@ export function AdminStorageModule({
                         className={styles.smallTonalBtn}
                         onClick={() => handleDeleteBucket(selectedBucket)}
                       >
-                        重试删除
+                        重试
                       </RippleButton>
                     ) : null}
                   </div>

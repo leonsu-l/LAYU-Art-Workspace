@@ -160,15 +160,14 @@ export function GalleryPrototype({
     }
     onNotify({
       tone: 'warning',
-      message:
-        '该作品资源返回 404（可能已到期清理或已被删除），已移除失效预览；请重新拉取图库与任务列表。',
-      actionLabel: '重新同步列表',
+      message: '图片已失效（404），已移除预览，建议刷新图库。',
+      actionLabel: '刷新列表',
       onAction: () => {
         setInvalidated404Keys([])
         onGalleryScenarioChange?.('mixed')
         onNotify({
           tone: 'info',
-          message: '已同步最新图库与任务历史，过期组已自动移除。',
+          message: '图库已同步',
         })
       },
     })
@@ -572,15 +571,12 @@ export function GalleryPrototype({
             </>
           ) : (
             <>
-              <span
-                className={styles.policyPill}
-                title="此为当前站点对新生成图片的默认保留政策；修改策略不会追溯更改既有作品的到期时间"
-              >
+              <span className={styles.policyPill}>
                 <LabIcon name="clock" size={14} />
-                <span>新图默认：{formatRetentionPolicyText(siteRetentionDays)}</span>
+                <span>新图{formatRetentionPolicyText(siteRetentionDays)}</span>
               </span>
               <span className={styles.summaryPill}>
-                已存 {items.length} 张 · {formatBytes(totalBytes)}
+                {items.length} 张 · {formatBytes(totalBytes)}
               </span>
             </>
           )}
@@ -599,7 +595,7 @@ export function GalleryPrototype({
                 }
                 onNotify({
                   tone: 'info',
-                  message: '已模拟刷新图库元数据与有效期状态（每 10 秒自动同步，不预下载大图）。',
+                  message: '图库已刷新',
                 })
               }, 850)
             }}
@@ -619,8 +615,8 @@ export function GalleryPrototype({
           <div className={styles.galleryNoticeText}>
             <Icon name="alert-circle" size={16} />
             <span>
-              <strong>图片失效演示（HTTP 404）：</strong>
-              点击第 1 张图或下方按钮可模拟读取到已清理/失效图片。404 不能单独证明已到期，界面会立即丢弃失效预览并提示重新拉取图库与任务列表。
+              <strong>图片加载失败（404）：</strong>
+              图片可能已过期或被删除，打开失效图片时会自动移除并提示刷新列表。
             </span>
           </div>
           <RippleButton
@@ -636,7 +632,7 @@ export function GalleryPrototype({
               }
             }}
           >
-            {items.some((i) => i.key === 'srv-1') ? '模拟打开返回 404' : '重新拉取并恢复列表'}
+            {items.some((i) => i.key === 'srv-1') ? '模拟图片 404' : '刷新恢复列表'}
           </RippleButton>
         </div>
       ) : null}
@@ -658,7 +654,7 @@ export function GalleryPrototype({
           <>
             <div className={styles.toolbarLeft}>
               <span className={styles.monoMeta}>
-                共 {items.length} 张云端作品 · 各图以自身保存成功时承诺的到期日为准
+                共 {items.length} 张作品 · 每张按各自显示时间过期
               </span>
             </div>
 
@@ -770,20 +766,14 @@ export function GalleryPrototype({
         </div>
       ) : items.length === 0 ? (
         <div className={styles.galleryEmptyCard}>
-          <span className={styles.pageEyebrow}>EMPTY GALLERY</span>
-          <h2>云端图库暂无作品</h2>
+          <h2>还没有作品</h2>
           <p>
-            当前站点对新生成图片的默认保存政策为{' '}
-            <strong>{formatRetentionPolicyText(siteRetentionDays)}</strong>
-            （自整组图片保存成功起算，每日 24 小时；到期后将连同所属任务整组清理）。
+            新生成的图片默认<strong>{formatRetentionPolicyText(siteRetentionDays)}</strong>
+            ，到期后整组自动删除。
           </p>
-          <span className={styles.policyPill}>
-            <LabIcon name="clock" size={14} />
-            <span>新图默认策略：{formatRetentionPolicyText(siteRetentionDays)}</span>
-          </span>
           <RippleButton type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
             <Icon name="sparkles" size={15} />
-            <span>前往创作工作台生成</span>
+            <span>去生成图片</span>
           </RippleButton>
         </div>
       ) : (
@@ -897,7 +887,7 @@ export function GalleryPrototype({
       <footer className={styles.safetyFooter}>
         <Icon name="shield" size={15} />
         <span>
-          作品与任务历史双向同步：删除或到期清理均会作用于所属任务及同组全部图片（已消耗的额度不因删除而撤销，已下载的本地副本不受服务端到期影响）。
+          删除或到期时，同一任务的全部图片会一起删除，不退回已用额度。
         </span>
       </footer>
 
@@ -1711,7 +1701,7 @@ export function AdminPrototype({
     )
     onNotify({
       tone: 'success',
-      message: '已标记为已处理（未触发重绘或文件改动；若同一问题复发将自动重开）。',
+      message: '已标记为已处理',
     })
   }
 
@@ -1731,7 +1721,7 @@ export function AdminPrototype({
     )
     onNotify({
       tone: 'warning',
-      message: '模拟同指纹问题再次发生：累计次数 +1，状态已重新变回 open。',
+      message: '模拟问题再发：次数 +1，已重新打开',
     })
   }
 
@@ -1739,7 +1729,7 @@ export function AdminPrototype({
     setIssues((prev) => prev.filter((item) => item.id !== id))
     onNotify({
       tone: 'warning',
-      message: 'POST /resolve 返回 HTTP 404：该告警已过期（超过 30 天）或已不存在，已从当前列表移除。',
+      message: '该记录已过期或不存在（404），已从列表移除',
     })
   }
 
@@ -1750,7 +1740,7 @@ export function AdminPrototype({
           <span className={styles.pageEyebrow}>SITE ADMINISTRATION</span>
           <h1 className={styles.pageTitle}>站点管理台</h1>
           <p className={styles.pageSub}>
-            统一管理共享渠道、成员额度、邀请码、队列并发、参数模板、存储策略与 R2 桶、待处理问题日志及非私密统计
+            管理共享渠道、用户额度、邀请码、队列并发、参数模板、存储与问题日志
           </p>
         </div>
 
@@ -1762,10 +1752,10 @@ export function AdminPrototype({
               onClick={() => setAdminTab('issues')}
             >
               <LabIcon name="bell" size={14} />
-              <span>待处理告警 · {openIssueCount} 条</span>
+              <span>待处理问题 {openIssueCount} 条</span>
             </RippleButton>
           ) : (
-            <span className={styles.summaryPill}>问题日志已全部处理</span>
+            <span className={styles.summaryPill}>问题已全部处理</span>
           )}
         </div>
       </header>
