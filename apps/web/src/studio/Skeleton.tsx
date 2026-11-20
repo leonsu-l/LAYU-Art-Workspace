@@ -146,6 +146,8 @@ export function ShimmerImage({
       <img
         src={src}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         title={title}
         onClick={onClick}
         className={`${styles.shimmerImageEl} ${isLoaded ? styles.shimmerImageElLoaded : ''} ${className}`}
@@ -157,7 +159,7 @@ export function ShimmerImage({
           setErroredSrc(src)
         }}
       />
-      <span
+      {erroredSrc === src && !forceSkeleton ? <span className={styles.imageError}>图片加载失败</span> : <span
         aria-hidden="true"
         className={`${styles.shimmerOverlay} ${isLoaded ? styles.shimmerOverlayHidden : ''}`}
         style={
@@ -169,7 +171,7 @@ export function ShimmerImage({
         <span className={styles.mediaGlyph}>
           <Icon name="image" size={iconSize} />
         </span>
-      </span>
+      </span>}
     </span>
   )
 }

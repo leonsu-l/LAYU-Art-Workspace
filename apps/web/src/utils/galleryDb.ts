@@ -1,9 +1,12 @@
 import type {
-  GalleryImageRecord,
-  GallerySaveSummary,
+  ServerGalleryImage,
   GalleryStorageStats,
   GenerateImageResult,
 } from '@nanobanana/shared/types/generation'
+
+// The legacy browser store has its own record format, independent of the server API.
+type GalleryImageRecord = Omit<ServerGalleryImage, 'url'> & { blob: Blob }
+interface GallerySaveSummary { savedCount: number; skippedCount: number }
 
 const DB_NAME = 'nanobanana-gallery-db'
 const DB_VERSION = 1

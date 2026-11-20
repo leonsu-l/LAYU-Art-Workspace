@@ -20,7 +20,7 @@ export function SnackbarHost({
   const iconName = isWarning ? 'alert-circle' : snackbar.tone === 'success' ? 'check' : 'sparkles'
 
   return (
-    <div className={styles.viewportHost} aria-live={isWarning ? 'assertive' : 'polite'}>
+    <div className={styles.viewportHost} data-studio-notice aria-live={isWarning ? 'assertive' : 'polite'}>
       <div
         key={snackbar.id}
         role={isWarning ? 'alert' : 'status'}

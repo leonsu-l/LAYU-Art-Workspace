@@ -676,6 +676,10 @@
 }
 
 .lightboxPrompt {
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: transparent;
   margin: 0;
   font-size: 13px;
   line-height: 1.48;

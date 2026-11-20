@@ -1,7 +1,6 @@
-import type { GalleryImageRecord, GalleryStorageStats, ServerGalleryImage } from '@nanobanana/shared/types/generation'
+import type { GalleryStorageStats, ServerGalleryImage } from '@nanobanana/shared/types/generation'
 import { backendErrorMessage, backendRequest } from './backendClient'
-// Keep the view's discriminant while accepting server records only; legacy IndexedDB is never opened.
-export type GalleryItem = (GalleryImageRecord & { source: 'browser'; key: string }) | (ServerGalleryImage & { source: 'server'; key: string })
+export type GalleryItem = ServerGalleryImage & { source: 'server'; key: string }
 export interface GallerySnapshot { images: GalleryItem[]; browserError: string | null; serverError: string | null }
 export interface GalleryStorageSummary { browser: GalleryStorageStats | null; server: GalleryStorageStats | null; browserError: string | null; serverError: string | null }
 export async function loadGallery(previous: GalleryItem[] = [], signal?: AbortSignal): Promise<GallerySnapshot> {
