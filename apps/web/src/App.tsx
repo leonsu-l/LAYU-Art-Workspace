@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { ConnectionSettingsPanel, GenerationParamsPanel } from './components/ConfigPanel'
 import { Icon } from './components/Icon'
-import { ChannelSelector } from './components/ChannelSelector'
+import { ChannelModelBar, M3SplitGenerateButton } from './studio/Controls'
+import { RippleButton } from './studio/Ripple'
+import { SkeletonBlock } from './studio/Skeleton'
+import { useNotify } from './studio/useNotify'
+import type { Template } from '@nanobanana/shared/types/studio'
+import work from './studio/Workbench.module.css'
 import { userStorageKey } from './services/sessionScope'
 import { PromptPanel } from './components/PromptPanel'
 import { ResultPanel } from './components/ResultPanel'
 import { TaskRoll } from './components/TaskRoll'
-import { useRipple } from './components/ui/useRipple'
 import { useBeforeUnloadGuard } from './hooks/useBeforeUnloadGuard'
 import { useImageGeneration } from './hooks/useImageGeneration'
 import { usePersistentConfig } from './hooks/usePersistentConfig'
 import { getGalleryStorageSummary, type GalleryStorageSummary } from './services/galleryService'
 import { buildRequestPreview } from './services/imageGenerationService'
 import { formatBytes } from './utils/galleryDb'
-import { promptIdeas } from './utils/promptIdeas'
 import { getReferenceImageLimitError, getReferenceImageLimits, referenceImageBytes } from './utils/referenceImages'
 import { PROMPT_STORAGE_KEY } from './utils/storage'
 import styles from './App.module.css'
@@ -36,7 +38,7 @@ function App() {
     activeProvider,
     activeProfile,
     isHydrated,
-    ready, channels, channel, catalog, templates, quota, error: configError, saveStatus, selectChannel,
+    ready, selectionLoaded, channels, channel, catalog, templates, quota, error: configError, saveStatus, selectChannel,
     setActiveProvider,
     updateProviderProfile,
     updateOpenAIParams,
@@ -91,7 +93,7 @@ function App() {
     promptLength > 0 &&
     promptLength <= 4000
 
-  const { ripples, triggerRipple, dismissRipple } = useRipple(!canGenerate)
+  const notify = useNotify()
 
   useEffect(() => {
     savePromptToStorage(promptKey, prompt)
@@ -115,18 +117,14 @@ function App() {
     }
   }, [config, referenceImages])
 
-  function openConnectionSettings() {
-    document.getElementById('connection-settings')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-
   function handleGenerate() {
     if (canGenerate) {
       void generateImage(prompt, config, referenceImages)
     }
   }
 
-  function handleUseIdea() {
-    setPrompt(promptIdeas[0].prompt)
+  function handleUseIdea(idea: string) {
+    setPrompt(idea)
     document.getElementById('image-prompt')?.focus()
   }
 
@@ -138,272 +136,60 @@ function App() {
     }
   }
 
-  function handleClearResult() {
-    clearResult() // Only clears the selected preview, never a durable task.
+  function applyTemplate(template: Template) {
+    if (!isHydrated || template.provider !== activeProvider) return
+    if (activeProvider === 'openai-compatible') updateOpenAIParams(template.params)
+    else updateGeminiParams(template.params)
+    notify({ tone: 'success', message: `已套用「${template.name}」，渠道与模型保持不变。` })
   }
+  const availableTemplates = isHydrated && !isSubmitting ? templates.filter((i) => i.provider === activeProvider) : []
+  const initialLoad = !selectionLoaded && !configError
+  const blocker = !ready ? '请先选择可用渠道和模型' : !isHydrated ? '正在加载最近参数…'
+    : channel?.scope === 'shared' && !quota?.configured ? '共享额度尚未配置或加载' : channel?.scope === 'shared' && !quota?.unlimited && !quota?.remaining ? '今日共享额度已用完'
+    : isReadingImages ? '正在读取参考图…' : referenceImageError ? '请先调整参考图' : pendingSubmissions.length ? '存在待确认提交，请先恢复'
+    : connectionError ? '连接中断，请重连' : !hasDiscovered ? '正在恢复后端任务…' : isSubmitting ? '等待后端确认接收' : deletingTaskId ? '正在删除任务…'
+    : !promptLength ? '输入画面描述后即可生成' : promptLength > 4000 ? '提示词超出 4,000 字上限' : ''
+  const count = activeProvider === 'openai-compatible' ? config.profiles[activeProvider].params.n : 1
 
-  const hasTopAlerts =
-    !hasDiscovered ||
-    Boolean(connectionError) ||
-    Boolean(submissionError) ||
-    isSubmitting ||
-    pendingSubmissions.length > 0
-
-  return (
-    <div className={styles.shell}>
-      <main id="main" className={styles.page}>
-        <header className={styles.studioBar}>
-          <div className={styles.studioTitleGroup}>
-            <h1 className={styles.title}>创作工作台</h1>
-            <p className={styles.subtitle}>输入描述与参考图，在右侧即时对照查看生成结果。</p>
-          </div>
-          <div className={styles.studioBadges}>
-            <span className={styles.modeChip}>
-              <span className={styles.modeDot} aria-hidden="true" />
-              {referenceImages.length ? `图文生图 · ${referenceImages.length} 张` : '文本生图'}
-            </span>
-            <span className={styles.modelChip} title={activeProfile.model || '未填模型 ID'}>
-              {activeProvider === 'openai-compatible' ? 'OpenAI' : 'Gemini'} · {activeProfile.model || '自定义模型'}
-            </span>
-            <button
-              type="button"
-              className={`${styles.keyChip} ${ready ? styles.keyChipReady : styles.keyChipMissing}`}
-              onClick={openConnectionSettings}
-            >
-              <Icon name={ready ? 'check' : 'settings'} size={13} />
-              <span>{ready ? '渠道就绪' : '选择渠道'}</span>
-            </button>
-          </div>
-        </header>
-
-        {hasTopAlerts ? (
-          <section className={styles.alertStack} aria-label="状态与恢复提示">
-            {!hasDiscovered ? (
-              <div className={styles.alertCard} data-tone="neutral" role="status">
-                <Icon name="loader" size={16} className={styles.spinner} />
-                <p className={styles.alertMessage}>正在发现后端已有任务；完成前暂停新提交。</p>
-              </div>
-            ) : null}
-
-            {connectionError ? (
-              <div className={styles.alertCard} data-tone="warning" role="status">
-                <Icon name="alert-circle" size={16} />
-                <p className={styles.alertMessage}>
-                  连接 / 恢复提示：{connectionError} 会自动重连，已有任务不会因此被标记为失败。
-                </p>
-                <button type="button" className={styles.alertButton} onClick={refreshTasks} disabled={isRefreshing}>
-                  {isRefreshing ? '正在同步' : '刷新 / 重连'}
-                </button>
-              </div>
-            ) : null}
-
-            {submissionError ? (
-              <div className={styles.alertCard} data-tone="error" role="alert">
-                <Icon name="alert-circle" size={16} />
-                <p className={styles.alertMessage}>提交提示：{submissionError.message}</p>
-              </div>
-            ) : null}
-
-            {isSubmitting ? (
-              <div className={styles.alertCard} data-tone="warning" role="status">
-                <Icon name="loader" size={16} className={styles.spinner} />
-                <p className={styles.alertMessage}>正在提交，尚待后端确认接收。此时建议不要关闭页面。</p>
-              </div>
-            ) : null}
-
-            {pendingSubmissions.length > 0 ? (
-              <div className={styles.pendingBanner} role="alert">
-                <p className={styles.pendingCopy}>
-                  以下提交尚未确认，暂不创建新任务以防重复扣费。重试只使用同一 ID 和原始请求；刷新后需保持原提示词与配置，并按原顺序重新选择相同参考图。
-                </p>
-                <div className={styles.pendingList}>
-                  {pendingSubmissions.map((pending) => (
-                    <div key={pending.id} className={styles.pendingRow}>
-                      <code>{pending.id}</code>
-                      <button
-                        type="button"
-                        className={styles.alertButton}
-                        disabled={isSubmitting || isReadingImages || Boolean(deletingTaskId)}
-                        onClick={() => void retrySubmission(pending, prompt, config, referenceImages)}
-                      >
-                        恢复 / 重试同一请求
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        <div className={styles.workspace}>
-          <div className={styles.controlsColumn}>
-            <ChannelSelector channels={channels} channelId={config.channelId} provider={activeProvider} model={activeProfile.model} catalog={catalog} templates={templates} quota={quota} error={configError} saveStatus={saveStatus} isHydrated={isHydrated} onChannel={selectChannel} onProvider={setActiveProvider} onModel={(model) => updateProviderProfile(activeProvider, { model })} onTemplate={(template) => activeProvider === 'openai-compatible' ? updateOpenAIParams(template.params) : updateGeminiParams(template.params)} />
-            <PromptPanel
-              prompt={prompt}
-              isSubmitting={isSubmitting}
-              canGenerate={canGenerate}
-              onPromptChange={setPrompt}
-              onGenerate={handleGenerate}
-              referenceImages={referenceImages}
-              referenceLimits={referenceLimits}
-              referenceImageError={referenceImageError}
-              onReferenceImagesChange={setReferenceImages}
-              onReadingImagesChange={setIsReadingImages}
-            />
-
-            <GenerationParamsPanel
-              config={config}
-              activeProvider={activeProvider}
-              activeProfile={activeProfile}
-              isHydrated={isHydrated}
-              hasReferenceImages={referenceImages.length > 0}
-              onProfileChange={(patch) => updateProviderProfile(activeProvider, patch)}
-              onOpenAIParamsChange={updateOpenAIParams}
-              onGeminiParamsChange={updateGeminiParams}
-            />
-
-            <ConnectionSettingsPanel requestPreview={requestPreview} />
-
-            <div className={styles.actionBar}>
-              <div className={styles.actionStatus}>
-                {!ready ? (
-                  <button type="button" className={styles.setupLink} onClick={openConnectionSettings}>
-                    <Icon name="settings" size={15} />
-                    <span>请先选择可用渠道和模型</span>
-                  </button>
-                ) : referenceImageError ? (
-                  <span className={styles.blockerError}>
-                    <Icon name="alert-circle" size={15} />
-                    <span>参考图超出限制，请先调整</span>
-                  </span>
-                ) : isReadingImages ? (
-                  <span className={styles.blockerMuted}>正在读取参考图…</span>
-                ) : !hasDiscovered ? (
-                  <span className={styles.blockerMuted}>正在恢复后端任务，请稍候…</span>
-                ) : pendingSubmissions.length > 0 ? (
-                  <span className={styles.blockerError}>存在待确认提交，请先在上方恢复或刷新</span>
-                ) : connectionError ? (
-                  <span className={styles.blockerError}>连接异常，等待重连或刷新任务后可提交</span>
-                ) : promptLength === 0 ? (
-                  <span className={styles.blockerMuted}>输入提示词后即可开始生成</span>
-                ) : promptLength > 4000 ? (
-                  <span className={styles.blockerError}>提示词超出 4,000 字上限</span>
-                ) : (
-                  <span className={styles.readyHint}>
-                    <Icon name="check" size={14} />
-                    <span>就绪 · Ctrl / ⌘ + ↵ 快速提交</span>
-                  </span>
-                )}
-              </div>
-
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onPointerDown={triggerRipple}
-                onClick={handleGenerate}
-                disabled={!canGenerate}
-              >
-                <span className={styles.rippleLayer} aria-hidden="true">
-                  {ripples.map((wave) => (
-                    <span
-                      key={wave.id}
-                      className={styles.ripple}
-                      style={{
-                        width: `${wave.size}px`,
-                        height: `${wave.size}px`,
-                        left: `${wave.left}px`,
-                        top: `${wave.top}px`,
-                      }}
-                      onAnimationEnd={() => dismissRipple(wave.id)}
-                    />
-                  ))}
-                </span>
-                <Icon name={isSubmitting ? 'loader' : 'sparkles'} size={17} className={isSubmitting ? styles.spinner : ''} />
-                <span>
-                  {isSubmitting
-                    ? '正在提交'
-                    : isReadingImages
-                      ? '正在读取图片'
-                      : !hasDiscovered
-                        ? '正在恢复任务'
-                        : !canSubmit
-                          ? '等待连接 / 确认'
-                          : '开始生成'}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.resultColumn}>
-            <ResultPanel
-              isGenerating={isGenerating}
-              isSubmitting={isSubmitting}
-              taskStatus={selectedTask?.status}
-              result={result}
-              error={error}
-              expectedImageCount={expectedImageCount}
-              expectedAspectRatio={expectedAspectRatio}
-              requestedSize={isSubmitting ? undefined : selectedTask?.requestedSize}
-              onUseIdea={handleUseIdea}
-              onClearResult={handleClearResult}
-            />
-            {selectedTask?.status === 'succeeded' ? (
-              <p className={styles.galleryNotice} role="status">
-                <span>新图片由后端保存，不会重复写入浏览器旧图库。</span>
-                <Link to="/gallery" viewTransition>
-                  查看图库
-                  <Icon name="arrow-up-right" size={13} />
-                </Link>
-              </p>
-            ) : null}
-          </div>
+  return <main id="main" aria-label="创作工作台">
+    <div className={work.proLayout}>
+      <aside className={work.proRail} aria-label="创作设置">
+        <div className={work.proRailScroll}>
+          {initialLoad ? <SkeletonBlock variant="field" /> : <ChannelModelBar explicitSelection channels={channels} channelId={config.channelId ?? ''}
+            provider={activeProvider} model={activeProfile.model} catalog={catalog} catalogLoading={Boolean(channel && !catalog && !configError)}
+            templates={availableTemplates} quota={quota} onChannelChange={selectChannel} onProviderChange={setActiveProvider}
+            onModelChange={(model) => updateProviderProfile(activeProvider, { model })} onApplyTemplate={applyTemplate} />}
+          {configError && <p role="alert" className={work.recoveryAlert}>{configError}</p>}
+          {!initialLoad && !ready && <p className={work.blockerAlert}><Icon name="settings" size={16} />{config.channelId && !channel ? '原渠道已不可用，请重新选择。' : channel && !channel.enabled ? '所选渠道已停用，请重新选择。' : '请在上方选择已启用的渠道与模型。'}</p>}
+          {catalog?.error && <p className={work.blockerAlert}>目录刷新失败，保留上次目录：{catalog.error}</p>}
+          {catalog?.stale && <p className={work.fieldMeta}>目录缓存已过期，可由渠道管理者刷新。</p>}
+          {connectionError && <div className={work.recoveryAlert} role="alert"><p>{connectionError} · 正在重连</p><RippleButton className={work.recoveryBtnTonal} disabled={isRefreshing} onClick={refreshTasks}>刷新状态</RippleButton></div>}
+          {submissionError && <p className={work.recoveryAlert} role="alert">提交提示：{submissionError.message}</p>}
+          {pendingSubmissions.length > 0 && <div className={work.recoveryAlert} role="alert"><strong>有待确认的提交</strong><p>保留原提示词和参数，按原顺序重新选择参考图；恢复只会使用原请求 ID。</p>
+            {pendingSubmissions.map((i) => <div className={work.recoveryActions} key={i.id}><code>{i.id}</code><RippleButton className={work.recoveryBtnPrimary} disabled={isSubmitting || isReadingImages || Boolean(deletingTaskId)} onClick={() => void retrySubmission(i, prompt, config, referenceImages)}>恢复 / 重试同一请求</RippleButton></div>)}
+          </div>}
+          <PromptPanel prompt={prompt} isSubmitting={isSubmitting} canGenerate={canGenerate} onPromptChange={setPrompt} onGenerate={handleGenerate}
+            referenceImages={referenceImages} referenceLimits={referenceLimits} referenceImageError={referenceImageError} onReferenceImagesChange={setReferenceImages} onReadingImagesChange={setIsReadingImages} />
+          <GenerationParamsPanel key={`${config.channelId}:${activeProfile.model}`} config={config} activeProvider={activeProvider} isHydrated={isHydrated && !initialLoad} hasReferenceImages={referenceImages.length > 0}
+            onOpenAIParamsChange={updateOpenAIParams} onGeminiParamsChange={updateGeminiParams} />
+          {saveStatus && <span className={work.fieldMeta} role="status">{saveStatus}</span>}
         </div>
-
-        <div className={styles.historySection}>
-          <TaskRoll
-            tasks={tasks}
-            selectedTask={selectedTask}
-            pendingSubmissions={[]}
-            isSubmitting={isSubmitting}
-            isRefreshing={isRefreshing}
-            isReadingImages={isReadingImages}
-            hasDiscovered={hasDiscovered}
-            connectionError={null}
-            submissionError={null}
-            deletingTaskId={deletingTaskId}
-            deletionError={deletionError}
-            deletionNotice={deletionNotice}
-            onSelectTask={selectTask}
-            onDeleteTask={handleDeleteTask}
-            onRefresh={refreshTasks}
-            onRetrySubmission={(pending) => void retrySubmission(pending, prompt, config, referenceImages)}
-          />
-        </div>
-
-        <aside className={styles.storageNote} aria-label="存储说明">
-          <Icon name="shield" size={16} />
-          <div>
-            <strong>任务与新作品由后端持久保存</strong>
-            <span>后端确认接收后可安全关闭或刷新页面；参数在账号内同步，提示词仅按账号保存在当前浏览器；旧图库不展示、不认领。</span>
-          </div>
-        </aside>
-
-        <footer className={styles.footer}>
-          <span className={styles.footerBrand}>nanobanana <span aria-hidden="true">·</span> 给想象一个形状</span>
-          <span className={styles.cacheItem}>
-            <Icon name="folder" size={13} />
-            本机提示词 <span className={`${styles.cacheValue} tnum`}>{formatBytes(cacheSummary.localBytes)}</span>
-          </span>
-          <span className={styles.cacheItem} title={cacheSummary.gallery?.serverError ?? ''}>
-            后端图库 <span className={`${styles.cacheValue} tnum`}>{cacheSummary.gallery?.server ? `${formatBytes(cacheSummary.gallery.server.totalBytes)} / ${cacheSummary.gallery.server.imageCount} 张` : '暂不可用'}</span>
-            （非浏览器缓存）
-          </span>
-          <span className={styles.protocol}>{providerNameMap[activeProvider]}</span>
+        <footer className={work.proRailFooter}><div className={work.readinessLine}><span className={blocker ? work.readinessErr : work.readinessOk}>{blocker || (channel?.scope === 'shared' ? '就绪 · 将消耗 1 次共享额度' : '就绪 · 使用私有渠道')}</span><span className={work.shortcutHint}>Ctrl / ⌘ ↵</span></div>
+          <M3SplitGenerateButton label={isSubmitting ? '正在提交…' : `生成图像 (${count})`} busy={isSubmitting} disabled={!canGenerate} templates={availableTemplates} onGenerate={handleGenerate} onApplyTemplate={applyTemplate} />
         </footer>
-      </main>
+      </aside>
+      <section className={work.proStage} aria-label="结果画布"><div className={work.stageCard}>
+        <ResultPanel loading={!hasDiscovered && !connectionError} isGenerating={isGenerating} isSubmitting={isSubmitting} taskStatus={selectedTask?.status} model={(isSubmitting ? activeProfile.model : selectedTask?.model) || activeProfile.model}
+          result={result} error={error} expectedImageCount={expectedImageCount} expectedAspectRatio={expectedAspectRatio} requestedSize={isSubmitting ? undefined : selectedTask?.requestedSize}
+          onUseIdea={handleUseIdea} onClearResult={() => { clearResult(); notify({message: '已清空画布，可从任务胶卷重新查看。'}) }} />
+        <TaskRoll tasks={tasks} selectedTask={selectedTask} loading={!hasDiscovered && !connectionError} isSubmitting={isSubmitting} isRefreshing={isRefreshing} deletingTaskId={deletingTaskId}
+          deletionError={deletionError} deletionNotice={deletionNotice} onSelectTask={selectTask} onDeleteTask={handleDeleteTask} onRefresh={refreshTasks} />
+      </div></section>
     </div>
-  )
+    <footer className={styles.footer}><ConnectionSettingsPanel requestPreview={requestPreview} />
+      <span>本机提示词 {formatBytes(cacheSummary.localBytes)} · 云端图库 {cacheSummary.gallery?.server ? `${formatBytes(cacheSummary.gallery.server.totalBytes)} / ${cacheSummary.gallery.server.imageCount} 张` : '暂不可用'} · {providerNameMap[activeProvider]}</span>
+    </footer>
+  </main>
 }
 
 function loadPromptFromStorage(key: string): string {

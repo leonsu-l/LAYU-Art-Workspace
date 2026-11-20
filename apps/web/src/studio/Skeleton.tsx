@@ -116,6 +116,7 @@ export function ShimmerImage({
   className = '',
   wrapperClassName = '',
   onClick,
+  onDimensions,
   title,
 }: {
   src: string
@@ -127,6 +128,7 @@ export function ShimmerImage({
   iconSize?: number
   className?: string
   wrapperClassName?: string
+  onDimensions?: (width: number, height: number) => void
   onClick?: () => void
   title?: string
 }) {
@@ -151,7 +153,8 @@ export function ShimmerImage({
         title={title}
         onClick={onClick}
         className={`${styles.shimmerImageEl} ${isLoaded ? styles.shimmerImageElLoaded : ''} ${className}`}
-        onLoad={() => {
+        onLoad={(e) => {
+          onDimensions?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
           setErroredSrc((prev) => (prev === src ? null : prev))
           setLoadedSrc(src)
         }}
