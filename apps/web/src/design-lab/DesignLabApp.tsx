@@ -700,10 +700,10 @@ export function DesignLabApp() {
         {tab === 'decisions' ? (
           <section className={styles.sectionGrid}>
             <div className={styles.introCard}>
-              <span className={styles.eyebrow}>STAGE 5–6 · REVIEW &amp; PRODUCTION INTEGRATION</span>
-              <h1>已选定方向 A · 钴蓝暗房，全站 5 页原型与交互细节已就绪</h1>
+              <span className={styles.eyebrow}>STAGE 6 · PRODUCTION INTEGRATION</span>
+              <h1>钴蓝暗房已接入工作台、图库、渠道、账号和站点管理</h1>
               <p>
-                本 Design Lab 仍处于 Mock 隔离实验态，生产代码尚未改写。截至目前已完成方向锁定、连接式控件变形修正、M3 Primary Tabs 与手机横滑切页、纯云端图库改造、Snackbar 统一反馈、应用级抛物线缩放预览、图库 Hover+选中色阶修正、M3 Shimmer Skeleton 全站加载占位以及全局复用点击涟漪；确认后即可进入 Stage 6 生产集成。
+                五组页面共用设计令牌、控件、加载占位和预览动效。这里可以用示例数据切换场景；实际应用使用登录账号的渠道、额度、任务和作品。
               </p>
             </div>
 
