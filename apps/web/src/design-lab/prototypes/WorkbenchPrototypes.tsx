@@ -16,15 +16,15 @@ import {
   RatioTileSelector,
   SegmentedRail,
   StudioSelect,
-} from '../components/LabControls'
-import { RippleButton } from '../components/LabRipple'
+} from '../../studio/Controls'
+import { RippleButton } from '../../studio/Ripple'
 import {
   ConnectedRatioSkeleton,
   ShimmerImage,
   SkeletonBlock,
   SplitCtaSkeleton,
-} from '../components/LabSkeleton'
-import type { SnackbarPayload } from '../components/useSnackbar'
+} from '../../studio/Skeleton'
+import type { SnackbarPayload } from '../../studio/useSnackbar'
 import {
   MOCK_ARTWORKS,
   MOCK_CATALOG_BY_CHANNEL,
@@ -42,7 +42,7 @@ import {
   type LabLoadMode,
   type LabPageRoute,
 } from './MultiPagePrototypes'
-import styles from './WorkbenchPrototypes.module.css'
+import styles from '../../studio/Workbench.module.css'
 
 export type { LabLoadMode, LabPageRoute }
 export type LabScenario =

@@ -2,9 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import type { Channel, ModelCatalog } from '@nanobanana/shared/types/studio'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import { backendRequest, backendErrorMessage } from '../services/backendClient'
-import { StudioHeader } from '../components/StudioHeader'
 import styles from './AccountPage.module.css'
-export function ChannelsPage() { return <><StudioHeader /><main id="main" className={styles.page}><h1>我的自定义渠道</h1><ChannelManager scope="private" /></main></> }
+export function ChannelsPage() { return <><main id="main" className={styles.page}><h1>我的自定义渠道</h1><ChannelManager scope="private" /></main></> }
 export function ChannelManager({ scope }: { scope: 'shared' | 'private' }) {
   const [channels, setChannels] = useState<Channel[]>([]); const [editing, setEditing] = useState<Channel | null | undefined>(undefined)
   const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false)

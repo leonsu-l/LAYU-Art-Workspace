@@ -8,21 +8,21 @@ import {
   RatioTileSelector,
   SegmentedRail,
   StudioSelect,
-} from '../components/LabControls'
-import { RippleButton } from '../components/LabRipple'
+} from '../../studio/Controls'
+import { RippleButton } from '../../studio/Ripple'
 import {
   ConnectedRatioSkeleton,
   ShimmerImage,
   SkeletonBlock,
   SkeletonTextStack,
-} from '../components/LabSkeleton'
+} from '../../studio/Skeleton'
 import {
   buildContainerMorphKeyframes,
   isRectMostlyInViewport,
   measureContainImageRect,
   type RectLike,
-} from '../components/lightboxTransition'
-import type { SnackbarPayload } from '../components/useSnackbar'
+} from '../../studio/lightboxTransition'
+import type { SnackbarPayload } from '../../studio/useSnackbar'
 import {
   MOCK_ADMIN_SETTINGS,
   MOCK_ADMIN_USAGE,
@@ -34,7 +34,7 @@ import {
   MOCK_TEMPLATES,
   type MockGalleryItem,
 } from '../mockData'
-import styles from './MultiPagePrototypes.module.css'
+import styles from '../../studio/Pages.module.css'
 
 export type LabPageRoute = 'workbench' | 'gallery' | 'channels' | 'account' | 'admin'
 export type LabLoadMode = 'ready' | 'loading' | 'media-loading'

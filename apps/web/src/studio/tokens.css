@@ -1,10 +1,10 @@
 /* ==========================================================================
-   Design Lab — Authentic Material 3 Expressive Token System
+   Cobalt Studio — Material 3 Expressive Token System
    Tonal surface stepping (no heavy 1px border cages), shape-morphing scale,
    spring physics, and harmonized Primary / Secondary / Tertiary color roles.
    ========================================================================== */
 
-.scope {
+html[data-theme], [data-studio-theme] {
   --md-ref-typeface-brand: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --md-ref-typeface-plain: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --md-ref-typeface-mono: 'Roboto Mono', ui-monospace, 'Cascadia Mono', monospace;
@@ -39,7 +39,7 @@
    DIRECTION A · M3 Expressive Cobalt Studio (Selected)
    Cool slate-tinted neutral tones + Cobalt Primary + Warm Amber Tertiary
    ========================================================================== */
-.scope[data-lab-theme='light'] {
+html[data-theme='light'], [data-studio-theme='light'] {
   --md-sys-color-primary: #2754E6;
   --md-sys-color-on-primary: #FFFFFF;
   --md-sys-color-primary-container: #DCE2FF;
@@ -89,7 +89,7 @@
   --md-sys-elevation-level3: 0 4px 8px rgba(24, 27, 34, 0.12), 0 8px 18px 4px rgba(24, 27, 34, 0.10);
 }
 
-.scope[data-lab-theme='dark'] {
+html[data-theme='dark'], [data-studio-theme='dark'] {
   --md-sys-color-primary: #B6C4FF;
   --md-sys-color-on-primary: #002782;
   --md-sys-color-primary-container: #0E3CC3;

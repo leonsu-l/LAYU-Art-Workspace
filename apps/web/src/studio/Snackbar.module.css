@@ -17,6 +17,7 @@
   transition: bottom 180ms var(--md-sys-motion-easing-standard);
 }
 
+:global(#studio-overlay-root:not(:empty)) ~ .viewportHost,
 :global(#lab-overlay-root:not(:empty)) ~ .viewportHost {
   bottom: max(106px, calc(env(safe-area-inset-bottom, 20px) + 86px));
 }

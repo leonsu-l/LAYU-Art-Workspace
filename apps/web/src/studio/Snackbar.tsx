@@ -1,9 +1,9 @@
-import { Icon } from '../../components/Icon'
-import { RippleButton } from './LabRipple'
+import { Icon } from '../components/Icon'
+import { RippleButton } from './Ripple'
 import type { SnackbarItem } from './useSnackbar'
-import styles from './LabSnackbar.module.css'
+import styles from './Snackbar.module.css'
 
-export function LabSnackbarHost({
+export function SnackbarHost({
   snackbar,
   onDismiss,
   onPause,

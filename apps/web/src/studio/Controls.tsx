@@ -9,19 +9,19 @@ import {
 } from 'react'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import type { Channel, ModelCatalog, Quota, Template } from '@nanobanana/shared/types/studio'
-import { Icon } from '../../components/Icon'
-import { useRipple } from '../../components/ui/useRipple'
+import { Icon } from '../components/Icon'
+import { useRipple } from '../components/ui/useRipple'
 import {
   findFirstEnabledIndex,
   findLastEnabledIndex,
   findNextEnabledIndex,
   findSelectedEnabledIndex,
   type SelectOptionItem,
-} from '../../components/ui/selectNavigation'
-import { RippleButton, RippleOverlay } from './LabRipple'
-import rippleStyles from './LabRipple.module.css'
-import { SkeletonBlock } from './LabSkeleton'
-import styles from './LabControls.module.css'
+} from '../components/ui/selectNavigation'
+import { RippleButton, RippleOverlay } from './Ripple'
+import rippleStyles from './Ripple.module.css'
+import { SkeletonBlock } from './Skeleton'
+import styles from './Controls.module.css'
 
 /* --------------------------------------------------------------------------
    1. Authentic M3 Expressive Select (faithful to m3_example.html language)

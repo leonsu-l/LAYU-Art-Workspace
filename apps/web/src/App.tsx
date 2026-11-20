@@ -6,7 +6,6 @@ import { ChannelSelector } from './components/ChannelSelector'
 import { userStorageKey } from './services/sessionScope'
 import { PromptPanel } from './components/PromptPanel'
 import { ResultPanel } from './components/ResultPanel'
-import { StudioHeader } from './components/StudioHeader'
 import { TaskRoll } from './components/TaskRoll'
 import { useRipple } from './components/ui/useRipple'
 import { useBeforeUnloadGuard } from './hooks/useBeforeUnloadGuard'
@@ -152,7 +151,6 @@ function App() {
 
   return (
     <div className={styles.shell}>
-      <StudioHeader />
       <main id="main" className={styles.page}>
         <header className={styles.studioBar}>
           <div className={styles.studioTitleGroup}>

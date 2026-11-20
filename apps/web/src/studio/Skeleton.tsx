@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
-import { Icon } from '../../components/Icon'
-import styles from './LabSkeleton.module.css'
+import { Icon } from '../components/Icon'
+import styles from './Skeleton.module.css'
 
 export type SkeletonVariant =
   | 'text'

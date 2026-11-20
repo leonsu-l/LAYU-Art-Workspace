@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useSession } from '../hooks/SessionContext'
 import { backendRequest, backendErrorMessage } from '../services/backendClient'
-import { StudioHeader } from '../components/StudioHeader'
 import styles from './AccountPage.module.css'
 export function LoginPage() {
   const { user, loading, authenticate, logout, error: sessionError } = useSession()
@@ -20,7 +19,7 @@ export function LoginPage() {
     try { await authenticate(register, { username: data.get('username'), password: data.get('password'), ...(register ? { inviteCode: data.get('inviteCode') } : {}) }) }
     catch (e) { setError(backendErrorMessage(e)) } finally { setBusy(false) }
   }
-  return <><StudioHeader /><main id="main" className={styles.page}><section className={styles.card}><h1>{register ? '创建账号' : '登录工作台'}</h1><p>用户名：3–64 个 ASCII 字母、数字、点、下划线或连字符。密码：12–1024 个字符。</p><form className={styles.form} onSubmit={(e) => void submit(e)}>
+  return <><main id="main" className={styles.page}><section className={styles.card}><h1>{register ? '创建账号' : '登录工作台'}</h1><p>用户名：3–64 个 ASCII 字母、数字、点、下划线或连字符。密码：12–1024 个字符。</p><form className={styles.form} onSubmit={(e) => void submit(e)}>
     <label className={styles.field}>用户名<input className={styles.input} name="username" required autoComplete="username" /></label>
     <label className={styles.field}>密码<input className={styles.input} name="password" type="password" required autoComplete={register ? 'new-password' : 'current-password'} /></label>
     {register && <label className={styles.field}>邀请码<input className={styles.input} name="inviteCode" required autoComplete="off" /></label>}
@@ -40,7 +39,7 @@ export function PasswordPage() {
     try { await backendRequest('/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword: data.get('currentPassword'), newPassword: data.get('newPassword') }) }); form.reset(); forgetSession(); await backendRequest('/auth/session'); navigate('/login', { replace: true }) }
     catch (e) { setError(backendErrorMessage(e)) } finally { setBusy(false) }
   }
-  return <><StudioHeader /><main id="main" className={styles.page}><section className={styles.card}><h1>{user?.mustChangePassword ? '请先修改密码' : '修改密码'}</h1><p>新密码须为 12–1024 个字符。改密后所有旧会话失效，请重新登录。</p><form className={styles.form} onSubmit={(e) => void submit(e)}>
+  return <><main id="main" className={styles.page}><section className={styles.card}><h1>{user?.mustChangePassword ? '请先修改密码' : '修改密码'}</h1><p>新密码须为 12–1024 个字符。改密后所有旧会话失效，请重新登录。</p><form className={styles.form} onSubmit={(e) => void submit(e)}>
     <label className={styles.field}>当前密码<input className={styles.input} type="password" name="currentPassword" autoComplete="current-password" required /></label>
     <label className={styles.field}>新密码<input className={styles.input} type="password" name="newPassword" autoComplete="new-password" required /></label>
     <label className={styles.field}>确认新密码<input className={styles.input} type="password" name="confirm" autoComplete="new-password" required /></label>

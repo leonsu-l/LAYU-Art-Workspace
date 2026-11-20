@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../components/Icon'
-import { StudioHeader } from '../components/StudioHeader'
 import { formatBytes } from '../utils/galleryDb'
 import {
   deleteGalleryItem,
@@ -166,7 +165,6 @@ export function GalleryPage() {
 
   return (
     <div className={styles.shell}>
-      <StudioHeader />
       <main id="main" className={styles.page}>
         <header className={styles.masthead}>
           <div className={styles.mastheadMain}>

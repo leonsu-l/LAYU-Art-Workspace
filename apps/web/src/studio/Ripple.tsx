@@ -1,6 +1,6 @@
 import type { ComponentPropsWithRef } from 'react'
-import { useRipple, type RippleWave } from '../../components/ui/useRipple'
-import styles from './LabRipple.module.css'
+import { useRipple, type RippleWave } from '../components/ui/useRipple'
+import styles from './Ripple.module.css'
 
 export type RippleTone = 'current' | 'light'
 

@@ -9,17 +9,17 @@ import {
   RatioTileSelector,
   SegmentedRail,
   StudioSelect,
-} from './components/LabControls'
-import { RippleButton } from './components/LabRipple'
+} from '../studio/Controls'
+import { RippleButton } from '../studio/Ripple'
 import {
   ConnectedRatioSkeleton,
   ShimmerImage,
   SkeletonBlock,
   SkeletonTextStack,
   SplitCtaSkeleton,
-} from './components/LabSkeleton'
-import { LabSnackbarHost } from './components/LabSnackbar'
-import { useSnackbar } from './components/useSnackbar'
+} from '../studio/Skeleton'
+import { SnackbarHost } from '../studio/Snackbar'
+import { useSnackbar } from '../studio/useSnackbar'
 import {
   MOCK_ARTWORKS,
   MOCK_CATALOG_BY_CHANNEL,
@@ -34,7 +34,7 @@ import {
   type LabPageTransition,
   type LabScenario,
 } from './prototypes/WorkbenchPrototypes'
-import tokenStyles from './tokens.module.css'
+import '../studio/tokens.css'
 import styles from './DesignLabApp.module.css'
 
 type LabTab = 'audit' | 'components' | 'prototypes' | 'decisions'
@@ -130,8 +130,8 @@ export function DesignLabApp() {
 
   return (
     <div
-      className={`${tokenStyles.scope} ${styles.labShell}`}
-      data-lab-theme={theme}
+      className={styles.labShell}
+      data-studio-theme={theme}
     >
       {/* Top Design Lab M3 App Bar */}
       <header className={styles.labBar}>
@@ -750,7 +750,7 @@ export function DesignLabApp() {
                   title: 'Snackbar 浮动通知体系与安全阻断边界',
                   body: (
                     <>
-                      新增 <code>LabSnackbarHost</code>（自动上避预览底栏），承接操作结果、模板套用、任务详情与删图警告等瞬时反馈，不破坏流式排版；强制改密说明、待恢复提交与无可用渠道阻断等核心提示保留内联常驻。
+                      新增 <code>SnackbarHost</code>（自动上避预览底栏），承接操作结果、模板套用、任务详情与删图警告等瞬时反馈，不破坏流式排版；强制改密说明、待恢复提交与无可用渠道阻断等核心提示保留内联常驻。
                     </>
                   ),
                 },
@@ -795,7 +795,7 @@ export function DesignLabApp() {
 
       <div id="lab-overlay-root" />
 
-      <LabSnackbarHost
+      <SnackbarHost
         snackbar={snackbar}
         onDismiss={dismissSnackbar}
         onPause={pauseSnackbar}

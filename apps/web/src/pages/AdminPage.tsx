@@ -3,13 +3,12 @@ import type { AdminUser, Invite, Settings, Template, Usage } from '@nanobanana/s
 import type { ProviderType, ProviderConfig } from '@nanobanana/shared/types/generation'
 import { createDefaultProviderConfig } from '@nanobanana/shared/utils/configDefaults'
 import { backendRequest, backendErrorMessage } from '../services/backendClient'
-import { StudioHeader } from '../components/StudioHeader'
 import { GenerationParamsPanel } from '../components/ConfigPanel'
 import { ChannelManager } from './ChannelsPage'
 import styles from './AccountPage.module.css'
 export function AdminPage() {
   const [tab, setTab] = useState('channels')
-  return <><StudioHeader /><main id="main" className={styles.page}><h1>站点管理</h1><nav className={styles.tabs} aria-label="管理分类">{Object.entries({ channels: '共享渠道', users: '用户', invites: '邀请码', settings: '额度与队列', templates: '参数模板', usage: '使用统计' }).map(([id, name]) => <button key={id} aria-pressed={tab === id} onClick={() => setTab(id)}>{name}</button>)}</nav>
+  return <><main id="main" className={styles.page}><h1>站点管理</h1><nav className={styles.tabs} aria-label="管理分类">{Object.entries({ channels: '共享渠道', users: '用户', invites: '邀请码', settings: '额度与队列', templates: '参数模板', usage: '使用统计' }).map(([id, name]) => <button key={id} aria-pressed={tab === id} onClick={() => setTab(id)}>{name}</button>)}</nav>
     {tab === 'channels' ? <ChannelManager scope="shared" /> : tab === 'users' ? <UsersAdmin /> : tab === 'invites' ? <InvitesAdmin /> : tab === 'settings' ? <SettingsAdmin /> : tab === 'templates' ? <TemplatesAdmin /> : <UsageAdmin />}
   </main></>
 }
