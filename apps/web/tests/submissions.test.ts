@@ -143,6 +143,31 @@ test('CSRF headers cover every mutating verb and decode the cookie', () => {
   for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) assert.deepEqual(csrfHeaders(method, 'other=x; XSRF-TOKEN=a%2Fb'), { 'X-XSRF-TOKEN': 'a/b' })
   assert.deepEqual(csrfHeaders('GET', 'XSRF-TOKEN=secret'), {})
 })
+test('missing CSRF cookie is renewed once for concurrent writes; a failed renewal sends no mutation', async (t) => {
+  const cookieJar = { cookie: '' }
+  const originals = ['window', 'document'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const)
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { setTimeout, clearTimeout } })
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: cookieJar })
+  t.after(() => { for (const [key, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key) } })
+  changeSessionScope('preview-user')
+  const calls: string[] = []
+  let issueToken = true
+  t.mock.method(globalThis, 'fetch', async (path: string, init: RequestInit) => {
+    calls.push(path)
+    if (path === '/api/auth/session') {
+      await Promise.resolve()
+      if (issueToken) cookieJar.cookie = 'XSRF-TOKEN=renewed'
+      return Response.json({ user: { id: 'preview-user' } })
+    }
+    assert.equal((init.headers as Record<string, string>)['X-XSRF-TOKEN'], 'renewed')
+    return Response.json({ ok: true })
+  })
+  await Promise.all([backendRequest('/preferences', { method: 'PUT' }), backendRequest('/admin/settings', { method: 'PUT' })])
+  assert.deepEqual(calls, ['/api/auth/session', '/api/preferences', '/api/admin/settings'])
+  cookieJar.cookie = ''; issueToken = false
+  await assert.rejects(backendRequest('/tasks', { method: 'POST' }), BackendRequestError)
+  assert.equal(calls.at(-1), '/api/auth/session')
+})
 test('dynamic models keep custom values, application budgets and key-free task previews', () => {
   const config = createDefaultProviderConfig()
   assert.equal(config.profiles['openai-compatible'].model, '')
