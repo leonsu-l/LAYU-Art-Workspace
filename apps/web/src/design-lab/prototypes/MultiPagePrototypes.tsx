@@ -1,29 +1,22 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef, useState } from 'react'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import { Icon } from '../../components/Icon'
+import { AccountSkeleton, AccountShowcase } from '../../studio/AccountView'
+import { GalleryView } from '../../studio/GalleryView'
+import { LabIcon } from '../../studio/LabIcon'
 import {
   CountStepper,
   M3PrimaryTabs,
   RatioTileSelector,
   SegmentedRail,
   StudioSelect,
-} from '../components/LabControls'
-import { RippleButton } from '../components/LabRipple'
-import { LabIcon } from '../components/LabIcon'
+} from '../../studio/Controls'
+import { RippleButton } from '../../studio/Ripple'
 import {
   ConnectedRatioSkeleton,
-  ShimmerImage,
   SkeletonBlock,
-  SkeletonTextStack,
-} from '../components/LabSkeleton'
-import {
-  buildContainerMorphKeyframes,
-  isRectMostlyInViewport,
-  measureContainImageRect,
-  type RectLike,
-} from '../components/lightboxTransition'
-import type { SnackbarPayload } from '../components/useSnackbar'
+} from '../../studio/Skeleton'
+import type { SnackbarPayload } from '../../studio/useSnackbar'
 import {
   MOCK_ADMIN_ISSUES,
   MOCK_ADMIN_SETTINGS,
@@ -37,16 +30,11 @@ import {
   MOCK_R2_BUCKETS,
   MOCK_TEMPLATES,
   type AdminIssueRecord,
-  type MockGalleryItem,
 } from '../mockData'
-import {
-  formatBytes,
-  formatRetentionPolicyText,
-  getImageRetentionSummary,
-} from '../utils/retentionFormat'
+import { formatRetentionPolicyText, getImageRetentionSummary } from '../utils/retentionFormat'
 import { AdminIssuesModule } from './AdminIssuesModule'
 import { AdminStorageModule } from './AdminStorageModule'
-import styles from './MultiPagePrototypes.module.css'
+import styles from '../../studio/Pages.module.css'
 
 export type LabPageRoute = 'workbench' | 'gallery' | 'channels' | 'account' | 'admin'
 export type LabLoadMode = 'ready' | 'loading' | 'media-loading'
@@ -64,22 +52,8 @@ export type LabAdminTab =
 /* ==========================================================================
    PAGE 2 · /gallery — 我的图库
    ========================================================================== */
-function cancelAnimations(list: Animation[]) {
-  for (const anim of list) {
-    try {
-      anim.cancel()
-    } catch {
-      // Ignore canceled or already released animations
-    }
-  }
-}
-
 export function GalleryPrototype({
-  onGoWorkbench,
-  onNotify,
-  loadMode = 'ready',
-  galleryScenario = 'mixed',
-  onGalleryScenarioChange,
+  onGoWorkbench, onNotify, loadMode = 'ready', galleryScenario = 'mixed', onGalleryScenarioChange,
 }: {
   onGoWorkbench: () => void
   onNotify: (payload: SnackbarPayload) => void
@@ -87,942 +61,74 @@ export function GalleryPrototype({
   galleryScenario?: LabGalleryScenario
   onGalleryScenarioChange?: (next: LabGalleryScenario) => void
 }) {
-  const [selectedKeys, setSelectedKeys] = useState<string[]>(['srv-2'])
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [previewItem, setPreviewItem] = useState<MockGalleryItem | null>(null)
-  const [openSeq, setOpenSeq] = useState(0)
-  const [isClosing, setIsClosing] = useState(false)
-  const [hudVisible, setHudVisible] = useState(true)
-  const [promptExpanded, setPromptExpanded] = useState(false)
-  const [invalidated404Keys, setInvalidated404Keys] = useState<string[]>([])
+  const [selected, setSelected] = useState(['srv-2'])
+  const [refreshing, setRefreshing] = useState(false)
+  const [removed404, setRemoved404] = useState(false)
   const [nowMs] = useState(() => Date.now())
+  const simulate404 = galleryScenario === 'expired-404'
+  const expiredKey = 'srv-1'
+  const items = galleryScenario === 'empty' ? [] : simulate404 && removed404
+    ? MOCK_GALLERY_ITEMS.filter((item) => item.key !== expiredKey)
+    : MOCK_GALLERY_ITEMS
+  const policyDays = galleryScenario === 'permanent-policy' ? null : MOCK_GALLERY_RETENTION_DAYS
+  const loading = loadMode === 'loading' || refreshing
 
-  const thumbRefs = useRef<Record<string, HTMLButtonElement | null>>({})
-  const backdropRef = useRef<HTMLDivElement | null>(null)
-  const surfaceRef = useRef<HTMLDivElement | null>(null)
-  const imgRef = useRef<HTMLImageElement | null>(null)
-  const topHudRef = useRef<HTMLDivElement | null>(null)
-  const bottomHudRef = useRef<HTMLDivElement | null>(null)
-
-  const launchOriginRef = useRef<{ key: string; rect: RectLike } | null>(null)
-  const lastLaunchSeqRef = useRef(0)
-  const lastPreviewKeyRef = useRef<string | null>(null)
-  const stepDirectionRef = useRef<-1 | 1>(1)
-  const isClosingRef = useRef(false)
-  const closeSessionRef = useRef(0)
-  const openAnimsRef = useRef<Animation[]>([])
-  const openHudAnimsRef = useRef<Animation[]>([])
-  const stepAnimsRef = useRef<Animation[]>([])
-  const closeAnimsRef = useRef<Animation[]>([])
-  const closeTimerRef = useRef<number | null>(null)
-  const refreshTimerRef = useRef<number | null>(null)
-
-  const siteRetentionDays =
-    galleryScenario === 'permanent-policy' ? null : MOCK_GALLERY_RETENTION_DAYS
-  const items = useMemo(() => {
-    if (galleryScenario === 'empty') return []
-    const hidden = galleryScenario === 'expired-404' ? invalidated404Keys : []
-    return MOCK_GALLERY_ITEMS.filter((item) => !hidden.includes(item.key))
-  }, [galleryScenario, invalidated404Keys])
-  const totalBytes = items.reduce((sum, item) => sum + item.bytes, 0)
-  const showListSkeleton = loadMode === 'loading' || isRefreshing
-  const showMediaSkeleton = loadMode === 'media-loading'
-  const allSelected = items.length > 0 && items.every((item) => selectedKeys.includes(item.key))
-  const previewIndex = previewItem ? items.findIndex((i) => i.key === previewItem.key) : -1
-  const previewRetention = previewItem
-    ? getImageRetentionSummary(previewItem.retentionDays, previewItem.expiresAt, nowMs)
-    : null
-
-  const finalizeClose = useCallback((sessionId?: number) => {
-    if (sessionId !== undefined && sessionId !== closeSessionRef.current) return
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current)
-      closeTimerRef.current = null
-    }
-    // Leave active close animations filling (`fill: 'forwards'` / `'both'`) until
-    // React unmounts the portal, avoiding a 1-frame fullscreen snap-back flash.
-    openAnimsRef.current = []
-    openHudAnimsRef.current = []
-    stepAnimsRef.current = []
-    isClosingRef.current = false
-    setIsClosing(false)
-    setPreviewItem(null)
-  }, [])
-
-  function triggerSimulated404(item: MockGalleryItem) {
-    // Never retain an invalid preview once 404 is encountered; prompt list re-sync.
-    setInvalidated404Keys((prev) =>
-      prev.includes(item.key) ? prev : [...prev, item.key],
-    )
-    setSelectedKeys((prev) => prev.filter((k) => k !== item.key))
-    if (previewItem?.key === item.key) {
-      finalizeClose()
-    }
-    onNotify({
-      tone: 'warning',
-      message: '图片已失效（404），已移除预览，建议刷新图库。',
-      actionLabel: '刷新列表',
-      onAction: () => {
-        setInvalidated404Keys([])
+  useEffect(() => {
+    if (!refreshing) return
+    const timer = window.setTimeout(() => {
+      setRefreshing(false)
+      if (simulate404) {
+        setRemoved404(false)
         onGalleryScenarioChange?.('mixed')
-        onNotify({
-          tone: 'info',
-          message: '图库已同步',
-        })
-      },
+      }
+      onNotify({ message: '图库已刷新' })
+    }, 850)
+    return () => window.clearTimeout(timer)
+  }, [refreshing, simulate404, onGalleryScenarioChange, onNotify])
+
+  function restoreList() {
+    setRemoved404(false)
+    onGalleryScenarioChange?.('mixed')
+    onNotify({ message: '图库已同步' })
+  }
+
+  function removeExpiredImage() {
+    setRemoved404(true)
+    setSelected((keys) => keys.filter((key) => key !== expiredKey))
+    onNotify({
+      tone: 'warning', message: '图片已失效（404），已移除预览，建议刷新图库。',
+      actionLabel: '刷新列表', onAction: restoreList,
     })
   }
 
-  function openPreview(item: MockGalleryItem) {
-    if (galleryScenario === 'expired-404' && item.key === 'srv-1') {
-      triggerSimulated404(item)
-      return
-    }
-    closeSessionRef.current += 1
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current)
-      closeTimerRef.current = null
-    }
-    const thumbEl = thumbRefs.current[item.key]
-    launchOriginRef.current = thumbEl
-      ? { key: item.key, rect: thumbEl.getBoundingClientRect() }
-      : null
-    isClosingRef.current = false
-    setIsClosing(false)
-    setHudVisible(true)
-    setPromptExpanded(false)
-    setOpenSeq((seq) => seq + 1)
-    setPreviewItem(item)
-  }
-
-  const closePreview = useCallback(() => {
-    if (!previewItem || isClosingRef.current) return
-
-    const sessionId = ++closeSessionRef.current
-
-    const reducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    const backdropEl = backdropRef.current
-    const surfaceEl = surfaceRef.current
-    const imgEl = imgRef.current
-
-    if (
-      reducedMotion ||
-      !backdropEl ||
-      !surfaceEl ||
-      !imgEl ||
-      typeof surfaceEl.animate !== 'function'
-    ) {
-      finalizeClose(sessionId)
-      return
-    }
-
-    isClosingRef.current = true
-    setIsClosing(true)
-
-    // Hide floating HUD overlays immediately from their current visual opacity
-    const topHudOpacity = topHudRef.current
-      ? Number(window.getComputedStyle(topHudRef.current).opacity)
-      : 1
-    const bottomHudOpacity = bottomHudRef.current
-      ? Number(window.getComputedStyle(bottomHudRef.current).opacity)
-      : 1
-    cancelAnimations(openHudAnimsRef.current)
-    cancelAnimations(stepAnimsRef.current)
-    openHudAnimsRef.current = []
-    stepAnimsRef.current = []
-    const hudCloseAnims: Animation[] = []
-    if (topHudRef.current) {
-      hudCloseAnims.push(
-        topHudRef.current.animate(
-          [
-            { opacity: Number.isFinite(topHudOpacity) ? topHudOpacity : 1, transform: 'translate3d(0, 0, 0)' },
-            { opacity: 0, transform: 'translate3d(0, -6px, 0)' },
-          ],
-          { duration: 85, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
-        ),
-      )
-    }
-    if (bottomHudRef.current) {
-      hudCloseAnims.push(
-        bottomHudRef.current.animate(
-          [
-            { opacity: Number.isFinite(bottomHudOpacity) ? bottomHudOpacity : 1, transform: 'translate3d(-50%, 0, 0)' },
-            { opacity: 0, transform: 'translate3d(-50%, 8px, 0)' },
-          ],
-          { duration: 85, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
-        ),
-      )
-    }
-
-    // Reversing in-flight launch seamlessly if interrupted mid-open on the same item
-    const [surfaceOpenAnim, imgOpenAnim, scrimOpenAnim] = openAnimsRef.current
-    if (
-      surfaceOpenAnim?.playState === 'running' &&
-      previewItem.key === launchOriginRef.current?.key
-    ) {
-      for (const anim of [surfaceOpenAnim, imgOpenAnim, scrimOpenAnim]) {
-        if (!anim) continue
-        anim.effect?.updateTiming({ fill: 'both' })
-        anim.reverse()
-      }
-      closeAnimsRef.current = [
-        surfaceOpenAnim,
-        ...(imgOpenAnim ? [imgOpenAnim] : []),
-        ...(scrimOpenAnim ? [scrimOpenAnim] : []),
-        ...hudCloseAnims,
-      ]
-      const reverseMs = Number(surfaceOpenAnim.currentTime ?? 180)
-      closeTimerRef.current = window.setTimeout(
-        () => finalizeClose(sessionId),
-        Math.max(120, reverseMs + 70),
-      )
-      surfaceOpenAnim.finished.then(
-        () => finalizeClose(sessionId),
-        () => {},
-      )
-      return
-    }
-
-    cancelAnimations(openAnimsRef.current)
-    openAnimsRef.current = []
-
-    const destThumbEl = thumbRefs.current[previewItem.key]
-    let destRect: RectLike | null = destThumbEl ? destThumbEl.getBoundingClientRect() : null
-    if (destThumbEl && destRect && !isRectMostlyInViewport(destRect)) {
-      destThumbEl.scrollIntoView({ block: 'center', behavior: 'instant' })
-      destRect = destThumbEl.getBoundingClientRect()
-    }
-
-    const surfaceRect = surfaceEl.getBoundingClientRect()
-    const imgRect = measureContainImageRect(surfaceRect, imgEl, previewItem.dimensions)
-
-    if (destRect && destRect.width > 0 && isRectMostlyInViewport(destRect)) {
-      const closeKeyframes = buildContainerMorphKeyframes(destRect, surfaceRect, imgRect, 'close', 14)
-      surfaceEl.style.transformOrigin = '0 0'
-      const surfaceCloseAnim = surfaceEl.animate(closeKeyframes, {
-        duration: 260,
-        easing: 'linear',
-        fill: 'forwards',
-      })
-      const imgCloseAnim = imgEl.animate(
-        [
-          { borderRadius: '16px' },
-          { borderRadius: '0px', offset: 0.7 },
-          { borderRadius: '0px' },
-        ],
-        {
-          duration: 260,
-          easing: 'cubic-bezier(0.24, 0.08, 0.18, 1)',
-          fill: 'forwards',
-        },
-      )
-      const backdropCloseAnim = backdropEl.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: 220,
-        delay: 20,
-        easing: 'cubic-bezier(0.32, 0, 0.2, 1)',
-        fill: 'forwards',
-      })
-      closeAnimsRef.current = [surfaceCloseAnim, imgCloseAnim, backdropCloseAnim, ...hudCloseAnims]
-      closeTimerRef.current = window.setTimeout(() => finalizeClose(sessionId), 360)
-      surfaceCloseAnim.finished.then(
-        () => finalizeClose(sessionId),
-        () => {},
-      )
-    } else {
-      surfaceEl.style.transformOrigin = ''
-      const surfaceCloseAnim = surfaceEl.animate(
-        [
-          { transform: 'scale(1)', opacity: 1 },
-          { transform: 'scale(0.9)', opacity: 0 },
-        ],
-        { duration: 170, easing: 'cubic-bezier(0.3, 0, 1, 1)', fill: 'forwards' },
-      )
-      const backdropCloseAnim = backdropEl.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: 170,
-        easing: 'ease-out',
-        fill: 'forwards',
-      })
-      closeAnimsRef.current = [surfaceCloseAnim, backdropCloseAnim, ...hudCloseAnims]
-      closeTimerRef.current = window.setTimeout(() => finalizeClose(sessionId), 240)
-      surfaceCloseAnim.finished.then(
-        () => finalizeClose(sessionId),
-        () => {},
-      )
-    }
-  }, [finalizeClose, previewItem])
-
-  const stepPreview = useCallback(
-    (delta: -1 | 1) => {
-      if (previewIndex < 0 || isClosingRef.current) return
-      const nextIdx = (previewIndex + delta + items.length) % items.length
-      stepDirectionRef.current = delta
-      setPromptExpanded(false)
-      setPreviewItem(items[nextIdx])
-    },
-    [items, previewIndex],
-  )
-
-  useLayoutEffect(() => {
-    if (!previewItem) {
-      cancelAnimations(openAnimsRef.current)
-      cancelAnimations(openHudAnimsRef.current)
-      cancelAnimations(stepAnimsRef.current)
-      cancelAnimations(closeAnimsRef.current)
-      openAnimsRef.current = []
-      openHudAnimsRef.current = []
-      stepAnimsRef.current = []
-      closeAnimsRef.current = []
-      lastPreviewKeyRef.current = null
-      return
-    }
-
-    const reducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reducedMotion) {
-      lastLaunchSeqRef.current = openSeq
-      lastPreviewKeyRef.current = previewItem.key
-      return
-    }
-
-    const backdropEl = backdropRef.current
-    const surfaceEl = surfaceRef.current
-    const imgEl = imgRef.current
-    if (!backdropEl || !surfaceEl || !imgEl || typeof surfaceEl.animate !== 'function') return
-
-    const isFreshLaunch = openSeq !== lastLaunchSeqRef.current
-    if (!isFreshLaunch) {
-      if (lastPreviewKeyRef.current !== previewItem.key) {
-        lastPreviewKeyRef.current = previewItem.key
-        cancelAnimations(openAnimsRef.current)
-        cancelAnimations(stepAnimsRef.current)
-        openAnimsRef.current = []
-        surfaceEl.style.transformOrigin = ''
-        const dir = stepDirectionRef.current
-        if (typeof imgEl.animate === 'function') {
-          const stepAnim = imgEl.animate(
-            [
-              { opacity: 0.65, transform: `translate3d(${dir * 22}px, 0, 0) scale(0.985)` },
-              { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' },
-            ],
-            { duration: 150, easing: 'cubic-bezier(0.2, 0, 0, 1)', fill: 'none' },
-          )
-          stepAnimsRef.current = [stepAnim]
-        }
-      }
-      return
-    }
-
-    lastLaunchSeqRef.current = openSeq
-    lastPreviewKeyRef.current = previewItem.key
-
-    // Interrupt any in-flight close or launch animation synchronously before measuring
-    cancelAnimations(closeAnimsRef.current)
-    cancelAnimations(openAnimsRef.current)
-    cancelAnimations(openHudAnimsRef.current)
-    cancelAnimations(stepAnimsRef.current)
-    closeAnimsRef.current = []
-    openAnimsRef.current = []
-    openHudAnimsRef.current = []
-    stepAnimsRef.current = []
-
-    const origin = launchOriginRef.current?.rect ?? null
-    const surfaceRect = surfaceEl.getBoundingClientRect()
-    const imgRect = measureContainImageRect(surfaceRect, imgEl, previewItem.dimensions)
-
-    if (origin && origin.width > 0 && isRectMostlyInViewport(origin)) {
-      const openKeyframes = buildContainerMorphKeyframes(origin, surfaceRect, imgRect, 'open', 14)
-      surfaceEl.style.transformOrigin = '0 0'
-
-      const surfaceAnim = surfaceEl.animate(openKeyframes, {
-        duration: 340,
-        easing: 'linear',
-        fill: 'none',
-      })
-
-      const imgAnim = imgEl.animate(
-        [
-          { borderRadius: '0px' },
-          { borderRadius: '0px', offset: 0.25 },
-          { borderRadius: '16px' },
-        ],
-        {
-          duration: 340,
-          easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
-          fill: 'none',
-        },
-      )
-
-      const backdropAnim = backdropEl.animate([{ opacity: 0 }, { opacity: 1 }], {
-        duration: 210,
-        easing: 'cubic-bezier(0.2, 0, 0, 1)',
-        fill: 'none',
-      })
-
-      openAnimsRef.current = [surfaceAnim, imgAnim, backdropAnim]
-
-      const hudAnims: Animation[] = []
-      if (topHudRef.current) {
-        hudAnims.push(
-          topHudRef.current.animate(
-            [
-              { opacity: 0, transform: 'translate3d(0, -10px, 0)' },
-              { opacity: 1, transform: 'translate3d(0, 0, 0)' },
-            ],
-            {
-              duration: 180,
-              delay: 90,
-              easing: 'cubic-bezier(0.2, 0, 0, 1)',
-              fill: 'backwards',
-            },
-          ),
-        )
-      }
-      if (bottomHudRef.current) {
-        hudAnims.push(
-          bottomHudRef.current.animate(
-            [
-              { opacity: 0, transform: 'translate3d(-50%, 12px, 0)' },
-              { opacity: 1, transform: 'translate3d(-50%, 0, 0)' },
-            ],
-            {
-              duration: 180,
-              delay: 110,
-              easing: 'cubic-bezier(0.2, 0, 0, 1)',
-              fill: 'backwards',
-            },
-          ),
-        )
-      }
-      openHudAnimsRef.current = hudAnims
-    } else {
-      surfaceEl.style.transformOrigin = ''
-      const surfaceAnim = surfaceEl.animate(
-        [
-          { transform: 'scale(0.92)', opacity: 0 },
-          { transform: 'scale(1)', opacity: 1 },
-        ],
-        { duration: 210, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'none' },
-      )
-      const backdropAnim = backdropEl.animate([{ opacity: 0 }, { opacity: 1 }], {
-        duration: 190,
-        easing: 'ease-out',
-        fill: 'none',
-      })
-      openAnimsRef.current = [surfaceAnim, backdropAnim]
-    }
-  }, [openSeq, previewItem])
-
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current)
-      if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
-      cancelAnimations(openAnimsRef.current)
-      cancelAnimations(openHudAnimsRef.current)
-      cancelAnimations(stepAnimsRef.current)
-      cancelAnimations(closeAnimsRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!previewItem) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closePreview()
-      } else if (event.key === 'ArrowLeft') {
-        stepPreview(-1)
-      } else if (event.key === 'ArrowRight') {
-        stepPreview(1)
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [closePreview, previewItem, stepPreview])
-
-  function toggleSelect(key: string) {
-    setSelectedKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
-  }
-
-  function toggleAll() {
-    if (allSelected) {
-      setSelectedKeys([])
-    } else {
-      setSelectedKeys(items.map((item) => item.key))
-    }
-  }
-
-  return (
-    <div className={styles.pageWrap}>
-      <header className={styles.pageHeader}>
-        <div className={styles.pageTitleGroup}>
-          <span className={styles.pageEyebrow}>STUDIO GALLERY</span>
-          <h1 className={styles.pageTitle}>我的图库</h1>
-          <p className={styles.pageSub}>按最新生成倒序排列 · 点击卡片预览原图、提示词与任务分组</p>
+  return <GalleryView
+    key={galleryScenario}
+    items={items} selectedKeys={items.length ? selected : []} onSelection={setSelected}
+    onGoWorkbench={onGoWorkbench} onRefresh={() => setRefreshing(true)} isRefreshing={loading}
+    showListSkeleton={loading} showMediaSkeleton={loadMode === 'media-loading'} overlayId="lab-overlay-root"
+    retention={{
+      policyLabel: formatRetentionPolicyText(policyDays),
+      describe: (item) => getImageRetentionSummary(item.retentionDays, item.expiresAt, nowMs),
+    }}
+    notice={simulate404 && (
+      <div className={styles.galleryNoticeBanner} role="status">
+        <div className={styles.galleryNoticeText}>
+          <Icon name="alert-circle" size={16} />
+          <span><strong>图片加载失败（404）：</strong>图片可能已过期或被删除，打开失效图片时会自动移除并提示刷新列表。</span>
         </div>
-
-        <div className={styles.pageHeaderActions}>
-          {showListSkeleton ? (
-            <>
-              <SkeletonBlock variant="pill" width={148} height={30} />
-              <SkeletonBlock variant="pill" width={132} height={30} staggerIndex={1} />
-            </>
-          ) : (
-            <>
-              <span className={styles.policyPill}>
-                <LabIcon name="clock" size={14} />
-                <span>新图{formatRetentionPolicyText(siteRetentionDays)}</span>
-              </span>
-              <span className={styles.summaryPill}>
-                {items.length} 张 · {formatBytes(totalBytes)}
-              </span>
-            </>
-          )}
-          <RippleButton
-            type="button"
-            className={styles.tonalBtn}
-            disabled={showListSkeleton}
-            onClick={() => {
-              if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
-              setIsRefreshing(true)
-              refreshTimerRef.current = window.setTimeout(() => {
-                setIsRefreshing(false)
-                if (galleryScenario === 'expired-404') {
-                  setInvalidated404Keys([])
-                  onGalleryScenarioChange?.('mixed')
-                }
-                onNotify({
-                  tone: 'info',
-                  message: '图库已刷新',
-                })
-              }, 850)
-            }}
-          >
-            <Icon name="loader" size={14} />
-            <span>{showListSkeleton ? '正在刷新…' : '刷新图库'}</span>
-          </RippleButton>
-          <RippleButton type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
-            <Icon name="plus" size={15} />
-            <span>创建新作品</span>
-          </RippleButton>
-        </div>
-      </header>
-
-      {galleryScenario === 'expired-404' ? (
-        <div className={styles.galleryNoticeBanner} role="status">
-          <div className={styles.galleryNoticeText}>
-            <Icon name="alert-circle" size={16} />
-            <span>
-              <strong>图片加载失败（404）：</strong>
-              图片可能已过期或被删除，打开失效图片时会自动移除并提示刷新列表。
-            </span>
-          </div>
-          <RippleButton
-            type="button"
-            className={styles.tonalBtn}
-            onClick={() => {
-              const first = items[0]
-              if (first) {
-                triggerSimulated404(first)
-              } else {
-                setInvalidated404Keys([])
-                onGalleryScenarioChange?.('mixed')
-              }
-            }}
-          >
-            {items.some((i) => i.key === 'srv-1') ? '模拟图片 404' : '刷新恢复列表'}
-          </RippleButton>
-        </div>
-      ) : null}
-
-      {/* Batch Action Bar */}
-      <div className={styles.toolbarCard}>
-        {showListSkeleton ? (
-          <>
-            <div className={styles.toolbarLeft}>
-              <SkeletonBlock variant="text" width={168} height={13} />
-            </div>
-            <div className={styles.toolbarRight}>
-              <SkeletonBlock variant="rect" width={92} height={38} radius={12} />
-              <SkeletonBlock variant="pill" width={76} height={28} staggerIndex={1} />
-              <SkeletonBlock variant="pill" width={104} height={38} radius={19} staggerIndex={2} />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.toolbarLeft}>
-              <span className={styles.monoMeta}>
-                共 {items.length} 张作品 · 每张按各自显示时间过期
-              </span>
-            </div>
-
-            <div className={styles.toolbarRight}>
-              <RippleButton
-                type="button"
-                aria-pressed={allSelected}
-                disabled={items.length === 0}
-                className={`${styles.selectToggleBtn} ${allSelected ? styles.selectToggleActive : ''}`}
-                onClick={toggleAll}
-              >
-                <Icon name={allSelected ? 'check' : 'grid'} size={14} />
-                <span>{allSelected ? '取消全选' : '全选当前'}</span>
-              </RippleButton>
-
-              <span className={styles.countChip}>已选 {selectedKeys.length} 张</span>
-
-              <RippleButton
-                type="button"
-                className={styles.dangerTonalBtn}
-                disabled={selectedKeys.length === 0}
-                onClick={() =>
-                  onNotify({
-                    tone: 'warning',
-                    message: `Mock 提示：删除所选 ${selectedKeys.length} 张作品将按所属任务整组删除（含同组未选中图片），无法撤销。`,
-                  })
-                }
-              >
-                <Icon name="trash" size={14} />
-                <span>删除所选</span>
-              </RippleButton>
-            </div>
-          </>
-        )}
+        <RippleButton type="button" className={styles.tonalBtn} onClick={removed404 ? restoreList : removeExpiredImage}>
+          {removed404 ? '刷新恢复列表' : '模拟图片 404'}
+        </RippleButton>
       </div>
-
-      {/* Contact-Sheet Grid */}
-      {showListSkeleton ? (
-        <div
-          className={styles.galleryGrid}
-          role="status"
-          aria-busy="true"
-          aria-label="正在加载图库作品"
-        >
-          {Array.from({ length: 5 }, (_, idx) => (
-            <article key={idx} className={styles.galleryCard} aria-hidden="true">
-              <div className={styles.galleryCardTop}>
-                <SkeletonBlock variant="pill" width={22} height={12} staggerIndex={idx} />
-                <SkeletonBlock
-                  variant="text"
-                  width="54%"
-                  height={12}
-                  staggerIndex={idx}
-                  style={{ flex: 1 }}
-                />
-                <SkeletonBlock variant="rect" width={22} height={22} radius={7} staggerIndex={idx} />
-              </div>
-
-              <SkeletonBlock
-                variant="media"
-                aspectRatio="4 / 3"
-                radius={14}
-                icon="image"
-                iconSize={22}
-                staggerIndex={idx}
-              />
-
-              <SkeletonTextStack widths={['94%', '66%']} lineHeight={13} staggerIndex={idx} />
-
-              <div className={styles.galleryMeta}>
-                <div className={styles.galleryBadgeGroup}>
-                  <SkeletonBlock
-                    variant="rect"
-                    width={62}
-                    height={22}
-                    radius="var(--md-sys-shape-corner-small)"
-                    staggerIndex={idx}
-                  />
-                  <SkeletonBlock
-                    variant="rect"
-                    width={78}
-                    height={22}
-                    radius="var(--md-sys-shape-corner-small)"
-                    staggerIndex={idx + 1}
-                  />
-                </div>
-                <SkeletonBlock variant="text" width={96} height={11} staggerIndex={idx + 1} />
-              </div>
-
-              <div className={styles.galleryCardActions}>
-                <SkeletonBlock
-                  variant="pill"
-                  height={32}
-                  radius={16}
-                  staggerIndex={idx}
-                  style={{ flex: 1 }}
-                />
-                <SkeletonBlock
-                  variant="pill"
-                  height={32}
-                  radius={16}
-                  staggerIndex={idx + 1}
-                  style={{ flex: 1 }}
-                />
-                <SkeletonBlock variant="pill" width={34} height={32} radius={16} staggerIndex={idx + 2} />
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <div className={styles.galleryEmptyCard}>
-          <h2>还没有作品</h2>
-          <p>
-            新生成的图片默认<strong>{formatRetentionPolicyText(siteRetentionDays)}</strong>
-            ，到期后整组自动删除。
-          </p>
-          <RippleButton type="button" className={styles.primaryBtn} onClick={onGoWorkbench}>
-            <Icon name="sparkles" size={15} />
-            <span>去生成图片</span>
-          </RippleButton>
-        </div>
-      ) : (
-        <div className={styles.galleryGrid}>
-          {items.map((item, idx) => {
-            const selected = selectedKeys.includes(item.key)
-            const retention = getImageRetentionSummary(item.retentionDays, item.expiresAt, nowMs)
-            const retentionClass =
-              retention.tone === 'urgent'
-                ? styles.retentionChipUrgent
-                : retention.tone === 'timed'
-                  ? styles.retentionChipTimed
-                  : styles.retentionChipPermanent
-            return (
-              <article
-                key={item.key}
-                className={`${styles.galleryCard} ${selected ? styles.galleryCardSelected : ''}`}
-              >
-                <div className={styles.galleryCardTop}>
-                  <span className={styles.frameCode}>{String(idx + 1).padStart(2, '0')}</span>
-                  <span className={styles.modelChip}>{item.model}</span>
-                  <RippleButton
-                    type="button"
-                    aria-pressed={selected}
-                    aria-label={`选择作品 ${idx + 1}`}
-                    className={`${styles.cardCheckBtn} ${selected ? styles.cardCheckBtnActive : ''}`}
-                    onClick={() => toggleSelect(item.key)}
-                  >
-                    <Icon name="check" size={14} className={styles.checkGlyph} />
-                  </RippleButton>
-                </div>
-
-                <RippleButton
-                  ref={(el) => {
-                    thumbRefs.current[item.key] = el
-                  }}
-                  type="button"
-                  rippleTone="light"
-                  className={`${styles.galleryThumbBtn} ${previewItem?.key === item.key ? styles.galleryThumbHidden : ''}`}
-                  onClick={() => openPreview(item)}
-                >
-                  <ShimmerImage
-                    src={item.url}
-                    alt={item.prompt}
-                    aspectRatio="4 / 3"
-                    radius={14}
-                    forceSkeleton={showMediaSkeleton}
-                    staggerIndex={idx}
-                  />
-                  <span className={styles.thumbOverlay}>
-                    <Icon name="eye" size={15} />
-                    <span>查看大图</span>
-                  </span>
-                </RippleButton>
-
-                <p className={styles.galleryPrompt}>{item.prompt}</p>
-
-                <div className={styles.galleryMeta}>
-                  <div className={styles.galleryBadgeGroup}>
-                    <span className={styles.sourceServer}>
-                      {item.groupCount > 1 ? `同组 ${item.groupCount} 张` : '单图作品'}
-                    </span>
-                    <span
-                      className={`${styles.retentionChip} ${retentionClass}`}
-                      title={retention.detailLabel}
-                    >
-                      <LabIcon name="clock" size={11} />
-                      <span>{retention.shortLabel}</span>
-                    </span>
-                  </div>
-                  <span className={styles.monoMeta}>
-                    {item.dimensions} · {Math.round(item.bytes / 1024)} KiB
-                  </span>
-                </div>
-
-                <div className={styles.galleryCardActions}>
-                  <RippleButton type="button" className={styles.cardGhostBtn} onClick={() => openPreview(item)}>
-                    <Icon name="eye" size={14} />
-                    <span>预览</span>
-                  </RippleButton>
-                  <RippleButton
-                    type="button"
-                    className={styles.cardGhostBtn}
-                    onClick={() =>
-                      onNotify({ tone: 'info', message: `已模拟下载原图：${item.key}` })
-                    }
-                  >
-                    <Icon name="download" size={14} />
-                    <span>下载</span>
-                  </RippleButton>
-                  <RippleButton
-                    type="button"
-                    className={styles.cardDangerBtn}
-                    aria-label={`删除 ${item.key}`}
-                    onClick={() =>
-                      onNotify({
-                        tone: 'warning',
-                        message: `删除此作品将连带删除所属任务（共 ${item.groupCount} 张同组图片），无法撤销。`,
-                      })
-                    }
-                  >
-                    <Icon name="trash" size={14} />
-                  </RippleButton>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      )}
-
-      <footer className={styles.safetyFooter}>
-        <Icon name="shield" size={15} />
-        <span>
-          删除或到期时，同一任务的全部图片会一起删除，不退回已用额度。
-        </span>
-      </footer>
-
-      {previewItem && typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              className={`${styles.lightboxScrim} ${isClosing ? styles.lightboxClosing : ''}`}
-              role="dialog"
-              aria-modal="true"
-              aria-label="作品大图预览"
-            >
-              <div ref={backdropRef} className={styles.lightboxBackdrop} aria-hidden="true" />
-              <div
-                ref={surfaceRef}
-                className={styles.lightboxSurface}
-                onClick={(e) => {
-                  if (e.target === e.currentTarget) closePreview()
-                }}
-              >
-                <div
-                  className={styles.lightboxCanvas}
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) closePreview()
-                  }}
-                >
-                  <img
-                    ref={imgRef}
-                    className={styles.lightboxImg}
-                    src={previewItem.url}
-                    alt={previewItem.prompt}
-                    onClick={() => setHudVisible((v) => !v)}
-                    title={hudVisible ? '点击图片隐藏悬浮信息栏' : '点击图片显示信息栏'}
-                  />
-                </div>
-
-                {/* Top Floating Frosted Strip */}
-                <div ref={topHudRef} className={styles.lightboxTopBar}>
-                  <div className={`${styles.hudGlassPill} ${!hudVisible ? styles.hudItemHidden : ''}`}>
-                    <span className={styles.hudIndexChip}>
-                      {String(previewIndex + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
-                    </span>
-                    <span className={styles.hudSpecText}>
-                      {previewItem.model} · {previewItem.dimensions}
-                    </span>
-                  </div>
-
-                  <div className={styles.hudActionCluster}>
-                    <div
-                      className={`${styles.hudSecondaryGroup} ${!hudVisible ? styles.hudItemHidden : ''}`}
-                    >
-                      {items.length > 1 ? (
-                        <div className={styles.hudNavGroup}>
-                          <RippleButton
-                            type="button"
-                            className={styles.hudIconBtn}
-                            onClick={() => stepPreview(-1)}
-                            aria-label="上一张作品"
-                            title="上一张 (←)"
-                          >
-                            <Icon name="arrow-left" size={15} />
-                          </RippleButton>
-                          <RippleButton
-                            type="button"
-                            className={styles.hudIconBtn}
-                            onClick={() => stepPreview(1)}
-                            aria-label="下一张作品"
-                            title="下一张 (→)"
-                          >
-                            <Icon name="arrow-right" size={15} />
-                          </RippleButton>
-                        </div>
-                      ) : null}
-
-                      <RippleButton
-                        type="button"
-                        className={styles.hudDownloadBtn}
-                        onClick={() =>
-                          onNotify({ tone: 'info', message: `已模拟下载原图：${previewItem.key}` })
-                        }
-                      >
-                        <Icon name="download" size={15} />
-                        <span>下载原图</span>
-                      </RippleButton>
-                    </div>
-
-                    <RippleButton
-                      type="button"
-                      className={styles.hudIconBtn}
-                      onClick={() => setHudVisible((v) => !v)}
-                      aria-label={hudVisible ? '隐藏信息遮罩' : '显示信息遮罩'}
-                      title={hudVisible ? '隐藏信息栏' : '显示信息栏'}
-                    >
-                      <Icon name={hudVisible ? 'eye-off' : 'eye'} size={15} />
-                    </RippleButton>
-
-                    <RippleButton
-                      type="button"
-                      className={styles.hudIconBtn}
-                      onClick={closePreview}
-                      aria-label="关闭预览"
-                      title="关闭 (Esc)"
-                    >
-                      <Icon name="close" size={17} />
-                    </RippleButton>
-                  </div>
-                </div>
-
-                {/* Bottom Compact Frosted Caption Dock */}
-                <div
-                  ref={bottomHudRef}
-                  className={`${styles.lightboxBottomDock} ${!hudVisible ? styles.hudBottomHidden : ''}`}
-                >
-                  <p
-                    className={`${styles.lightboxPrompt} ${promptExpanded ? styles.lightboxPromptExpanded : ''}`}
-                    onClick={() => setPromptExpanded((v) => !v)}
-                    title="点击展开或收起完整描述"
-                  >
-                    {previewItem.prompt}
-                  </p>
-                  <div className={styles.lightboxSubMeta}>
-                    <span>
-                      {previewRetention?.detailLabel ?? '永久保存'} ·{' '}
-                      {previewItem.groupCount > 1 ? `同组 ${previewItem.groupCount} 张` : '单图作品'} ·{' '}
-                      {Math.round(previewItem.bytes / 1024)} KiB
-                    </span>
-                    <span>点击画面切换信息遮罩 · Esc 关闭</span>
-                  </div>
-                </div>
-              </div>
-            </div>,
-            document.getElementById('lab-overlay-root') ?? document.body,
-          )
-        : null}
-    </div>
-  )
+    )}
+    onBeforePreview={(item) => {
+      if (!simulate404 || item.key !== expiredKey) return true
+      removeExpiredImage()
+      return false
+    }}
+    onDownload={(item) => onNotify({ message: `已模拟下载原图：${item.key}` })}
+    onDeleteOne={(item) => onNotify({ tone: 'warning', message: `删除此作品将连带删除所属任务（共 ${item.groupCount} 张同组图片），无法撤销。` })}
+    onDeleteSelected={(items) => onNotify({ tone: 'warning', message: `删除所选 ${items.length} 张作品将按所属任务整组删除，无法撤销。` })} />
 }
 
 /* ==========================================================================
@@ -1446,111 +552,10 @@ export function AccountPrototype({
       </div>
 
       {isAccountLoading ? (
-        <div
-          className={styles.authSplitCard}
-          role="status"
-          aria-busy="true"
-          aria-label="正在连接会话"
-        >
-          <section className={styles.authShowcase} aria-hidden="true">
-            <div className={styles.authBrandBadge}>
-              <SkeletonBlock variant="rect" width={44} height={44} radius={14} />
-              <div className={styles.skeletonListStack} style={{ gap: 6 }}>
-                <SkeletonBlock variant="text" width={140} height={15} />
-                <SkeletonBlock variant="text" width={116} height={11} staggerIndex={1} />
-              </div>
-            </div>
-
-            <div className={styles.skeletonListStack} style={{ gap: 8 }}>
-              <SkeletonBlock variant="text" width="84%" height={26} staggerIndex={1} />
-              <SkeletonBlock variant="text" width="56%" height={26} staggerIndex={2} />
-            </div>
-
-            <SkeletonTextStack widths={['94%', '72%']} lineHeight={14} staggerIndex={2} />
-
-            <div className={styles.securityHighlights} style={{ gap: 12 }}>
-              {[76, 84, 70].map((pct, idx) => (
-                <div key={idx} className={styles.skeletonRow}>
-                  <SkeletonBlock variant="circle" width={16} height={16} staggerIndex={idx} />
-                  <SkeletonBlock variant="text" width={`${pct}%`} height={13} staggerIndex={idx + 1} />
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className={styles.authFormPane} aria-hidden="true">
-            <div className={styles.skeletonListStack} style={{ gap: 6 }}>
-              <SkeletonBlock variant="text" width={110} height={11} />
-              <SkeletonBlock variant="text" width={160} height={22} staggerIndex={1} />
-            </div>
-
-            <div className={styles.authForm}>
-              <div className={styles.filledField}>
-                <SkeletonBlock variant="text" width={146} height={12} />
-                <SkeletonBlock variant="field" staggerIndex={0} />
-              </div>
-              <div className={styles.filledField}>
-                <SkeletonBlock variant="text" width={128} height={12} />
-                <SkeletonBlock variant="field" staggerIndex={1} />
-              </div>
-              {authMode !== 'login' ? (
-                <div className={styles.filledField}>
-                  <SkeletonBlock variant="text" width={92} height={12} />
-                  <SkeletonBlock variant="field" staggerIndex={2} />
-                </div>
-              ) : null}
-
-              <div className={styles.authActions}>
-                <SkeletonBlock variant="pill" width="100%" height={44} radius={22} staggerIndex={2} />
-                {authMode !== 'password' ? (
-                  <SkeletonBlock variant="pill" width="100%" height={44} radius={22} staggerIndex={3} />
-                ) : null}
-              </div>
-            </div>
-          </section>
-        </div>
+        <AccountSkeleton authMode={authMode} />
       ) : (
       <div key={authMode} className={`${styles.authSplitCard} ${styles.subPanelFade}`}>
-        {/* Left Identity Showcase */}
-        <section className={styles.authShowcase}>
-          <div className={styles.authBrandBadge}>
-            <span className={styles.authGlyph}>
-              <Icon name="banana" size={24} />
-            </span>
-            <div>
-              <strong>NanoBanana Studio</strong>
-              <span>Multi-User AI Darkroom</span>
-            </div>
-          </div>
-
-          <h1 className={styles.authHeroTitle}>
-            {authMode === 'password'
-              ? '更新账号密码，保障工作区隔离安全'
-              : authMode === 'register'
-                ? '凭邀请码加入创作暗房'
-                : '回到你的创作工作台'}
-          </h1>
-
-          <p className={styles.authHeroCopy}>
-            作品、提示词历史与私有渠道密钥按账号严格隔离；共享渠道按北京时间每日统计额度。
-          </p>
-
-          <ul className={styles.securityHighlights}>
-            <li>
-              <Icon name="shield" size={16} />
-              <span>HttpOnly 会话 Cookie + CSRF 保护，防跨站伪造</span>
-            </li>
-            <li>
-              <Icon name="check" size={16} />
-              <span>私有渠道 API Key 由服务端 AES-GCM 加密保管</span>
-            </li>
-            <li>
-              <Icon name="sparkles" size={16} />
-              <span>提交确认后即使关闭页面，后台队列仍继续完成生图</span>
-            </li>
-          </ul>
-        </section>
-
+        <AccountShowcase authMode={authMode} />
         {/* Right Form Card */}
         <section className={styles.authFormPane}>
           <div className={styles.authFormHeader}>

@@ -4,8 +4,8 @@ export type ResolvedTheme = 'light' | 'dark'
 export const THEME_STORAGE_KEY = 'nanobanana.theme-mode'
 
 export const THEME_COLORS: Record<ResolvedTheme, string> = {
-  dark: '#141310',
-  light: '#fef8e9',
+  dark: '#111319',
+  light: '#f7f9fc',
 }
 
 export function isThemeMode(value: unknown): value is ThemeMode {

@@ -1,97 +1,7 @@
 @import 'tailwindcss';
+@import './studio/tokens.css';
 
-/* ==========================================================================
-   NanoBanana Studio — Material 3 Expressive Design System (Dark + Light)
-
-   Layer 1 · reference palette  -> centralized raw tones (swap here for blue!)
-   Layer 2 · system tokens      -> semantic colour roles, type, shape, motion
-   Layer 3 · base + utilities   -> typography classes, state layers, ripple
-
-   Future palette swap note:
-   To migrate from warm gold to a blue palette, update the primary/secondary/
-   neutral-variant reference tones in Layer 1 and THEME_COLORS in utils/theme.ts
-   (+ index.html boot script). Components only consume --md-sys-* roles.
-   ========================================================================== */
-
-/* ---------------------------- 1 · REFERENCE PALETTE ---------------------- */
 :root {
-  /* Primary — safelight gold (centralized brand hue) */
-  --md-ref-primary-10: #241a00;
-  --md-ref-primary-20: #3f2e00;
-  --md-ref-primary-30: #5b4300;
-  --md-ref-primary-35: #6a4e00;
-  --md-ref-primary-40: #7a5900;
-  --md-ref-primary-50: #9a7100;
-  --md-ref-primary-80: #f2bf48;
-  --md-ref-primary-90: #ffdf9c;
-  --md-ref-primary-95: #ffefd2;
-  --md-ref-primary-99: #fffcf5;
-
-  /* Secondary — muted brass, for supporting chrome */
-  --md-ref-secondary-10: #241a00;
-  --md-ref-secondary-20: #3c2e0b;
-  --md-ref-secondary-30: #54451e;
-  --md-ref-secondary-40: #6d5c33;
-  --md-ref-secondary-80: #d9c48c;
-  --md-ref-secondary-90: #f6e0b2;
-  --md-ref-secondary-95: #ffefd2;
-
-  /* Tertiary — sage: "stored / ready", the calm counterpoint */
-  --md-ref-tertiary-10: #0a1f02;
-  --md-ref-tertiary-20: #163009;
-  --md-ref-tertiary-30: #2e4a24;
-  --md-ref-tertiary-40: #446539;
-  --md-ref-tertiary-80: #a9d18f;
-  --md-ref-tertiary-90: #c5edaa;
-  --md-ref-tertiary-95: #dcffc6;
-
-  /* Error */
-  --md-ref-error-10: #410002;
-  --md-ref-error-20: #690005;
-  --md-ref-error-30: #93000a;
-  --md-ref-error-40: #ba1a1a;
-  --md-ref-error-80: #ffb4ab;
-  --md-ref-error-90: #ffdad6;
-  --md-ref-error-95: #ffedea;
-
-  /* Neutral — warm graphite & warm ivory */
-  --md-ref-neutral-4: #0f0e0b;
-  --md-ref-neutral-6: #141310;
-  --md-ref-neutral-10: #1d1b17;
-  --md-ref-neutral-12: #232019;
-  --md-ref-neutral-17: #2e2b23;
-  --md-ref-neutral-20: #33302a;
-  --md-ref-neutral-22: #38342e;
-  --md-ref-neutral-24: #3d3931;
-  --md-ref-neutral-30: #48443b;
-  --md-ref-neutral-40: #5f5a4f;
-  --md-ref-neutral-50: #7a7466;
-  --md-ref-neutral-60: #958e7f;
-  --md-ref-neutral-80: #cdc3b2;
-  --md-ref-neutral-87: #e2d6c0;
-  --md-ref-neutral-90: #e9decd;
-  --md-ref-neutral-92: #efe4cb;
-  --md-ref-neutral-94: #f5ecd6;
-  --md-ref-neutral-95: #f8eedc;
-  --md-ref-neutral-96: #faf2df;
-  --md-ref-neutral-98: #fef8e9;
-  --md-ref-neutral-99: #fffcf5;
-  --md-ref-neutral-100: #ffffff;
-
-  /* Neutral variant */
-  --md-ref-neutral-variant-30: #4d4639;
-  --md-ref-neutral-variant-45: #6d6555;
-  --md-ref-neutral-variant-50: #7a7363;
-  --md-ref-neutral-variant-60: #998f7d;
-  --md-ref-neutral-variant-70: #b5ab98;
-  --md-ref-neutral-variant-80: #cfc5ae;
-  --md-ref-neutral-variant-90: #e8dfc4;
-
-  /* ------------------------- 2 · SYSTEM · TYPE SCALE -------------------- */
-  --md-ref-typeface-brand: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --md-ref-typeface-plain: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --md-ref-typeface-mono: 'Roboto Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', monospace;
-
   --md-sys-typescale-display-large: 400 57px / 64px var(--md-ref-typeface-brand);
   --md-sys-typescale-display-large-tracking: -0.25px;
   --md-sys-typescale-display-medium: 400 45px / 52px var(--md-ref-typeface-brand);
@@ -173,119 +83,10 @@
   --md-sys-layout-top-bar-height: 64px;
 }
 
-/* ------------------------- 2 · SYSTEM · COLOUR ROLES (DARK) -------------- */
-:root,
-:root[data-theme='dark'] {
-  color-scheme: dark;
-
-  --md-sys-color-primary: var(--md-ref-primary-80);
-  --md-sys-color-on-primary: var(--md-ref-primary-20);
-  --md-sys-color-primary-container: var(--md-ref-primary-30);
-  --md-sys-color-on-primary-container: var(--md-ref-primary-90);
-
-  --md-sys-color-secondary: var(--md-ref-secondary-80);
-  --md-sys-color-on-secondary: var(--md-ref-secondary-20);
-  --md-sys-color-secondary-container: var(--md-ref-secondary-30);
-  --md-sys-color-on-secondary-container: var(--md-ref-secondary-90);
-
-  --md-sys-color-tertiary: var(--md-ref-tertiary-80);
-  --md-sys-color-on-tertiary: var(--md-ref-tertiary-20);
-  --md-sys-color-tertiary-container: var(--md-ref-tertiary-30);
-  --md-sys-color-on-tertiary-container: var(--md-ref-tertiary-90);
-
-  --md-sys-color-error: var(--md-ref-error-80);
-  --md-sys-color-on-error: var(--md-ref-error-20);
-  --md-sys-color-error-container: var(--md-ref-error-30);
-  --md-sys-color-on-error-container: var(--md-ref-error-90);
-
-  --md-sys-color-surface-dim: var(--md-ref-neutral-6);
-  --md-sys-color-surface: var(--md-ref-neutral-6);
-  --md-sys-color-surface-bright: var(--md-ref-neutral-24);
-  --md-sys-color-surface-container-lowest: var(--md-ref-neutral-4);
-  --md-sys-color-surface-container-low: var(--md-ref-neutral-10);
-  --md-sys-color-surface-container: var(--md-ref-neutral-12);
-  --md-sys-color-surface-container-high: var(--md-ref-neutral-17);
-  --md-sys-color-surface-container-highest: var(--md-ref-neutral-22);
-  --md-sys-color-on-surface: var(--md-ref-neutral-90);
-  --md-sys-color-on-surface-variant: var(--md-ref-neutral-variant-80);
-  --md-sys-color-outline: var(--md-ref-neutral-variant-60);
-  --md-sys-color-outline-variant: var(--md-ref-neutral-variant-30);
-  --md-sys-color-surface-tint: var(--md-sys-color-primary);
-  --md-sys-color-inverse-surface: var(--md-ref-neutral-90);
-  --md-sys-color-inverse-on-surface: var(--md-ref-neutral-20);
-  --md-sys-color-inverse-primary: var(--md-ref-primary-40);
-  --md-sys-color-scrim: #000;
-  --md-sys-color-shadow: #000;
+:root {
   --md-sys-color-overlay-scrim: rgb(0 0 0 / 0.68);
-  --md-sys-color-on-overlay: var(--md-ref-neutral-99);
-
-  --md-sys-elevation-level0: 0 0 0 0 transparent;
-  --md-sys-elevation-level1: 0 1px 2px 0 rgb(0 0 0 / 0.34), 0 1px 3px 1px rgb(0 0 0 / 0.18);
-  --md-sys-elevation-level2: 0 1px 2px 0 rgb(0 0 0 / 0.36), 0 2px 6px 2px rgb(0 0 0 / 0.20);
-  --md-sys-elevation-level3: 0 1px 3px 0 rgb(0 0 0 / 0.38), 0 4px 8px 3px rgb(0 0 0 / 0.22);
-  --md-sys-elevation-level4: 0 2px 3px 0 rgb(0 0 0 / 0.40), 0 6px 10px 4px rgb(0 0 0 / 0.24);
-  --md-sys-elevation-level5: 0 4px 4px 0 rgb(0 0 0 / 0.42), 0 8px 12px 6px rgb(0 0 0 / 0.26);
-
-  --md-sys-ambient-backdrop:
-    radial-gradient(110% 60% at 50% -18%, color-mix(in srgb, var(--md-sys-color-primary) 7%, transparent) 0%, transparent 58%),
-    radial-gradient(80% 45% at 100% 0%, color-mix(in srgb, var(--md-sys-color-secondary) 4%, transparent) 0%, transparent 62%);
-}
-
-/* ------------------------- 2 · SYSTEM · COLOUR ROLES (LIGHT) ------------- */
-:root[data-theme='light'] {
-  color-scheme: light;
-
-  --md-sys-color-primary: var(--md-ref-primary-40);
-  --md-sys-color-on-primary: var(--md-ref-primary-99);
-  --md-sys-color-primary-container: var(--md-ref-primary-90);
-  --md-sys-color-on-primary-container: var(--md-ref-primary-10);
-
-  --md-sys-color-secondary: var(--md-ref-secondary-40);
-  --md-sys-color-on-secondary: var(--md-ref-primary-99);
-  --md-sys-color-secondary-container: var(--md-ref-secondary-90);
-  --md-sys-color-on-secondary-container: var(--md-ref-secondary-10);
-
-  --md-sys-color-tertiary: var(--md-ref-tertiary-40);
-  --md-sys-color-on-tertiary: var(--md-ref-neutral-100);
-  --md-sys-color-tertiary-container: var(--md-ref-tertiary-90);
-  --md-sys-color-on-tertiary-container: var(--md-ref-tertiary-10);
-
-  --md-sys-color-error: var(--md-ref-error-40);
-  --md-sys-color-on-error: var(--md-ref-neutral-100);
-  --md-sys-color-error-container: var(--md-ref-error-90);
-  --md-sys-color-on-error-container: var(--md-ref-error-10);
-
-  --md-sys-color-surface-dim: var(--md-ref-neutral-87);
-  --md-sys-color-surface: var(--md-ref-neutral-98);
-  --md-sys-color-surface-bright: var(--md-ref-neutral-99);
-  --md-sys-color-surface-container-lowest: var(--md-ref-neutral-100);
-  --md-sys-color-surface-container-low: var(--md-ref-neutral-96);
-  --md-sys-color-surface-container: var(--md-ref-neutral-94);
-  --md-sys-color-surface-container-high: var(--md-ref-neutral-92);
-  --md-sys-color-surface-container-highest: var(--md-ref-neutral-90);
-  --md-sys-color-on-surface: var(--md-ref-neutral-10);
-  --md-sys-color-on-surface-variant: var(--md-ref-neutral-variant-30);
-  --md-sys-color-outline: var(--md-ref-neutral-variant-45);
-  --md-sys-color-outline-variant: var(--md-ref-neutral-variant-80);
-  --md-sys-color-surface-tint: var(--md-sys-color-primary);
-  --md-sys-color-inverse-surface: var(--md-ref-neutral-20);
-  --md-sys-color-inverse-on-surface: var(--md-ref-neutral-95);
-  --md-sys-color-inverse-primary: var(--md-ref-primary-80);
-  --md-sys-color-scrim: #000;
-  --md-sys-color-shadow: #1d1b17;
-  --md-sys-color-overlay-scrim: rgb(29 27 23 / 0.68);
-  --md-sys-color-on-overlay: var(--md-ref-neutral-99);
-
-  --md-sys-elevation-level0: 0 0 0 0 transparent;
-  --md-sys-elevation-level1: 0 1px 2px 0 rgb(29 27 23 / 0.08), 0 1px 3px 1px rgb(29 27 23 / 0.05);
-  --md-sys-elevation-level2: 0 1px 3px 0 rgb(29 27 23 / 0.10), 0 3px 8px 2px rgb(29 27 23 / 0.07);
-  --md-sys-elevation-level3: 0 2px 4px 0 rgb(29 27 23 / 0.12), 0 6px 12px 4px rgb(29 27 23 / 0.08);
-  --md-sys-elevation-level4: 0 3px 6px 0 rgb(29 27 23 / 0.14), 0 8px 16px 5px rgb(29 27 23 / 0.10);
-  --md-sys-elevation-level5: 0 4px 8px 0 rgb(29 27 23 / 0.16), 0 10px 20px 6px rgb(29 27 23 / 0.12);
-
-  --md-sys-ambient-backdrop:
-    radial-gradient(110% 60% at 50% -18%, color-mix(in srgb, var(--md-sys-color-primary) 6%, transparent) 0%, transparent 58%),
-    radial-gradient(80% 45% at 100% 0%, color-mix(in srgb, var(--md-sys-color-secondary) 5%, transparent) 0%, transparent 62%);
+  --md-sys-color-on-overlay: white;
+  --md-sys-elevation-level5: var(--md-sys-elevation-level3);
 }
 
 /* ------------------------------- BASE ------------------------------------ */
@@ -321,9 +122,6 @@ body,
 
 body {
   min-width: 320px;
-  background-image: var(--md-sys-ambient-backdrop);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
   transition:
     background-color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard),
     color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard);
@@ -570,6 +368,14 @@ samp {
 
 ::view-transition-new(root) {
   animation: md-enter-fade var(--md-sys-motion-duration-long1) var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+::view-transition-old(studio-page) { animation: studio-exit 260ms var(--md-sys-motion-easing-standard) both; }
+::view-transition-new(studio-page) { animation: studio-enter 300ms var(--md-sys-motion-easing-emphasized-decelerate) both; }
+@keyframes studio-exit { to { transform: translateX(calc(-100% * var(--studio-direction, 1))); opacity: 0.72; } }
+@keyframes studio-enter { from { transform: translateX(calc(100% * var(--studio-direction, 1))); opacity: 0.78; } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0.01ms !important; }
 }
 
 /* --------------------------- REDUCED MOTION ------------------------------ */

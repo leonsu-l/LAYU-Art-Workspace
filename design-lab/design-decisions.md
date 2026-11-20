@@ -25,7 +25,7 @@
 
 - **Date:** 2026-11-19
 - **Scope:** global / multi-page architecture
-- **Status:** accepted (pending Stage 6 production integration approval)
+- **Status:** integrated (see `dec-010-production-integration`)
 - **Context:** User selected Direction A (`Cobalt Studio` — cool slate neutral tonal ladder + Cobalt Primary + Warm Amber Tertiary), requested discarding Direction B, and asked for cohesive matching designs across all application pages.
 - **Decision:** Prune Direction B (`editorial-stage`) from tokens, prototypes, and lab shell; keep unified M3 Top App Bar navigation across `/` (Workbench), `/gallery` (Cloud-only Gallery excluding legacy browser storage UI, with static `20px` corner radius, `1px` fade-in selection outline via `::after`, dead-centered `22×22` checkmark, task-group delete safety hint, and full-viewport preview), `/channels` (Shared/Private channel split master-detail editor with write-only key handling & catalog fetch), `/login` · `/password` (Sign in, invite registration, forced password update with 12–1024 char guidance), and `/admin` (6 cohesive M3 admin sub-tabs covering shared channels, user management & quota reset, invite codes, quota & queue settings, templates, and non-private usage telemetry).
 
@@ -33,7 +33,7 @@
 
 - **Date:** 2026-11-19
 - **Scope:** global / primary & sub-navigation bars
-- **Status:** accepted (pending Stage 6 production integration approval)
+- **Status:** integrated (see `dec-010-production-integration`)
 - **Context:** User requested updating section switchers to match authentic Material 3 Primary Tabs (baseline hairline divider + primary-colored rounded underline pill indicator), binding horizontal swipe gestures on mobile to top-level section switching with synchronized slide animations on both mobile and desktop, while keeping sub-section bars manual-click only.
 - **Decision:** Introduce `M3PrimaryTabs` (`fixed` and `scrollable` variants) using `ResizeObserver`-backed indicator glide (`translate3d` + elastic drag interpolation) across both primary navigation (`创作工作台`, `我的图库`, `自定义渠道`, `账号安全`, `站点管理`) and in-page sub-tabs (`/login · /password` views, `/admin` 6 sub-modules). Wrap top-level routes in a directional horizontal slide pager with real-time pointer/touch drag on mobile (`touch-action: pan-y`, input/dialog/scrollable guards, rubber-band boundaries, and seamless handoff to enter/exit keyframes), while sub-sections switch solely on manual click with subtle vertical fade.
 
@@ -41,7 +41,7 @@
 
 - **Date:** 2026-11-19
 - **Scope:** global / notifications, feedback & alerts
-- **Status:** accepted (pending Stage 6 production integration approval)
+- **Status:** integrated (see `dec-010-production-integration`)
 - **Context:** Action notices across Gallery, Channels, Account, Admin, and Workbench previously rendered inline banners that pushed layout content down on click. User asked to move transient notifications/warnings to an M3 Snackbar where appropriate without forcing blocking/safety UI into auto-hiding toasts.
 - **Decision:** Add a unified Inverse-Surface `LabSnackbarHost` + `useSnackbar` controller (`info` / `success` / `warning` tones, hover/focus auto-dismiss pause, exit transition) for all transient operation results, downloads, template applications, task failure details, and cascade-deletion warnings. Deliberately keep persistent blocking/policy notices inline (`scenario === 'recovery'` deduplication banner, `scenario === 'blocker'` missing-channel alert, `/password` 12–1024 char security rule banner, and static footer policies).
 
@@ -49,7 +49,7 @@
 
 - **Date:** 2026-11-19
 - **Scope:** gallery lightbox preview
-- **Status:** accepted (pending Stage 6 production integration approval)
+- **Status:** integrated (see `dec-010-production-integration`)
 - **Context:** Previous gallery preview dialog wrapped images in large solid headers/footers limiting visual ratio, and snapped open/closed in place. User asked for maximum image visual dominance with compact frosted edge overlays and a full-fidelity App Launch / Close container transform emerging from and collapsing back into the card thumbnail icon.
 - **Decision:**
   1. **Immersive Viewport Lightbox**: Portal lightbox into `#lab-overlay-root` (`z-index: 220`, below Snackbar `z-index: 260` which lifts automatically above bottom caption dock), letting the artwork fill up to ~95% viewport height with translucent frosted top index/action pills and compact bottom caption dock (`hudVisible` click/eye toggle).
@@ -59,7 +59,7 @@
 
 - **Date:** 2026-11-19
 - **Scope:** gallery card states + global loading/media placeholders
-- **Status:** accepted (pending Stage 6 production integration approval)
+- **Status:** integrated (see `dec-010-production-integration`)
 - **Context:**
   1. In `/gallery`, `.galleryCard:hover` (`(0,2,0)`) overrode `.galleryCardSelected` (`(0,1,0)`), causing selected blue cards to revert to the neutral unselected hover surface when hovered (same specificity issue existed on Workbench `.filmCard`).
   2. Unloaded pages, channel catalogs, and progressive media thumbnails lacked a unified Material 3 Expressive skeleton placeholder system.
@@ -71,7 +71,7 @@
 
 - **Date:** 2026-11-19
 - **Scope:** global / all clickable interactive surfaces in Design Lab
-- **Status:** accepted (pending Stage 6 production integration approval)
+- **Status:** integrated (see `dec-010-production-integration`)
 - **Context:** Previously, only a subset of controls in `LabControls.tsx` rendered M3 radial pointer ripples by manually duplicating `useRipple`, `<RippleOverlay>`, and CSS keyframes, leaving shell toggles, snackbars, gallery cards/actions, lightbox buttons, channel items, auth controls, and admin buttons without ripples.
 - **Decision:** Centralize `RippleOverlay` and `RippleButton` in `apps/web/src/design-lab/components/LabRipple.tsx` + `LabRipple.module.css` reusing the shared `useRipple` hook (`apps/web/src/components/ui/useRipple.ts`), remove the duplicated ripple JSX/CSS from `LabControls.tsx`/`LabControls.module.css`, use zero-specificity `:where(.rippleHost)` so absolute/custom-positioned buttons (e.g. password toggle) stay intact, and replace every interactive `<button>` across `DesignLabApp`, `LabControls`, `LabSnackbar`, `WorkbenchPrototypes`, and `MultiPagePrototypes` (with `rippleTone="light"` for gallery artwork thumbnails).
 
@@ -86,7 +86,11 @@
   2. **Admin Storage & Dual Usage (`AdminStorageModule.tsx`)**: Keep `/api/admin/storage/settings` strictly separate from `/api/admin/settings` (quota/concurrency). Registering a new R2 bucket never auto-activates it; credential rotation omits untouched fields (never sending empty strings or masks) while offering an explicit `analyticsToken: null` clear toggle; bucket usage separates `application` (`imageCount`, `totalBytes`) from `cloudflare` (`payloadBytes`, `metadataBytes`, `objectCount`, `sampledAt`), rendering `—` rather than `0` for `not_configured` / `forbidden` / `no_data` / `unavailable`; deletion never infers safety from `imageCount === 0` and distinguishes HTTP 409 reference conflicts from retryable network failures.
   3. **Admin Operational Issues (`AdminIssuesModule.tsx`)**: Add live `openCount` badge on the `/admin` `问题日志` tab and header alert pill, filter by `open`/`resolved`/all with pagination, format Unix millisecond `firstSeen`/`lastSeen` timestamps, explain that `R2_FALLBACK` preserves user image access without retrying upstream, and make resolve/recurrence lifecycle interactive (`resolved` -> `open` with `occurrences + 1`).
 
+## 设计决策：将 Cobalt Studio 接入生产路由（`dec-010-production-integration`）
 
-
-
-
+- **日期：** 2026-11-20
+- **状态：** 已在 `feat/design-lab-ui-integration` 集成。
+- **范围：** 工作台、云端图库、自定义渠道、账号（登录与密码两条路由）和六栏站点管理。页面沿用现有后端契约。
+- **组件归属：** 色阶、控件、预览转场、骨架、涟漪和 Snackbar 由生产页面与 Design Lab 共用。开发入口继续保存示例数据与场景开关；生产页面的加载、可用操作和结果取决于真实请求。
+- **交互约束：** 模板只改参数，保留所选渠道与模型；待确认提交按原请求恢复。图库按任务整组删除，确认前说明对未选图片和任务历史的影响。权限导航跟随会话，强制改密时只开放密码页。
+- **验证记录：** [运行入口、生产路由与验证结果](<README.md>)。

@@ -114,7 +114,7 @@ export function usePersistentConfig() {
     revision.current += 1; setDirty(revision.current)
     setConfig((p) => ({ ...p, profiles: { ...p.profiles, [provider]: { ...p.profiles[provider], params: { ...p.profiles[provider].params, ...patch } } } }) as ProviderConfig)
   }
-  return { config, activeProvider, activeProfile, channels, channel, catalog, templates, quota, error, saveStatus, isHydrated, ready, selectChannel, refreshChannels, setActiveProvider, updateProviderProfile,
+  return { config, activeProvider, activeProfile, selectionLoaded, channels, channel, catalog, templates, quota, error, saveStatus, isHydrated, ready, selectChannel, refreshChannels, setActiveProvider, updateProviderProfile,
     updateOpenAIParams: (patch: Partial<OpenAIImageParams>) => updateParams('openai-compatible', patch),
     updateGeminiParams: (patch: Partial<GeminiImageParams>) => updateParams('gemini-compatible', patch),
   }

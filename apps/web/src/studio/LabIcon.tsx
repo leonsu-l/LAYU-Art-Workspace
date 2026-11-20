@@ -1,5 +1,5 @@
 import type { SVGProps } from 'react'
-import { Icon } from '../../components/Icon'
+import { Icon } from '../components/Icon'
 
 export type LabIconName =
   | Parameters<typeof Icon>[0]['name']

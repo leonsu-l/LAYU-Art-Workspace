@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
-import { Icon } from '../../components/Icon'
-import styles from './LabSkeleton.module.css'
+import { Icon } from '../components/Icon'
+import styles from './Skeleton.module.css'
 
 export type SkeletonVariant =
   | 'text'
@@ -116,6 +116,7 @@ export function ShimmerImage({
   className = '',
   wrapperClassName = '',
   onClick,
+  onDimensions,
   title,
 }: {
   src: string
@@ -127,6 +128,7 @@ export function ShimmerImage({
   iconSize?: number
   className?: string
   wrapperClassName?: string
+  onDimensions?: (width: number, height: number) => void
   onClick?: () => void
   title?: string
 }) {
@@ -146,10 +148,13 @@ export function ShimmerImage({
       <img
         src={src}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         title={title}
         onClick={onClick}
         className={`${styles.shimmerImageEl} ${isLoaded ? styles.shimmerImageElLoaded : ''} ${className}`}
-        onLoad={() => {
+        onLoad={(e) => {
+          onDimensions?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
           setErroredSrc((prev) => (prev === src ? null : prev))
           setLoadedSrc(src)
         }}
@@ -157,7 +162,7 @@ export function ShimmerImage({
           setErroredSrc(src)
         }}
       />
-      <span
+      {erroredSrc === src && !forceSkeleton ? <span className={styles.imageError}>图片加载失败</span> : <span
         aria-hidden="true"
         className={`${styles.shimmerOverlay} ${isLoaded ? styles.shimmerOverlayHidden : ''}`}
         style={
@@ -169,7 +174,7 @@ export function ShimmerImage({
         <span className={styles.mediaGlyph}>
           <Icon name="image" size={iconSize} />
         </span>
-      </span>
+      </span>}
     </span>
   )
 }

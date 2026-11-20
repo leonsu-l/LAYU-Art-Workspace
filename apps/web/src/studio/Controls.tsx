@@ -9,19 +9,19 @@ import {
 } from 'react'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import type { Channel, ModelCatalog, Quota, Template } from '@nanobanana/shared/types/studio'
-import { Icon } from '../../components/Icon'
-import { useRipple } from '../../components/ui/useRipple'
+import { Icon } from '../components/Icon'
+import { useRipple } from '../components/ui/useRipple'
 import {
   findFirstEnabledIndex,
   findLastEnabledIndex,
   findNextEnabledIndex,
   findSelectedEnabledIndex,
   type SelectOptionItem,
-} from '../../components/ui/selectNavigation'
-import { RippleButton, RippleOverlay } from './LabRipple'
-import rippleStyles from './LabRipple.module.css'
-import { SkeletonBlock } from './LabSkeleton'
-import styles from './LabControls.module.css'
+} from '../components/ui/selectNavigation'
+import { RippleButton, RippleOverlay } from './Ripple'
+import rippleStyles from './Ripple.module.css'
+import { SkeletonBlock } from './Skeleton'
+import styles from './Controls.module.css'
 
 /* --------------------------------------------------------------------------
    1. Authentic M3 Expressive Select (faithful to m3_example.html language)
@@ -80,7 +80,8 @@ export function StudioSelect<T extends string>({
         aria-label={label}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={listboxId}
+        aria-controls={open ? listboxId : undefined}
+        aria-activedescendant={open && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined}
         disabled={disabled}
         className={styles.selectTrigger}
         onClick={() => {
@@ -135,6 +136,7 @@ export function StudioSelect<T extends string>({
           {options.map((option, idx) => (
             <SelectOptionItemRow
               key={option.value}
+              id={`${listboxId}-${idx}`}
               label={option.label}
               selected={option.value === value}
               active={idx === activeIndex}
@@ -152,6 +154,7 @@ export function StudioSelect<T extends string>({
 }
 
 function SelectOptionItemRow({
+  id,
   label,
   selected,
   active,
@@ -161,6 +164,7 @@ function SelectOptionItemRow({
 }: {
   label: string
   selected: boolean
+  id: string
   active: boolean
   disabled: boolean
   onHover: () => void
@@ -169,6 +173,7 @@ function SelectOptionItemRow({
   const { ripples, triggerRipple, dismissRipple } = useRipple(disabled)
   return (
     <div
+      id={id}
       role="option"
       aria-selected={selected}
       aria-disabled={disabled || undefined}
@@ -387,6 +392,7 @@ export function M3SplitGenerateButton({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const menuTrigger = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -395,8 +401,12 @@ export function M3SplitGenerateButton({
         setMenuOpen(false)
       }
     }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setMenuOpen(false); menuTrigger.current?.focus() }
+    }
     document.addEventListener('pointerdown', onOutside)
-    return () => document.removeEventListener('pointerdown', onOutside)
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('pointerdown', onOutside); document.removeEventListener('keydown', onKeyDown) }
   }, [menuOpen])
 
   return (
@@ -413,6 +423,7 @@ export function M3SplitGenerateButton({
       <RippleButton
         type="button"
         className={`${styles.splitSide} ${menuOpen ? styles.splitSideOpen : ''}`}
+        ref={menuTrigger}
         aria-label="快捷套用参数模板"
         aria-expanded={menuOpen}
         disabled={templates.length === 0}
@@ -432,7 +443,7 @@ export function M3SplitGenerateButton({
               className={styles.splitMenuItem}
               onClick={() => {
                 onApplyTemplate(tpl)
-                setMenuOpen(false)
+                setMenuOpen(false); menuTrigger.current?.focus()
               }}
             >
               <Icon name="sliders" size={14} />
@@ -462,6 +473,7 @@ export function ChannelModelBar({
   onModelChange,
   onApplyTemplate,
   compact = false,
+  explicitSelection = false,
 }: {
   channels: Channel[]
   channelId: string
@@ -475,6 +487,7 @@ export function ChannelModelBar({
   onProviderChange: (p: ProviderType) => void
   onModelChange: (modelId: string) => void
   onApplyTemplate: (template: Template) => void
+  explicitSelection?: boolean
   compact?: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -486,7 +499,9 @@ export function ChannelModelBar({
   const matchingChannels = channels.filter(
     (item) => item.scope === activeScope && item.provider === provider,
   )
-  const catalogModels = catalog?.models ?? []
+  const catalogModels = currentChannel?.scope === 'shared'
+    ? currentChannel.enabledModels.map((id) => catalog?.models.find((m) => m.id === id) ?? { id, name: id })
+    : catalog?.models ?? []
   const matchingTemplates = templates.filter((item) => item.provider === provider)
 
   useEffect(() => {
@@ -533,7 +548,7 @@ export function ChannelModelBar({
         <span className={styles.channelTriggerSide}>
           {currentChannel?.scope === 'shared' && quota ? (
             <span className={styles.quotaBadge}>
-              {quota.unlimited ? '无限次' : `余 ${quota.remaining ?? 0}/${quota.limit ?? 0}`}
+              {!quota.configured ? '未配置额度' : quota.unlimited ? '无限次' : `余 ${quota.remaining ?? 0}/${quota.limit ?? 0}`}
             </span>
           ) : currentChannel?.scope === 'private' ? (
             <span className={styles.quotaBadge}>不占额度</span>
@@ -567,7 +582,9 @@ export function ChannelModelBar({
                   { value: 'private', label: '自定义' },
                 ]}
                 onChange={(nextScope) => {
+                  if (nextScope === activeScope) return
                   setScope(nextScope)
+                  if (explicitSelection) { onChannelChange(''); return }
                   const fallback = channels.find(
                     (c) => c.scope === nextScope && c.provider === provider && c.enabled,
                   )
@@ -585,7 +602,10 @@ export function ChannelModelBar({
                   { value: 'gemini-compatible', label: 'Gemini' },
                 ]}
                 onChange={(nextProvider) => {
+                  if (nextProvider === provider) return
+                  setScope(activeScope)
                   onProviderChange(nextProvider)
+                  if (explicitSelection) return
                   const fallback = channels.find(
                     (c) => c.scope === activeScope && c.provider === nextProvider && c.enabled,
                   )
@@ -657,6 +677,7 @@ export function ChannelModelBar({
             <div className={styles.popoverField}>
               <span className={styles.popoverLabel}>手填模型 ID（私有渠道可用）</span>
               <input
+                aria-label="手填模型 ID"
                 className={styles.popoverInput}
                 value={model}
                 onChange={(e) => onModelChange(e.target.value)}

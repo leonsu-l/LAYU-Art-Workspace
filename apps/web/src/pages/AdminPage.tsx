@@ -1,63 +1,151 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import type { AdminUser, Invite, Settings, Template, Usage } from '@nanobanana/shared/types/studio'
-import type { ProviderType, ProviderConfig } from '@nanobanana/shared/types/generation'
+import type { ProviderConfig, ProviderType } from '@nanobanana/shared/types/generation'
 import { createDefaultProviderConfig } from '@nanobanana/shared/utils/configDefaults'
 import { backendRequest, backendErrorMessage } from '../services/backendClient'
-import { StudioHeader } from '../components/StudioHeader'
+import { useStudioResource } from '../hooks/useStudioResource'
 import { GenerationParamsPanel } from '../components/ConfigPanel'
+import { Icon } from '../components/Icon'
+import { M3PrimaryTabs, SegmentedRail } from '../studio/Controls'
+import { RippleButton } from '../studio/Ripple'
+import { SkeletonBlock } from '../studio/Skeleton'
+import { useNotify } from '../studio/useNotify'
 import { ChannelManager } from './ChannelsPage'
-import styles from './AccountPage.module.css'
+import styles from '../studio/Pages.module.css'
+
+const sections = [
+  { id: 'channels', label: '共享渠道' }, { id: 'users', label: '用户管理' }, { id: 'invites', label: '邀请码' },
+  { id: 'settings', label: '额度与队列' }, { id: 'templates', label: '参数模板' }, { id: 'usage', label: '使用统计' },
+] as const
 export function AdminPage() {
-  const [tab, setTab] = useState('channels')
-  return <><StudioHeader /><main id="main" className={styles.page}><h1>站点管理</h1><nav className={styles.tabs} aria-label="管理分类">{Object.entries({ channels: '共享渠道', users: '用户', invites: '邀请码', settings: '额度与队列', templates: '参数模板', usage: '使用统计' }).map(([id, name]) => <button key={id} aria-pressed={tab === id} onClick={() => setTab(id)}>{name}</button>)}</nav>
-    {tab === 'channels' ? <ChannelManager scope="shared" /> : tab === 'users' ? <UsersAdmin /> : tab === 'invites' ? <InvitesAdmin /> : tab === 'settings' ? <SettingsAdmin /> : tab === 'templates' ? <TemplatesAdmin /> : <UsageAdmin />}
-  </main></>
+  const [tab, setTab] = useState<typeof sections[number]['id']>('users')
+  return <main id="main" className={styles.pageWrap}>
+    <header className={styles.pageHeader}><div className={styles.pageTitleGroup}><span className={styles.pageEyebrow}>SITE ADMINISTRATION</span><h1 className={styles.pageTitle}>站点管理台</h1><p className={styles.pageSub}>管理共享渠道、成员额度、邀请码、队列并发、参数模板与使用统计。</p></div></header>
+    <div className={styles.adminNavWrap}><M3PrimaryTabs label="站点管理模块" variant="scrollable" value={tab} items={sections} onChange={setTab} /></div>
+    <div key={tab} className={`${styles.subPanelFade} ${styles.adminSection}`}>
+      {tab === 'channels' ? <ChannelManager scope="shared" /> : tab === 'users' ? <UsersAdmin /> : tab === 'invites' ? <InvitesAdmin /> : tab === 'settings' ? <SettingsAdmin /> : tab === 'templates' ? <TemplatesAdmin /> : <UsageAdmin />}
+    </div></main>
+}
+function LoadState({ error, reload, label }: { error: string; reload: () => void; label: string }) {
+  return error ? <div className={styles.sectionNote} role="alert">{error} <RippleButton type="button" className={styles.tonalBtn} onClick={reload}>重试</RippleButton></div>
+    : <div className={styles.detailCard} role="status" aria-label={`正在加载${label}`}><SkeletonBlock variant="text" width="35%" /><SkeletonBlock variant="field" /><SkeletonBlock variant="field" staggerIndex={1} /></div>
 }
 function UsersAdmin() {
-  const [users, setUsers] = useState<AdminUser[]>([]); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false)
-  async function load() { setUsers((await backendRequest<{ users: AdminUser[] }>('/admin/users')).users) }
-  useEffect(() => { void load().catch((e) => setNotice(backendErrorMessage(e))) }, [])
+  const { data, setData, error, reload } = useStudioResource<{ users: AdminUser[] }>('/admin/users')
+  const notify = useNotify(), [busy, setBusy] = useState(false), [failure, setFailure] = useState('')
   async function update(user: AdminUser, event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); setBusy(true); setNotice('')
-    const limit = String(data.get('dailyLimit') ?? '')
-    const resetPassword = String(data.get('password') ?? '')
-    if (resetPassword && (resetPassword.length < 12 || resetPassword.length > 1024)) { setNotice('重置密码须为 12–1024 个字符，不会自动截断。'); setBusy(false); return }
+    event.preventDefault(); if (busy) return
+    const form = event.currentTarget, fields = new FormData(form), limit = fields.get('dailyLimit'), password = String(fields.get('password') ?? '')
+    setFailure('')
+    if (password && (password.length < 12 || password.length > 1024)) { setFailure('重置密码须为 12–1024 个字符。'); return }
+    setBusy(true)
+    let settingsSaved = false
     try {
-      await backendRequest(`/admin/users/${user.id}`, { method: 'PATCH', body: JSON.stringify({ dailyLimit: limit === '' ? null : Number(limit), ...(user.role === 'USER' ? { enabled: data.get('enabled') === 'on' } : {}) }) })
-      const password = String(data.get('password') ?? '')
-      if (password && user.role === 'USER') await backendRequest(`/admin/users/${user.id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) })
-      form.reset(); await load(); setNotice('用户已更新；如重置密码，该用户下次登录须改密。')
-    } catch (e) { setNotice(backendErrorMessage(e)) } finally { setBusy(false) }
+      const {user: updated} = await backendRequest<{user: AdminUser}>(`/admin/users/${user.id}`, {method: 'PATCH', body: JSON.stringify({dailyLimit: limit === '' ? null : Number(limit), ...(user.role === 'USER' ? {enabled: fields.get('enabled') === 'on'} : {})})})
+      settingsSaved = true
+      setData((old) => old && ({users: old.users.map((u) => u.id === user.id ? updated : u)}))
+      if (password && user.role === 'USER') {
+        await backendRequest(`/admin/users/${user.id}/reset-password`, {method: 'POST', body: JSON.stringify({password})})
+        const field = form.elements.namedItem('password'); if (field instanceof HTMLInputElement) field.value = ''
+        setData((old) => old && ({users: old.users.map((u) => u.id === user.id ? {...u, mustChangePassword: true} : u)}))
+      }
+      notify({tone: 'success', message: password ? '新密码已设置，该成员下次登录须改密。' : `已保存 ${user.username} 的设置。`})
+    } catch (e) { setFailure(`${settingsSaved ? '账号设置已保存，重置密码未确认：' : ''}${backendErrorMessage(e)}`) } finally { setBusy(false) }
   }
-  return <><p>日额度留空继承站点，-1 无限，0 禁止共享调用。不显示用户提示词或图片。</p>{notice && <p role="status">{notice}</p>}{users.map((user) => <section className={styles.card} key={`${user.id}:${user.enabled}:${user.dailyLimit}`}><h2>{user.username} · {user.role}</h2><form className={styles.form} onSubmit={(e) => void update(user, e)}>{user.role === 'USER' && <label><input name="enabled" type="checkbox" defaultChecked={user.enabled} />启用账号</label>}<label className={styles.field}>日额度覆盖<input className={styles.input} name="dailyLimit" type="number" min={-1} step={1} defaultValue={user.dailyLimit ?? ''} /></label>{user.role === 'USER' && <label className={styles.field}>重置密码（12–1024 字符；留空不更改）<input className={styles.input} type="password" name="password" autoComplete="new-password" /></label>}<button disabled={busy}>保存用户设置</button></form></section>)}</>
+  if (!data) return <LoadState label="用户列表" error={error} reload={reload} />
+  return <><p className={styles.sectionNote}>日额度留空继承站点默认；-1 为无限，0 为禁止共享调用。这里只显示账号与额度。</p>
+    {failure && <p role="alert" className={styles.cautionBanner}>{failure}</p>}
+    <div className={styles.adminGrid}>{data.users.map((u) => <form aria-label={`${u.username} 的设置`} className={styles.adminCard} key={u.id} onSubmit={(e) => void update(u, e)}>
+      <div className={styles.adminCardHead}><div><strong>{u.username}</strong><span className={u.role === 'ADMIN' ? styles.roleAdmin : styles.roleUser}>{u.role}</span></div><span className={u.enabled ? styles.statusOn : styles.statusOff}>{u.enabled ? '账号正常' : '已禁用'}</span></div>
+      <fieldset disabled={busy} className={styles.adminUserFields}>
+        <label className={styles.filledField}><span>日额度覆盖（空值继承）</span><input name="dailyLimit" type="number" step="1" min="-1" max="1000000" defaultValue={u.dailyLimit ?? ''} placeholder="继承站点默认" /></label>
+        {u.role === 'USER' && <><label className={styles.filledField}><span>重置密码（12–1024 字符，留空不改）</span><input name="password" type="password" autoComplete="new-password" /></label><label><input type="checkbox" name="enabled" defaultChecked={u.enabled} /> 启用账号</label></>}
+      </fieldset><div className={styles.adminCardFooter}><span className={styles.monoMeta}>{u.mustChangePassword ? '下次登录须改密' : '密码状态正常'}</span><RippleButton className={styles.tonalBtn} disabled={busy}>保存设置</RippleButton></div>
+    </form>)}</div></>
 }
 function InvitesAdmin() {
-  const [invites, setInvites] = useState<Invite[]>([]); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false)
-  async function load() { setInvites((await backendRequest<{ invites: Invite[] }>('/admin/invites')).invites) }
-  useEffect(() => { void load().catch((e) => setNotice(backendErrorMessage(e))) }, [])
-  async function change(id?: string) { setBusy(true); try { await backendRequest(id ? `/admin/invites/${id}` : '/admin/invites', { method: id ? 'DELETE' : 'POST', ...(!id ? { body: '{}' } : {}) }); await load(); setNotice(id ? '邀请码已撤销。' : '邀请码已创建。') } catch (e) { setNotice(backendErrorMessage(e)) } finally { setBusy(false) } }
-  return <section className={styles.card}><h2>无限次邀请码</h2><p>邀请码不过期、可无限注册普通用户；撤销后不能继续注册。</p><button disabled={busy} onClick={() => void change()}>创建邀请码</button>{notice && <p role="status">{notice}</p>}{invites.map((invite) => <div className={styles.actions} key={invite.id}><code>{invite.code}</code><span>{invite.enabled ? '有效' : '已撤销'} · 已注册 {invite.registrationCount}</span><button disabled={busy || !invite.enabled} onClick={() => void change(invite.id)}>撤销</button></div>)}</section>
+  const { data, setData, reload, error } = useStudioResource<{ invites: Invite[] }>('/admin/invites')
+  const notify = useNotify(), [busy, setBusy] = useState(false), [failure, setFailure] = useState('')
+  async function change(id?: string) {
+    if (busy || (id && !window.confirm('撤销此邀请码？已注册成员不受影响。'))) return
+    setBusy(true); setFailure('')
+    try {
+      if (id) { await backendRequest(`/admin/invites/${id}`, {method: 'DELETE'}); setData((old) => old && ({invites: old.invites.map((i) => i.id === id ? {...i, enabled: false} : i)})) }
+      else { const {invite} = await backendRequest<{invite: Invite}>('/admin/invites', {method: 'POST', body: '{}'}); setData((old) => ({invites: [invite, ...(old?.invites ?? [])]})) }
+      notify({tone: 'success', message: id ? '邀请码已撤销。' : '邀请码已创建。'})
+    } catch (e) { setFailure(backendErrorMessage(e)) } finally { setBusy(false) }
+  }
+  if (!data) return <LoadState label="邀请码" error={error} reload={reload} />
+  return <><div className={styles.toolbarCard}><span className={styles.sectionNoteInline}>邀请码不过期，可重复注册普通成员；撤销后立即停止注册。</span><RippleButton className={styles.primaryBtn} disabled={busy} onClick={() => void change()}><Icon name="plus" size={14} />创建邀请码</RippleButton></div>
+    {failure && <p className={styles.cautionBanner} role="alert">{failure}</p>}
+    <div className={styles.inviteList}>{!data.invites.length && <p className={styles.sectionNote}>暂无邀请码。</p>}{data.invites.map((i) => <div className={styles.inviteRow} key={i.id}><code className={styles.inviteCode}>{i.code}</code><span className={i.enabled ? styles.statusOn : styles.statusOff}>{i.enabled ? '有效' : '已撤销'}</span><span className={styles.monoMeta}>已注册 {i.registrationCount} 人</span>
+      <div className={styles.inviteActions}><RippleButton className={styles.tonalBtn} disabled={!i.enabled} onClick={async () => { try { await navigator.clipboard.writeText(i.code); notify({message: '邀请码已复制。'}) } catch { notify({tone: 'warning', message: '未能写入剪贴板，请选中邀请码复制。'}) } }}>复制</RippleButton><RippleButton className={styles.dangerTonalBtn} disabled={busy || !i.enabled} onClick={() => void change(i.id)}>撤销</RippleButton></div></div>)}</div></>
 }
+const settingFields = [
+  {key: 'defaultDailyLimit', label: '默认日任务额度（留空关闭共享；-1 无限；0 禁止）', min: -1, max: 1000000},
+  {key: 'globalConcurrency', label: '全站总并发（1–32）', min: 1, max: 32}, {key: 'perUserConcurrency', label: '单人并发上限（1–32）', min: 1, max: 32},
+  {key: 'queueLimit', label: '排队队列上限（1–10000）', min: 1, max: 10000},
+] as const
 function SettingsAdmin() {
-  const [settings, setSettings] = useState<Settings | null>(null); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false)
-  useEffect(() => { void backendRequest<{ settings: Settings }>('/admin/settings').then((r) => setSettings(r.settings)).catch((e) => setNotice(backendErrorMessage(e))) }, [])
-  async function save(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const data = new FormData(event.currentTarget); setBusy(true); try { const body = Object.fromEntries(['defaultDailyLimit', 'globalConcurrency', 'perUserConcurrency', 'queueLimit'].map((key) => [key, data.get(key) === '' ? null : Number(data.get(key))])); setSettings((await backendRequest<{ settings: Settings }>('/admin/settings', { method: 'PUT', body: JSON.stringify(body) })).settings); setNotice('全站配置已保存。') } catch (e) { setNotice(`保存失败：${backendErrorMessage(e)}`) } finally { setBusy(false) } }
-  return <section className={styles.card}><h2>共享额度、并发与队列</h2><p>默认日额度留空代表未配置共享生成，-1 为无限额，0 为禁止。按北京时间统计。</p>{notice && <p role="status">{notice}</p>}{settings && <form className={styles.form} onSubmit={(e) => void save(e)}>{([{ key: 'defaultDailyLimit', name: '默认日任务额度', min: -1 }, { key: 'globalConcurrency', name: '全站并发', min: 1, max: 32 }, { key: 'perUserConcurrency', name: '单人并发', min: 1, max: 32 }, { key: 'queueLimit', name: '队列上限', min: 1, max: 10000 }] as const).map((field) => <label className={styles.field} key={field.key}>{field.name}<input className={styles.input} type="number" step={1} name={field.key} min={field.min} max={'max' in field ? field.max : undefined} required={field.key !== 'defaultDailyLimit'} defaultValue={settings[field.key] ?? ''} /></label>)}<button disabled={busy}>保存全站配置</button></form>}</section>
+  const {data, setData, error, reload} = useStudioResource<{settings: Settings}>('/admin/settings')
+  const notify = useNotify(), [busy, setBusy] = useState(false), [failure, setFailure] = useState('')
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (busy) return
+    const fields = new FormData(event.currentTarget); setBusy(true); setFailure('')
+    try { const body = Object.fromEntries(settingFields.map(({key}) => [key, fields.get(key) === '' ? null : Number(fields.get(key))])); setData(await backendRequest<{settings: Settings}>('/admin/settings', {method: 'PUT', body: JSON.stringify(body)})); notify({tone: 'success', message: '全站配置已保存。'}) }
+    catch (e) { setFailure(backendErrorMessage(e)) } finally { setBusy(false) }
+  }
+  if (!data) return <LoadState label="额度与队列设置" error={error} reload={reload} />
+  return <form className={styles.detailCard} onSubmit={(e) => void save(e)}><div className={styles.detailHeader}><div><span className={styles.pageEyebrow}>QUOTA & QUEUE POLICY</span><h2>共享额度与并发队列设置</h2></div><span className={styles.summaryPill}>按北京时间（Asia/Shanghai）日切</span></div>
+    <fieldset className={styles.formGrid} disabled={busy}>{settingFields.map((f) => <label className={styles.filledField} key={f.key}><span>{f.label}</span><input type="number" step="1" name={f.key} min={f.min} max={f.max} required={f.key !== 'defaultDailyLimit'} defaultValue={data.settings[f.key] ?? ''} /></label>)}</fieldset>
+    {failure && <p className={styles.cautionBanner} role="alert">{failure}</p>}<div className={styles.detailFooter}><span className={styles.monoMeta}>失败任务退回原提交日额度；删除终态任务不退额。</span><RippleButton className={styles.primaryBtn} disabled={busy}><Icon name="check" size={15} />保存全站配置</RippleButton></div></form>
 }
 function TemplatesAdmin() {
-  const [templates, setTemplates] = useState<Template[]>([]); const [editing, setEditing] = useState<Template | null | undefined>(undefined)
-  const [config, setConfig] = useState<ProviderConfig>(createDefaultProviderConfig); const [name, setName] = useState(''); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false)
-  async function load() { setTemplates((await backendRequest<{ templates: Template[] }>('/templates')).templates) }
-  useEffect(() => { void load().catch((e) => setNotice(backendErrorMessage(e))) }, [])
-  function edit(template: Template | null) { const next = createDefaultProviderConfig(); if (template) { next.activeProvider = template.provider; Object.assign(next.profiles[template.provider].params, template.params) }; setConfig(next); setName(template?.name ?? ''); setEditing(template) }
-  async function save(event: FormEvent) { event.preventDefault(); setBusy(true); try { await backendRequest(editing ? `/admin/templates/${editing.id}` : '/admin/templates', { method: editing ? 'PUT' : 'POST', body: JSON.stringify({ name, provider: config.activeProvider, params: config.profiles[config.activeProvider].params }) }); await load(); setEditing(undefined); setNotice('模板已保存；不覆盖已有用户参数。') } catch (e) { setNotice(backendErrorMessage(e)) } finally { setBusy(false) } }
-  async function remove(id: string) { if (!window.confirm('删除此参数模板？')) return; setBusy(true); try { await backendRequest(`/admin/templates/${id}`, { method: 'DELETE' }); await load(); setNotice('模板已删除。') } catch (e) { setNotice(backendErrorMessage(e)) } finally { setBusy(false) } }
-  function params(provider: ProviderType, patch: object) { setConfig((previous) => ({ ...previous, profiles: { ...previous.profiles, [provider]: { ...previous.profiles[provider], params: { ...previous.profiles[provider].params, ...patch } } } }) as ProviderConfig) }
-  return <><button onClick={() => edit(null)}>新增参数模板</button>{notice && <p role="status">{notice}</p>}{editing !== undefined && <form onSubmit={(e) => void save(e)} className={styles.card}><label className={styles.field}>模板名称<input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} required /></label><label className={styles.field}>协议<select value={config.activeProvider} onChange={(e) => setConfig((p) => ({ ...p, activeProvider: e.target.value as ProviderType }))}><option value="openai-compatible">OpenAI</option><option value="gemini-compatible">Gemini</option></select></label><GenerationParamsPanel config={config} activeProvider={config.activeProvider} activeProfile={config.profiles[config.activeProvider]} isHydrated={!busy} hasReferenceImages={false} onProfileChange={() => undefined} onOpenAIParamsChange={(patch) => params('openai-compatible', patch)} onGeminiParamsChange={(patch) => params('gemini-compatible', patch)} /><div className={styles.actions}><button disabled={busy}>保存模板</button><button type="button" onClick={() => setEditing(undefined)}>取消</button></div></form>}{templates.map((template) => <section className={styles.card} key={template.id}><h2>{template.name}</h2><p>{template.provider}</p><div className={styles.actions}><button disabled={busy} onClick={() => edit(template)}>编辑</button><button disabled={busy} onClick={() => void remove(template.id)}>删除</button></div></section>)}</>
+  const {data, setData, error, reload} = useStudioResource<{templates: Template[]}>('/templates')
+  const [selected, setSelected] = useState<string | null>(null), [revision, setRevision] = useState(0)
+  const [busy, setBusy] = useState(false), notify = useNotify()
+  if (!data) return <LoadState label="参数模板" error={error} reload={reload} />
+  const template = selected === 'new' ? undefined : data.templates.find((t) => t.id === selected) ?? data.templates[0]
+  async function remove(id: string) {
+    if (!window.confirm('删除此参数模板？')) return
+    setBusy(true)
+    try { await backendRequest(`/admin/templates/${id}`, {method: 'DELETE'}); setData((old) => old && ({templates: old.templates.filter((t) => t.id !== id)})); setSelected(null); notify({message: '模板已删除。'}) }
+    catch (e) { notify({tone: 'warning', message: backendErrorMessage(e)}) } finally { setBusy(false) }
+  }
+  return <div className={styles.splitWorkspace}><section className={styles.masterRail}><div className={styles.masterHead}><strong>参数模板列表</strong><span>{data.templates.length} 个</span></div>
+    <RippleButton className={styles.tonalBtn} disabled={busy} onClick={() => setSelected('new')}><Icon name="plus" size={14} />新增参数模板</RippleButton>
+    <div className={styles.channelCardStack}>{data.templates.map((t) => <RippleButton type="button" key={t.id} className={`${styles.channelItemCard} ${template?.id === t.id ? styles.channelItemActive : ''}`} disabled={busy} aria-pressed={template?.id === t.id} onClick={() => setSelected(t.id)}><span className={styles.channelItemTop}><strong>{t.name}</strong><span className={styles.protoTag}>{t.provider === 'openai-compatible' ? 'OpenAI' : 'Gemini'}</span></span><span className={styles.monoMeta}>{t.provider === 'openai-compatible' ? `${t.params.size || 'auto'} · ${t.params.quality || 'auto'} · ${t.params.n ?? 1} 张` : `${t.params.aspectRatio || 'auto'} · ${t.params.imageSize || 'auto'}`}</span></RippleButton>)}</div></section>
+    <TemplateEditor key={`${template?.id ?? 'new'}:${revision}`} template={template} busy={busy} setBusy={setBusy} onRemove={remove} onCancel={() => { setSelected(template?.id ?? null); setRevision((r) => r + 1) }}
+      onSaved={(saved) => { setData((old) => ({templates: [...(old?.templates ?? []).filter((t) => t.id !== saved.id), saved]})); setSelected(saved.id); setRevision((r) => r + 1); notify({tone: 'success', message: '模板已保存。'}) }} /></div>
+}
+function TemplateEditor({ template, busy, setBusy, onRemove, onSaved, onCancel }: { template?: Template; busy: boolean; setBusy: (v: boolean) => void; onRemove: (id: string) => void; onSaved: (t: Template) => void; onCancel: () => void }) {
+  const [config, setConfig] = useState(() => { const initial = createDefaultProviderConfig(); if (template) { initial.activeProvider = template.provider; Object.assign(initial.profiles[template.provider].params, template.params) }; return initial })
+  const [failure, setFailure] = useState('')
+  function params(provider: ProviderType, patch: object) { setConfig((p) => ({ ...p, profiles: {...p.profiles, [provider]: {...p.profiles[provider], params: {...p.profiles[provider].params, ...patch}}} }) as ProviderConfig) }
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (busy) return
+    const name = new FormData(event.currentTarget).get('name'); setFailure(''); setBusy(true)
+    try { const result = await backendRequest<{template: Template}>(template ? `/admin/templates/${template.id}` : '/admin/templates', {method: template ? 'PUT' : 'POST', body: JSON.stringify({name, provider: config.activeProvider, params: config.profiles[config.activeProvider].params})}); onSaved(result.template) }
+    catch (e) { setFailure(backendErrorMessage(e)) } finally { setBusy(false) }
+  }
+  return <form className={styles.detailCard} onSubmit={(e) => void save(e)}><div className={styles.detailHeader}><div><span className={styles.pageEyebrow}>TEMPLATE BUILDER</span><h2>{template ? '编辑' : '新建'}预设模板（仅预填参数）</h2></div></div>
+    <fieldset disabled={busy} className={styles.adminSection}><label className={styles.filledField}><span>模板名称</span><input name="name" required defaultValue={template?.name} /></label>
+      <SegmentedRail<ProviderType> label="模板协议" value={config.activeProvider} options={[{value: 'openai-compatible', label: 'OpenAI'}, {value: 'gemini-compatible', label: 'Gemini'}]} onChange={(activeProvider) => setConfig((p) => ({...p, activeProvider}))} />
+      <GenerationParamsPanel key={config.activeProvider} config={config} activeProvider={config.activeProvider} isHydrated hasReferenceImages={false} onOpenAIParamsChange={(patch) => params('openai-compatible', patch)} onGeminiParamsChange={(patch) => params('gemini-compatible', patch)} /></fieldset>
+    {failure && <p className={styles.cautionBanner} role="alert">{failure}</p>}<div className={styles.detailFooter}>{template && <RippleButton type="button" className={styles.dangerTonalBtn} disabled={busy} onClick={() => onRemove(template.id)}>删除模板</RippleButton>}<div className={styles.pageHeaderActions}><RippleButton type="button" className={styles.tonalBtn} disabled={busy} onClick={onCancel}>取消</RippleButton><RippleButton className={styles.primaryBtn} disabled={busy}><Icon name="check" size={15} />保存模板</RippleButton></div></div></form>
+}
+function UsageTable({ title, columns, children }: {title: string; columns: string[]; children: ReactNode}) {
+  return <section><h3>{title}</h3><div className={styles.tableWrap} data-no-swipe="true"><table className={styles.dataTable} aria-label={title}><thead><tr>{columns.map((name) => <th key={name} scope="col">{name}</th>)}</tr></thead><tbody>{children}</tbody></table></div></section>
 }
 function UsageAdmin() {
-  const [usage, setUsage] = useState<Usage | null>(null); const [error, setError] = useState('')
-  async function load() { try { setUsage(await backendRequest<Usage>('/admin/usage')); setError('') } catch (e) { setError(backendErrorMessage(e)) } }
-  useEffect(() => { void load() }, [])
-  return <section className={styles.card}><h2>非私密使用统计</h2><p>仅统计数量及任务状态，不含提示词、图片或密钥。</p><button onClick={() => void load()}>刷新统计</button>{error && <p role="alert">{error}</p>}{usage && <><h3>用户</h3><div className={styles.scroll}><table className={styles.table}><thead><tr><th>用户</th><th>总计</th><th>成功</th><th>失败</th><th>活动</th></tr></thead><tbody>{usage.users.map((item) => <tr key={item.userId}><td>{item.username}</td><td>{item.total}</td><td>{item.succeeded}</td><td>{item.failed}</td><td>{item.active}</td></tr>)}</tbody></table></div><h3>渠道</h3><div className={styles.scroll}><table className={styles.table}><thead><tr><th>渠道</th><th>总计</th><th>成功</th><th>失败</th><th>活动</th></tr></thead><tbody>{usage.channels.map((item) => <tr key={item.channelId}><td>{item.name}</td><td>{item.total}</td><td>{item.succeeded}</td><td>{item.failed}</td><td>{item.active}</td></tr>)}</tbody></table></div><h3>最近任务（最多 100 条）</h3><div className={styles.scroll}><table className={styles.table}><thead><tr><th>任务 ID</th><th>用户</th><th>渠道 ID</th><th>状态</th><th>创建时间</th></tr></thead><tbody>{usage.tasks.map((item) => <tr key={item.id}><td>{item.id}</td><td>{item.username}</td><td>{item.channelId}</td><td>{item.status}</td><td>{item.createdAt}</td></tr>)}</tbody></table></div></>}</section>
+  const {data, loading, error, reload} = useStudioResource<Usage>('/admin/usage')
+  if (!data) return <LoadState label="使用统计" error={error} reload={reload} />
+  const counts = data.users.reduce((a, u) => ({total: a.total + u.total, succeeded: a.succeeded + u.succeeded, active: a.active + u.active}), {total: 0, succeeded: 0, active: 0})
+  const channels = new Map(data.channels.map((c) => [c.channelId, c.name]))
+  return <><div className={styles.kpiRow}>{[['总任务计数', counts.total, '按用户汇总'], ['成功任务', counts.succeeded, counts.total ? `占全部任务的 ${(counts.succeeded / counts.total * 100).toFixed(1)}%` : '暂无已提交任务'], ['当前活跃任务', counts.active, '排队中与运行中']].map(([title, value, note]) => <div className={styles.kpiCard} key={title}><span>{title}</span><strong>{value}</strong><small>{note}</small></div>)}</div>
+    <div className={styles.detailCard}><div className={styles.detailHeader}><div><span className={styles.pageEyebrow}>NON-PRIVATE TELEMETRY</span><h2>用户、渠道与最近任务状态</h2></div><RippleButton className={styles.tonalBtn} disabled={loading} onClick={() => void reload()}><Icon name="loader" size={14} />{loading ? '刷新中…' : '刷新统计'}</RippleButton></div>
+      {error && <p className={styles.cautionBanner} role="alert">{error}</p>}
+      {(['users', 'channels'] as const).map((key) => { const label = key === 'users' ? '用户' : '渠道'; return <UsageTable key={key} title={`${label}统计`} columns={[label, '总计', '成功', '失败', '活动']}>{data[key].map((r) => <tr key={'userId' in r ? r.userId : r.channelId}><td>{'username' in r ? r.username : r.name}</td><td>{r.total}</td><td>{r.succeeded}</td><td>{r.failed}</td><td>{r.active}</td></tr>)}</UsageTable> })}
+      <UsageTable title="最近任务（最多 100 条）" columns={['任务 ID', '用户', '渠道', '状态', '创建时间']}>{data.tasks.map((t) => <tr key={t.id}><td><code>{t.id}</code></td><td>{t.username}</td><td title={t.channelId}>{channels.get(t.channelId) || t.channelId}</td><td><span className={t.status === 'succeeded' ? styles.statusOn : t.status === 'running' ? styles.statusRunningChip : styles.statusOff}>{t.status}</span></td><td>{new Date(t.createdAt).toLocaleString()}</td></tr>)}</UsageTable>
+      {!data.tasks.length && <p className={styles.monoMeta}>暂无任务记录。</p>}</div></>
 }

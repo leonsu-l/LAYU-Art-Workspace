@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../components/Icon'
-import { SegmentedRail, StudioSelect } from '../components/LabControls'
-import { LabIcon } from '../components/LabIcon'
-import { RippleButton } from '../components/LabRipple'
-import { SkeletonBlock, SkeletonTextStack } from '../components/LabSkeleton'
-import type { SnackbarPayload } from '../components/useSnackbar'
+import { SegmentedRail, StudioSelect } from '../../studio/Controls'
+import { LabIcon } from '../../studio/LabIcon'
+import { RippleButton } from '../../studio/Ripple'
+import { SkeletonBlock, SkeletonTextStack } from '../../studio/Skeleton'
+import type { SnackbarPayload } from '../../studio/useSnackbar'
 import {
   MOCK_BUCKET_DELETE_BLOCK_REASONS,
   MOCK_BUCKET_USAGE,
@@ -26,7 +26,7 @@ import {
   validateRetentionDays,
 } from '../utils/retentionFormat'
 import type { LabLoadMode } from './MultiPagePrototypes'
-import pageStyles from './MultiPagePrototypes.module.css'
+import pageStyles from '../../studio/Pages.module.css'
 import styles from './AdminModules.module.css'
 
 const LOCAL_BUCKET_VALUE = '__local__'

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "project": "NanoBanana Studio",
-  "activeTask": "Multi-page Material 3 Expressive design system (Direction A selected)",
-  "currentFocus": "multi-page-review",
+  "activeTask": "将方向 A 已批准的五组页面接入生产应用（已完成）",
+  "currentFocus": "production-integrated",
   "designDirection": {
     "summary": "Selected Direction A (Cobalt Studio): authentic Material 3 Expressive across all 5 application pages with 5-level cool slate tonal surfaces (zero 1px border cages), Cobalt Primary + Muted Blue Secondary Container + Warm Amber Tertiary Container, connected button groups with overshoot-safe shape morphing, M3 Split CTA, radial ripples, tonal filled StudioSelect, and Cobalt-tinted M3 Expressive Shimmer Skeleton Loading.",
     "tokenFiles": [
-      "apps/web/src/design-lab/tokens.module.css"
+      "apps/web/src/studio/tokens.css"
     ],
     "referenceAssets": [
       "docs/REFERENCE.md",
@@ -28,33 +28,33 @@
       "id": "lab-tokens",
       "name": "Direction A M3 Expressive Token Matrix",
       "kind": "token-set",
-      "status": "approved",
-      "location": "apps/web/src/design-lab/tokens.module.css",
-      "notes": "Light & dark M3 tonal neutral ladder + Cobalt/Amber color roles + secondary-container hover and shimmer skeleton tokens for Direction A."
+      "status": "integrated",
+      "location": "apps/web/src/studio/tokens.css",
+      "notes": "生产路由与开发预览共用的钴蓝、琥珀及浅深色阶。"
     },
     {
       "id": "lab-components",
       "name": "M3 Expressive Connected Controls & Select",
       "kind": "composition",
-      "status": "experimental",
-      "location": "apps/web/src/design-lab/components/LabControls.tsx",
-      "notes": "ChannelModelBar popover (with catalog loading skeleton), RatioTileSelector, SegmentedRail, CountStepper, M3SplitGenerateButton, and StudioSelect with ripple and outer-corner clamp fix."
+      "status": "integrated",
+      "location": "apps/web/src/studio/Controls.tsx",
+      "notes": "渠道与模型选择、参数控件、模板按钮和栏目导航。"
     },
     {
       "id": "lab-skeleton",
       "name": "M3 Expressive Shimmer Skeleton Loading System",
       "kind": "component",
-      "status": "experimental",
-      "location": "apps/web/src/design-lab/components/LabSkeleton.tsx",
-      "notes": "GPU-composited Cobalt-tinted tonal shimmer blocks, progressive ShimmerImage crossfade reveal, and page-matching skeletons across all 5 routes."
+      "status": "integrated",
+      "location": "apps/web/src/studio/Skeleton.tsx",
+      "notes": "表单和列表加载占位，图片解码后渐显并报告原图尺寸。"
     },
     {
       "id": "lab-ripple",
       "name": "Unified M3 RippleButton & RippleOverlay",
       "kind": "component",
-      "status": "experimental",
-      "location": "apps/web/src/design-lab/components/LabRipple.tsx",
-      "notes": "Shared ripple surface and drop-in RippleButton reusing useRipple across all clickable controls, tabs, snackbars, cards, thumbnails, and lightbox HUD buttons."
+      "status": "integrated",
+      "location": "apps/web/src/studio/Ripple.tsx",
+      "notes": "按钮和图面共用 useRipple 及其可复用反馈层。"
     },
     {
       "id": "lab-workbench",
@@ -133,11 +133,55 @@
     "dec-006-gallery-immersive-launch-transition",
     "dec-007-gallery-selected-hover-and-m3-shimmer-skeleton",
     "dec-008-unified-m3-ripple-button-reuse",
-    "dec-009-image-retention-storage-and-issues"
+    "dec-009-image-retention-storage-and-issues",
+    "dec-010-production-integration"
   ],
   "openQuestions": [
-    "Approve the 5-page M3 Expressive prototypes under Direction A (including image retention, R2 storage management, and admin issues log) so Stage 6 production integration can begin?"
+    "是否将图片有效期、R2 存储管理和问题日志原型接入生产？"
   ],
-  "nextSuggestedAction": "Review /design-lab.html (Workbench retention + 410, Gallery mixed/empty/404, Admin Storage & Issues tabs) across desktop and 390px mobile, then confirm Stage 6 production integration.",
-  "updatedAt": "2026-11-19T21:23:00+08:00"
+  "nextSuggestedAction": "在 Design Lab 评审工作台的 410 恢复、图库的有效期与 404，以及管理台的存储管理和问题日志。",
+  "updatedAt": "2026-11-20T18:04:20+08:00",
+  "productionIntegration": {
+    "branch": "feat/design-lab-ui-integration",
+    "entry": "apps/web/src/main.tsx",
+    "pages": [
+      {
+        "name": "创作工作台",
+        "routes": [
+          "/"
+        ],
+        "component": "apps/web/src/App.tsx"
+      },
+      {
+        "name": "我的图库",
+        "routes": [
+          "/gallery"
+        ],
+        "component": "apps/web/src/pages/GalleryPage.tsx"
+      },
+      {
+        "name": "自定义渠道",
+        "routes": [
+          "/channels"
+        ],
+        "component": "apps/web/src/pages/ChannelsPage.tsx"
+      },
+      {
+        "name": "账号",
+        "routes": [
+          "/login",
+          "/password"
+        ],
+        "component": "apps/web/src/pages/AccountPage.tsx"
+      },
+      {
+        "name": "站点管理",
+        "routes": [
+          "/admin"
+        ],
+        "component": "apps/web/src/pages/AdminPage.tsx"
+      }
+    ],
+    "verification": "design-lab/README.md#集成验证"
+  }
 }
