@@ -149,6 +149,10 @@ function App() {
     : isReadingImages ? '正在读取参考图…' : referenceImageError ? '请先调整参考图' : pendingSubmissions.length ? '存在待确认提交，请先恢复'
     : connectionError ? '连接中断，请重连' : !hasDiscovered ? '正在恢复后端任务…' : isSubmitting ? '等待后端确认接收' : deletingTaskId ? '正在删除任务…'
     : !promptLength ? '输入画面描述后即可生成' : promptLength > 4000 ? '提示词超出 4,000 字上限' : ''
+  const selectionHint = config.channelId && !channel ? '原渠道已不可用，请重新选择。'
+    : channel && !channel.enabled ? '所选渠道已停用，请重新选择。'
+    : channel?.scope === 'shared' && activeProfile.model && !channel.enabledModels.includes(activeProfile.model) ? '原模型已停用，请选择管理员启用的模型。'
+    : '请在上方选择已启用的渠道与模型。'
   const count = activeProvider === 'openai-compatible' ? config.profiles[activeProvider].params.n : 1
 
   return <main id="main" aria-label="创作工作台">
@@ -160,7 +164,7 @@ function App() {
             templates={availableTemplates} quota={quota} onChannelChange={selectChannel} onProviderChange={setActiveProvider}
             onModelChange={(model) => updateProviderProfile(activeProvider, { model })} onApplyTemplate={applyTemplate} />}
           {configError && <p role="alert" className={work.recoveryAlert}>{configError}</p>}
-          {!initialLoad && !ready && <p className={work.blockerAlert}><Icon name="settings" size={16} />{config.channelId && !channel ? '原渠道已不可用，请重新选择。' : channel && !channel.enabled ? '所选渠道已停用，请重新选择。' : '请在上方选择已启用的渠道与模型。'}</p>}
+          {!initialLoad && !ready && <p className={work.blockerAlert}><Icon name="settings" size={16} />{selectionHint}</p>}
           {catalog?.error && <p className={work.blockerAlert}>目录刷新失败，保留上次目录：{catalog.error}</p>}
           {catalog?.stale && <p className={work.fieldMeta}>目录缓存已过期，可由渠道管理者刷新。</p>}
           {connectionError && <div className={work.recoveryAlert} role="alert"><p>{connectionError} · 正在重连</p><RippleButton className={work.recoveryBtnTonal} disabled={isRefreshing} onClick={refreshTasks}>刷新状态</RippleButton></div>}

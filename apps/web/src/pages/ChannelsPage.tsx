@@ -47,7 +47,7 @@ export function ChannelManager({ scope }: { scope: Channel['scope'] }) {
         </RippleButton>)}</div></section>
       {!data && loading ? <section className={styles.detailCard} role="status" aria-label="正在加载渠道配置"><SkeletonBlock variant="text" width="45%" /><SkeletonBlock variant="field" /><SkeletonBlock variant="field" /></section>
         : (active || selected === 'new') ? <ChannelEditor key={`${active?.id ?? 'new'}:${revision}`} channel={active} scope={scope} busy={busy || loading} setBusy={setBusy}
-          onCancel={() => { setSelected(null); setRevision((r) => r + 1) }} onRemove={remove}
+          onCancel={() => { setSelected(active?.id ?? null); setRevision((r) => r + 1) }} onRemove={remove}
           onSaved={(channel) => { setData((old) => ({ channels: [...(old?.channels ?? []).filter((c) => c.id !== channel.id), channel] })); setSelected(channel.id); setRevision((r) => r + 1); notify({tone: 'success', message: `已保存渠道「${channel.name}」。`}) }} />
         : <section className={styles.detailCard}><h2>新增{label}渠道</h2><p className={styles.pageSub}>填写接口地址和只写密钥。保存渠道后即可发现模型，也可以直接填写模型 ID。</p></section>}
     </div>

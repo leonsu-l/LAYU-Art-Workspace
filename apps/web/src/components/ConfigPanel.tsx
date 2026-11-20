@@ -13,13 +13,24 @@ const pixels: Record<string, string> = { auto: 'auto', '1:1': '1024x1024', '4:3'
 const names: Record<string, string> = { auto: '自动', medium: '标准', high: '高', max: '极致', low: '低', xhigh: '超高', opaque: '不透明', transparent: '透明' }
 function choices(values: readonly string[]) { return values.map((value) => ({ value, label: names[value] ?? value })) }
 
-function CustomParameter({ label, value, options, onChange }: { label: string; value: string; options: readonly string[]; onChange: (next: string) => void }) {
+interface CustomParameterProps {
+  label: string
+  value: string
+  options: readonly string[]
+  onChange: (next: string) => void
+  disabled?: boolean
+  labels?: Record<string, string>
+}
+function CustomParameter({ label, value, options, onChange, disabled, labels = names }: CustomParameterProps) {
   const [custom, setCustom] = useState(false)
-  const manual = custom || !options.includes(value)
+  const manual = !disabled && (custom || !options.includes(value))
+  const presets = options.map((id) => ({ value: id, label: labels[id] ?? id }))
   return <div className={page.filledField}>
-    <span>{label}</span><StudioSelect label={label} value={manual ? '__custom' : value}
-      options={[...choices(options), { value: '__custom', label: '自定义值' }]} onChange={(next) => {
-        setCustom(next === '__custom'); if (next !== '__custom') onChange(next)
+    <span>{label}</span>
+    <StudioSelect label={label} disabled={disabled} value={manual ? '__custom' : value}
+      options={[...presets, { value: '__custom', label: '自定义值' }]} onChange={(next) => {
+        setCustom(next === '__custom')
+        if (next !== '__custom') onChange(next)
       }} />
     {manual && <input aria-label={`自定义${label}`} value={value} spellCheck={false} onChange={(e) => onChange(e.target.value)} />}
   </div>
@@ -51,10 +62,14 @@ export function GenerationParamsPanel({ config, activeProvider, isHydrated, hasR
     {advanced && <div className={styles.advancedPanel}>{isOpenAI ? <>
       <CustomParameter label="图片尺寸" value={oa.size} options={[...new Set([...OPENAI_FLEXIBLE_SIZES, ...Object.values(pixels)])]} onChange={(size) => openAI({ size })} />
       <CustomParameter label="图片质量" value={oa.quality} options={OPENAI_QUALITIES} onChange={(quality) => openAI({ quality })} />
-      <CustomParameter label="输出格式" value={oa.outputFormat} options={OPENAI_OUTPUT_FORMATS} onChange={(outputFormat) => openAI({ outputFormat })} />
+      <div className={page.filledField}><span>输出格式</span>
+        <StudioSelect label="输出格式" value={oa.outputFormat} options={choices(OPENAI_OUTPUT_FORMATS)} onChange={(outputFormat) => openAI({
+          outputFormat, ...(outputFormat === 'jpeg' && oa.background === 'transparent' ? { background: 'opaque' } : {}),
+        })} />
+      </div>
       <CustomParameter label="背景" value={oa.background} options={oa.outputFormat === 'jpeg' ? ['auto', 'opaque'] : ['auto', 'opaque', 'transparent']} onChange={(background) => openAI({ background })} />
       {oa.outputFormat !== 'png' && <label className={page.filledField}><span>压缩质量（0–100）</span><input type="number" min={0} max={100} step={1} value={oa.outputCompression} onChange={(e) => openAI({ outputCompression: Number(e.target.value) })} /></label>}
-      <div className={page.filledField}><span>内容审核</span><StudioSelect label="内容审核" value={hasReferenceImages ? 'auto' : oa.moderation} disabled={hasReferenceImages} options={[{value: 'auto', label: '自动'}, {value: 'low', label: '较宽松'}]} onChange={(moderation) => openAI({ moderation })} />{hasReferenceImages && <small>参考图使用编辑接口默认审核。</small>}</div>
+      <div className={page.filledField}><CustomParameter key={String(hasReferenceImages)} label="内容审核" value={hasReferenceImages ? 'auto' : oa.moderation} disabled={hasReferenceImages} options={['auto', 'low']} labels={{auto: '自动', low: '较宽松'}} onChange={(value) => openAI({ moderation: value as OpenAIImageParams['moderation'] })} />{hasReferenceImages && <small>参考图使用编辑接口默认审核。</small>}</div>
     </> : <>
       <CustomParameter label="图片比例" value={gm.aspectRatio} options={['auto', ...model.aspectRatios]} onChange={(aspectRatio) => gemini({ aspectRatio })} />
       <CustomParameter label="输出分辨率" value={gm.imageSize} options={model.imageSizes} onChange={(imageSize) => gemini({ imageSize })} />

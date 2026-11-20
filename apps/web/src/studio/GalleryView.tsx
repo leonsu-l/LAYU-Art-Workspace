@@ -62,8 +62,8 @@ export function GalleryView<T extends Artwork>({
   const closeAnimsRef = useRef<Animation[]>([])
   const closeTimerRef = useRef<number | null>(null)
 
-  const allSelected = items.length > 0 && items.every((item) => selectedKeys.includes(item.key))
-
+  const selectedSet = new Set(selectedKeys)
+  const allSelected = items.length > 0 && items.every((item) => selectedSet.has(item.key))
 
   const finalizeClose = useCallback((sessionId?: number) => {
     if (sessionId !== undefined && sessionId !== closeSessionRef.current) return
@@ -538,7 +538,7 @@ export function GalleryView<T extends Artwork>({
                 type="button"
                 className={styles.dangerTonalBtn}
                 disabled={deleting || selectedKeys.length === 0}
-                onClick={() => onDeleteSelected(items.filter((i) => selectedKeys.includes(i.key)))}
+                onClick={() => onDeleteSelected(items.filter((i) => selectedSet.has(i.key)))}
               >
                 <Icon name="trash" size={14} />
                 <span>删除所选</span>
@@ -617,7 +617,7 @@ export function GalleryView<T extends Artwork>({
       ) : (
         <div className={styles.galleryGrid}>
           {items.map((item, idx) => {
-            const selected = selectedKeys.includes(item.key)
+            const selected = selectedSet.has(item.key)
             return (
               <article
                 key={item.key}

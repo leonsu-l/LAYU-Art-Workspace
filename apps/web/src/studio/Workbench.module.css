@@ -1152,7 +1152,8 @@
 }
 
 .artworkFigure img.resultOriginal { object-fit: contain; aspect-ratio: auto; }
-.filmEntry { position: relative; min-width: 0; }
+.historyRail { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: clamp(158px, 24%, 260px); overflow-x: auto; padding: 2px 2px 6px; scroll-snap-type: x proximity; }
+.filmEntry { position: relative; min-width: 0; scroll-snap-align: start; }
 .filmEntry .filmCard { width: 100%; padding-right: 30px; }
 .filmDelete { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 24px; height: 28px; border-radius: 12px; color: var(--md-sys-color-on-surface-variant); }
 .filmDelete:not(:disabled):hover { color: var(--md-sys-color-error); background: var(--md-sys-color-error-container); }

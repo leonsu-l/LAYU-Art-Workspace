@@ -11,6 +11,7 @@ export function GalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const previous = useRef<GalleryItem[]>([])
@@ -33,7 +34,7 @@ export function GalleryPage() {
       setSelected((old) => old.filter((key) => keys.has(key)))
       if (manual && !snapshot.serverError) notify({ message: '图库已刷新。' })
     } finally {
-      if (request.current === controller && !controller.signal.aborted) { request.current = null; setLoading(false) }
+      if (request.current === controller && !controller.signal.aborted) { request.current = null; setLoading(false); setInitialized(true) }
     }
   }, [notify])
 
@@ -69,7 +70,7 @@ export function GalleryPage() {
   }
 
   return <main id="main"><GalleryView items={items} selectedKeys={selected} onSelection={setSelected}
-    isRefreshing={loading} showListSkeleton={loading && !items.length && !error} deleting={deleting} error={error}
+    isRefreshing={loading} showListSkeleton={!initialized && loading} deleting={deleting} error={error}
     overlayId="studio-overlay-root" onGoWorkbench={() => void navigate('/')} onRefresh={() => void refresh(true)}
     onDeleteOne={(item) => void remove([item], false)} onDeleteSelected={(list) => void remove(list, true)}
     onDownload={(item) => { downloadGalleryItem(item); notify({ message: '已开始下载原图。' }) }} /></main>

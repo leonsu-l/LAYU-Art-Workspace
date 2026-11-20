@@ -392,6 +392,7 @@ export function M3SplitGenerateButton({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const menuTrigger = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -400,8 +401,12 @@ export function M3SplitGenerateButton({
         setMenuOpen(false)
       }
     }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setMenuOpen(false); menuTrigger.current?.focus() }
+    }
     document.addEventListener('pointerdown', onOutside)
-    return () => document.removeEventListener('pointerdown', onOutside)
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('pointerdown', onOutside); document.removeEventListener('keydown', onKeyDown) }
   }, [menuOpen])
 
   return (
@@ -418,6 +423,7 @@ export function M3SplitGenerateButton({
       <RippleButton
         type="button"
         className={`${styles.splitSide} ${menuOpen ? styles.splitSideOpen : ''}`}
+        ref={menuTrigger}
         aria-label="快捷套用参数模板"
         aria-expanded={menuOpen}
         disabled={templates.length === 0}
@@ -437,7 +443,7 @@ export function M3SplitGenerateButton({
               className={styles.splitMenuItem}
               onClick={() => {
                 onApplyTemplate(tpl)
-                setMenuOpen(false)
+                setMenuOpen(false); menuTrigger.current?.focus()
               }}
             >
               <Icon name="sliders" size={14} />
