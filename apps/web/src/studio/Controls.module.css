@@ -995,3 +995,6 @@
     font-size: 12.5px;
   }
 }
+
+.primaryTabIndicator { transition: transform 280ms var(--md-sys-motion-easing-emphasized-decelerate), width 220ms var(--md-sys-motion-easing-standard), opacity 120ms ease; }
+.splitSide svg { transition: transform 240ms var(--md-sys-motion-easing-expressive-spring); }

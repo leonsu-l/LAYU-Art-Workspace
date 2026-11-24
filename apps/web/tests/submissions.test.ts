@@ -4,7 +4,7 @@ import {
   acknowledgeSubmission, deleteGenerationTask, getGenerationTask, isDefiniteSubmissionRejection, isDeletedTaskError, PENDING_TASK_PREFIX,
   prepareSubmission, readPendingSubmissions, submitPendingRequest, withSubmissionLock,
 } from '../src/services/imageGenerationService.ts'
-import { changeSessionScope, userStorageKey } from '../src/services/sessionScope.ts'
+import { changeSessionScope, getStudioCache, userStorageKey } from '../src/services/sessionScope.ts'
 import { clearSubmissionMemory } from '../src/services/imageGenerationService.ts'
 import { taskParams } from '@nanobanana/shared/utils/generationParams'
 import { validateProviderConfig } from '@nanobanana/shared/utils/validation'
@@ -231,4 +231,15 @@ test('local selection restores only visible enabled channels and never upgrades 
   assert.equal(changed.profiles['openai-compatible'].model, '')
   assert.equal(restoreChannelSelection(saved, [editedChannel])?.model, '')
   assert.equal(reconcileChannelProtocol(config, [channel]), config)
+})
+
+test('studio snapshots are cleared on session rotation and late writes stay isolated', () => {
+  changeSessionScope('first')
+  const first = getStudioCache()
+  first.set('/gallery', ['private'])
+  changeSessionScope('second')
+  assert.equal(first.get('/gallery'), undefined)
+  first.set('/gallery', ['late'])
+  assert.equal(getStudioCache().get('/gallery'), undefined)
+  changeSessionScope('')
 })

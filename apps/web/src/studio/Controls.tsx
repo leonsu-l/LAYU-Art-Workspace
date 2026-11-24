@@ -819,7 +819,9 @@ export function M3PrimaryTabs<T extends string>({
     }
   }, [items, swipeProgress, value])
 
+  const syncRef = useRef(syncIndicator)
   useLayoutEffect(() => {
+    syncRef.current = syncIndicator
     syncIndicator()
   }, [syncIndicator])
 
@@ -841,13 +843,13 @@ export function M3PrimaryTabs<T extends string>({
     const trackEl = trackRef.current
     if (!innerEl || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
-      syncIndicator()
+      syncRef.current()
       centerActiveScrollableTab('auto')
     })
     observer.observe(innerEl)
     if (trackEl) observer.observe(trackEl)
     return () => observer.disconnect()
-  }, [centerActiveScrollableTab, syncIndicator])
+  }, [centerActiveScrollableTab])
 
   // Keep selected scrollable tab comfortably inside horizontal view without scrolling page
   useEffect(() => {

@@ -37,18 +37,19 @@ function CustomParameter({ label, value, options, onChange, disabled, labels = n
 }
 
 interface ParamsProps {
-  config: ProviderConfig; activeProvider: ProviderType; isHydrated: boolean; hasReferenceImages: boolean
+  config: ProviderConfig; activeProvider: ProviderType; isHydrated: boolean; busy?: boolean; hasReferenceImages: boolean
   onOpenAIParamsChange: (patch: Partial<OpenAIImageParams>) => void
   onGeminiParamsChange: (patch: Partial<GeminiImageParams>) => void
 }
-export function GenerationParamsPanel({ config, activeProvider, isHydrated, hasReferenceImages, onOpenAIParamsChange: openAI, onGeminiParamsChange: gemini }: ParamsProps) {
+export function GenerationParamsPanel({ config, activeProvider, isHydrated, busy, hasReferenceImages, onOpenAIParamsChange: openAI, onGeminiParamsChange: gemini }: ParamsProps) {
   const [advanced, setAdvanced] = useState(false)
   const oa = config.profiles['openai-compatible'].params, gm = config.profiles['gemini-compatible'].params
   const model = getGeminiModel(config.profiles['gemini-compatible'].model)
   const isOpenAI = activeProvider === 'openai-compatible'
+  const selectionKey = `${config.channelId}:${config.profiles[activeProvider].model}`
   const ratio = isOpenAI ? Object.keys(pixels).find((r) => pixels[r] === oa.size) ?? '' : gm.aspectRatio
-  if (!isHydrated) return <div className={styles.paramStack} role="status" aria-label="正在加载参数"><ConnectedRatioSkeleton /><SkeletonBlock variant="field" /></div>
-  return <section aria-label="生成参数" className={styles.paramStack}>
+  if (!isHydrated) return <div className={styles.paramStack} role="status" aria-label="正在加载参数"><SkeletonBlock variant="text" width="30%" /><ConnectedRatioSkeleton /><div className={styles.twoCol}><SkeletonBlock variant="field" /><SkeletonBlock variant="field" /></div><SkeletonBlock variant="button" /></div>
+  return <section inert={busy} aria-busy={busy} aria-label="生成参数" className={styles.paramStack}>
     <div className={styles.fieldGroup}><div className={styles.fieldHead}><span className={styles.fieldTitle}>画面比例</span><span className={styles.fieldMeta}>{(isOpenAI ? oa.size : gm.aspectRatio).replace('auto', '模型自动')}</span></div>
       <RatioTileSelector value={ratio} onChange={(next) => isOpenAI ? openAI({ size: pixels[next] }) : gemini({ aspectRatio: next })} /></div>
     <div className={styles.twoCol}>
@@ -60,20 +61,20 @@ export function GenerationParamsPanel({ config, activeProvider, isHydrated, hasR
     </div>
     <RippleButton type="button" className={styles.advancedToggle} aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}><span>高级参数 · {isOpenAI ? '尺寸、格式与审核' : '比例、分辨率与思考深度'}</span><Icon name="chevron-down" size={15} className={advanced ? styles.rotated : ''} /></RippleButton>
     {advanced && <div className={styles.advancedPanel}>{isOpenAI ? <>
-      <CustomParameter label="图片尺寸" value={oa.size} options={[...new Set([...OPENAI_FLEXIBLE_SIZES, ...Object.values(pixels)])]} onChange={(size) => openAI({ size })} />
-      <CustomParameter label="图片质量" value={oa.quality} options={OPENAI_QUALITIES} onChange={(quality) => openAI({ quality })} />
+      <CustomParameter key={`图片尺寸:${selectionKey}`} label="图片尺寸" value={oa.size} options={[...new Set([...OPENAI_FLEXIBLE_SIZES, ...Object.values(pixels)])]} onChange={(size) => openAI({ size })} />
+      <CustomParameter key={`图片质量:${selectionKey}`} label="图片质量" value={oa.quality} options={OPENAI_QUALITIES} onChange={(quality) => openAI({ quality })} />
       <div className={page.filledField}><span>输出格式</span>
         <StudioSelect label="输出格式" value={oa.outputFormat} options={choices(OPENAI_OUTPUT_FORMATS)} onChange={(outputFormat) => openAI({
           outputFormat, ...(outputFormat === 'jpeg' && oa.background === 'transparent' ? { background: 'opaque' } : {}),
         })} />
       </div>
-      <CustomParameter label="背景" value={oa.background} options={oa.outputFormat === 'jpeg' ? ['auto', 'opaque'] : ['auto', 'opaque', 'transparent']} onChange={(background) => openAI({ background })} />
+      <CustomParameter key={`背景:${selectionKey}`} label="背景" value={oa.background} options={oa.outputFormat === 'jpeg' ? ['auto', 'opaque'] : ['auto', 'opaque', 'transparent']} onChange={(background) => openAI({ background })} />
       {oa.outputFormat !== 'png' && <label className={page.filledField}><span>压缩质量（0–100）</span><input type="number" min={0} max={100} step={1} value={oa.outputCompression} onChange={(e) => openAI({ outputCompression: Number(e.target.value) })} /></label>}
-      <div className={page.filledField}><CustomParameter key={String(hasReferenceImages)} label="内容审核" value={hasReferenceImages ? 'auto' : oa.moderation} disabled={hasReferenceImages} options={['auto', 'low']} labels={{auto: '自动', low: '较宽松'}} onChange={(value) => openAI({ moderation: value as OpenAIImageParams['moderation'] })} />{hasReferenceImages && <small>参考图使用编辑接口默认审核。</small>}</div>
+      <div className={page.filledField}><CustomParameter key={`${selectionKey}:${hasReferenceImages}`} label="内容审核" value={hasReferenceImages ? 'auto' : oa.moderation} disabled={hasReferenceImages} options={['auto', 'low']} labels={{auto: '自动', low: '较宽松'}} onChange={(value) => openAI({ moderation: value as OpenAIImageParams['moderation'] })} />{hasReferenceImages && <small>参考图使用编辑接口默认审核。</small>}</div>
     </> : <>
-      <CustomParameter label="图片比例" value={gm.aspectRatio} options={['auto', ...model.aspectRatios]} onChange={(aspectRatio) => gemini({ aspectRatio })} />
-      <CustomParameter label="输出分辨率" value={gm.imageSize} options={model.imageSizes} onChange={(imageSize) => gemini({ imageSize })} />
-      <CustomParameter label="思考深度" value={gm.thinkingLevel} options={model.thinkingLevels} onChange={(thinkingLevel) => gemini({ thinkingLevel })} />
+      <CustomParameter key={`图片比例:${selectionKey}`} label="图片比例" value={gm.aspectRatio} options={['auto', ...model.aspectRatios]} onChange={(aspectRatio) => gemini({ aspectRatio })} />
+      <CustomParameter key={`输出分辨率:${selectionKey}`} label="输出分辨率" value={gm.imageSize} options={model.imageSizes} onChange={(imageSize) => gemini({ imageSize })} />
+      <CustomParameter key={`思考深度:${selectionKey}`} label="思考深度" value={gm.thinkingLevel} options={model.thinkingLevels} onChange={(thinkingLevel) => gemini({ thinkingLevel })} />
     </>}</div>}
   </section>
 }

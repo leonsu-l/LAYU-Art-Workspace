@@ -8,6 +8,17 @@
 .utility { display: grid; place-items: center; min-width: 30px; height: 30px; padding-inline: 6px; border: 0; border-radius: 15px; background: transparent; font-size: 12px; }
 .utility:hover, .utility[aria-pressed='true'] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 .viewport { overflow-x: clip; min-height: calc(100svh - 56px); }
-.surface { max-width: var(--md-sys-layout-max-width); margin-inline: auto; container-type: inline-size; view-transition-name: studio-page; }
+.surface { max-width: var(--md-sys-layout-max-width); margin-inline: auto; container-type: inline-size; width: 100%; }
 @media (max-width: 760px) { .viewport { touch-action: pan-y pinch-zoom; } .actions { gap: 3px; } .actions a { max-width: 10ch; } }
 @media (max-width: 400px) { .actions a { max-width: 7ch; } }
+
+.viewport { touch-action: pan-y pinch-zoom; }
+.peekSkeleton { display: grid; gap: 14px; padding: 24px; }
+.headerLink { position: relative; overflow: hidden; }
+.headerLink, .utility {
+  transition: background-color 150ms var(--md-sys-motion-easing-standard), color 150ms var(--md-sys-motion-easing-standard), filter 150ms var(--md-sys-motion-easing-standard), transform 160ms var(--md-sys-motion-easing-expressive-spring);
+}
+.headerLink:hover { filter: brightness(0.95); }
+.headerLink:active, .utility:active { transform: scale(.96); }
+.peekGrid, .peekFields { display: grid; gap: 12px; }
+.peekGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

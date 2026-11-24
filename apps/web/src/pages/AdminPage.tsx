@@ -28,7 +28,7 @@ export function AdminPage() {
 }
 function LoadState({ error, reload, label }: { error: string; reload: () => void; label: string }) {
   return error ? <div className={styles.sectionNote} role="alert">{error} <RippleButton type="button" className={styles.tonalBtn} onClick={reload}>重试</RippleButton></div>
-    : <div className={styles.detailCard} role="status" aria-label={`正在加载${label}`}><SkeletonBlock variant="text" width="35%" /><SkeletonBlock variant="field" /><SkeletonBlock variant="field" staggerIndex={1} /></div>
+    : <div className={styles.detailCard} role="status" aria-label={`正在加载${label}`}><SkeletonBlock variant="text" width="35%" />{Array.from({ length: label === "额度与队列设置" ? 6 : 4 }, (_, i) => <SkeletonBlock key={i} variant="field" staggerIndex={i} />)}</div>
 }
 function UsersAdmin() {
   const { data, setData, error, reload } = useStudioResource<{ users: AdminUser[] }>('/admin/users')

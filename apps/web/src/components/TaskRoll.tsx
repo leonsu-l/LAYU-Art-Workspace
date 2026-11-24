@@ -19,7 +19,7 @@ export function TaskRoll({ tasks, selectedTask, isSubmitting, isRefreshing, load
     <div className={styles.filmstripHead}><strong>任务胶卷</strong><span className={styles.filmstripCount}>{tasks.length} 条记录 · 点击切换画布</span>
       <RippleButton className={styles.stageTextBtn} type="button" onClick={onRefresh} disabled={isRefreshing}><Icon name="loader" size={14} />刷新</RippleButton></div>
     {deletionError && <p className={styles.recoveryAlert} role="alert">{deletionError}</p>}
-    {loading ? <SkeletonBlock variant="field" /> : !tasks.length ? <p className={styles.fieldMeta}>还没有生成任务。</p> : <div className={`${styles.filmstripRow} ${styles.historyRail}`} data-no-swipe="true" role="group" aria-label="最近生成任务">
+    {loading ? <div className={`${styles.filmstripRow} ${styles.historyRail}`} data-no-swipe="true">{[0, 1, 2].map((i) => <SkeletonBlock key={i} variant="media" width="100%" height={68} staggerIndex={i} />)}</div> : !tasks.length ? <p className={styles.fieldMeta}>还没有生成任务。</p> : <div className={`${styles.filmstripRow} ${styles.historyRail}`} data-no-swipe="true" role="group" aria-label="最近生成任务">
       {tasks.map((task) => {
         const image = task.result?.images.find((i) => i.url || i.base64Data)
         const thumb = image?.base64Data ? `data:${image.mimeType};base64,${image.base64Data}` : image?.url

@@ -1,3 +1,4 @@
+import { getStudioCache } from '../services/sessionScope'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { deleteGalleryItem, deleteGalleryItems, downloadGalleryItem, loadGallery, type GalleryItem } from '../services/galleryService'
@@ -8,13 +9,14 @@ import { useNotify } from '../studio/useNotify'
 export function GalleryPage() {
   const navigate = useNavigate()
   const notify = useNotify()
-  const [items, setItems] = useState<GalleryItem[]>([])
+  const [cache] = useState(getStudioCache)
+  const [items, setItems] = useState<GalleryItem[]>(() => cache.get<GalleryItem[]>('gallery') ?? [])
   const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [initialized, setInitialized] = useState(false)
+  const [initialized, setInitialized] = useState(() => Boolean(cache.get('gallery')))
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const previous = useRef<GalleryItem[]>([])
+  const previous = useRef(items)
   const request = useRef<AbortController | null>(null)
   const mounted = useRef(false)
 
@@ -27,6 +29,7 @@ export function GalleryPage() {
     try {
       const snapshot = await loadGallery(previous.current, controller.signal)
       if (controller.signal.aborted) return
+      if (!snapshot.serverError) cache.set('gallery', snapshot.images)
       previous.current = snapshot.images
       setItems(snapshot.images)
       setError(snapshot.serverError ? `图库刷新失败：${snapshot.serverError}` : null)
@@ -36,7 +39,7 @@ export function GalleryPage() {
     } finally {
       if (request.current === controller && !controller.signal.aborted) { request.current = null; setLoading(false); setInitialized(true) }
     }
-  }, [notify])
+  }, [notify, cache])
 
   useEffect(() => {
     mounted.current = true

@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { Icon } from '../components/Icon'
 import styles from './Skeleton.module.css'
 
@@ -135,6 +135,19 @@ export function ShimmerImage({
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
   const [erroredSrc, setErroredSrc] = useState<string | null>(null)
 
+  const imgRef = useRef<HTMLImageElement>(null)
+  const dimensionsRef = useRef(onDimensions)
+  useLayoutEffect(() => { dimensionsRef.current = onDimensions }, [onDimensions])
+  useLayoutEffect(() => {
+    const img = imgRef.current
+    if (img?.complete && img.naturalWidth > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Mirror the browser image cache before the first paint.
+      setErroredSrc(null)
+      setLoadedSrc(src)
+      dimensionsRef.current?.(img.naturalWidth, img.naturalHeight)
+    }
+  }, [src])
+
   const isLoaded = !forceSkeleton && loadedSrc === src && erroredSrc !== src
 
   return (
@@ -145,7 +158,7 @@ export function ShimmerImage({
         borderRadius: toCssSize(radius),
       }}
     >
-      <img
+      <img ref={imgRef}
         src={src}
         alt={alt}
         loading="lazy"

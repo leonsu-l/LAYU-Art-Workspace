@@ -38,7 +38,7 @@ function App() {
     activeProvider,
     activeProfile,
     isHydrated,
-    ready, selectionLoaded, channels, channel, catalog, templates, quota, error: configError, saveStatus, selectChannel,
+    ready, hasCachedSelection, selectionLoaded, channels, channel, catalog, templates, quota, error: configError, saveStatus, selectChannel,
     setActiveProvider,
     updateProviderProfile,
     updateOpenAIParams,
@@ -85,7 +85,7 @@ function App() {
 
   const promptLength = prompt.trim().length
   const canGenerate =
-    canSubmit &&
+    selectionLoaded && canSubmit &&
     isHydrated && ready && (channel?.scope !== 'shared' || Boolean(quota?.configured && (quota.unlimited || (quota.remaining ?? 0) > 0))) &&
     !isSubmitting &&
     !isReadingImages &&
@@ -143,7 +143,7 @@ function App() {
     notify({ tone: 'success', message: `已套用「${template.name}」，渠道与模型保持不变。` })
   }
   const availableTemplates = isHydrated && !isSubmitting ? templates.filter((i) => i.provider === activeProvider) : []
-  const initialLoad = !selectionLoaded && !configError
+  const initialLoad = !hasCachedSelection && !selectionLoaded && !channels.length && !configError
   const blocker = !ready ? '请先选择可用渠道和模型' : !isHydrated ? '正在加载最近参数…'
     : channel?.scope === 'shared' && !quota?.configured ? '共享额度尚未配置或加载' : channel?.scope === 'shared' && !quota?.unlimited && !quota?.remaining ? '今日共享额度已用完'
     : isReadingImages ? '正在读取参考图…' : referenceImageError ? '请先调整参考图' : pendingSubmissions.length ? '存在待确认提交，请先恢复'
@@ -159,7 +159,7 @@ function App() {
     <div className={work.proLayout}>
       <aside className={work.proRail} aria-label="创作设置">
         <div className={work.proRailScroll}>
-          {initialLoad ? <SkeletonBlock variant="field" /> : <ChannelModelBar explicitSelection channels={channels} channelId={config.channelId ?? ''}
+          {initialLoad ? <div className={work.paramStack}><SkeletonBlock variant="text" width="35%" /><SkeletonBlock variant="field" /><SkeletonBlock variant="field" /></div> : <ChannelModelBar explicitSelection channels={channels} channelId={config.channelId ?? ''}
             provider={activeProvider} model={activeProfile.model} catalog={catalog} catalogLoading={Boolean(channel && !catalog && !configError)}
             templates={availableTemplates} quota={quota} onChannelChange={selectChannel} onProviderChange={setActiveProvider}
             onModelChange={(model) => updateProviderProfile(activeProvider, { model })} onApplyTemplate={applyTemplate} />}
@@ -174,7 +174,7 @@ function App() {
           </div>}
           <PromptPanel prompt={prompt} isSubmitting={isSubmitting} canGenerate={canGenerate} onPromptChange={setPrompt} onGenerate={handleGenerate}
             referenceImages={referenceImages} referenceLimits={referenceLimits} referenceImageError={referenceImageError} onReferenceImagesChange={setReferenceImages} onReadingImagesChange={setIsReadingImages} />
-          <GenerationParamsPanel key={`${config.channelId}:${activeProfile.model}`} config={config} activeProvider={activeProvider} isHydrated={isHydrated && !initialLoad} hasReferenceImages={referenceImages.length > 0}
+          <GenerationParamsPanel config={config} activeProvider={activeProvider} isHydrated={!initialLoad} busy={!isHydrated} hasReferenceImages={referenceImages.length > 0}
             onOpenAIParamsChange={updateOpenAIParams} onGeminiParamsChange={updateGeminiParams} />
           {saveStatus && <span className={work.fieldMeta} role="status">{saveStatus}</span>}
         </div>

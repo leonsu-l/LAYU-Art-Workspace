@@ -1,24 +1,24 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { SessionContext, useSession } from './useSession'
+import { AccountSkeleton } from '../studio/AccountView'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import type { User } from '@nanobanana/shared/types/studio'
 import { backendRequest, backendErrorMessage } from '../services/backendClient'
 import { changeSessionScope } from '../services/sessionScope'
 import { clearSubmissionMemory } from '../services/imageGenerationService'
-interface Session { user: User | null; loading: boolean; error: string | null; refresh: () => Promise<void>; authenticate: (register: boolean, body: object) => Promise<void>; logout: () => Promise<void>; forgetSession: () => void }
-const Context = createContext<Session | null>(null)
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const refreshSequence = useRef(0)
-  function apply(next: User | null) { changeSessionScope(next?.id ?? ''); clearSubmissionMemory(); setUser(next) }
-  async function refresh() {
+  const apply = useCallback((next: User | null) => { changeSessionScope(next?.id ?? ''); clearSubmissionMemory(); setUser(next) }, [])
+  const refresh = useCallback(async () => {
     const sequence = ++refreshSequence.current
     setLoading(true); setError(null)
     try { const response = await backendRequest<{ user: User | null }>('/auth/session'); if (sequence === refreshSequence.current) apply(response.user) }
     catch (e) { if (sequence === refreshSequence.current) setError(backendErrorMessage(e)) }
     finally { if (sequence === refreshSequence.current) setLoading(false) }
-  }
+  }, [apply])
   useEffect(() => {
     // Remove only the application's unscoped legacy credentials and prompt. Never claim old gallery ownership.
     try {
@@ -31,7 +31,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     window.addEventListener('studio:unauthorized', invalid)
     window.addEventListener('storage', otherTab)
     return () => { window.removeEventListener('studio:unauthorized', invalid); window.removeEventListener('storage', otherTab) }
-  }, [])
+  }, [apply, refresh])
   async function authenticate(register: boolean, body: object) {
     const sequence = ++refreshSequence.current
     await backendRequest<{ user: User }>(register ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(body) })
@@ -57,13 +57,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     refreshSequence.current += 1; setError(null); apply(null)
     try { localStorage.setItem('nanobanana.session-changed', crypto.randomUUID()) } catch { /* Optional cross-tab notification. */ }
   }
-  return <Context.Provider value={{ user, loading, error, refresh, authenticate, logout, forgetSession }}><div key={user?.id ?? 'anonymous'}>{children}</div></Context.Provider>
+  return <SessionContext.Provider value={{ user, loading, error, refresh, authenticate, logout, forgetSession }}><div key={user?.id ?? 'anonymous'}>{children}</div></SessionContext.Provider>
 }
-export function useSession(): Session { const context = useContext(Context); if (!context) throw new Error('SessionProvider missing'); return context }
 export function SessionGate({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
   const { user, loading, error, refresh } = useSession()
   const location = useLocation()
-  if (loading) return <p role="status">正在验证登录状态…</p>
+  if (loading) return <main role="status" aria-label="正在验证登录状态"><AccountSkeleton authMode="login" /></main>
   if (error && !user) return <main><p role="alert">{error}</p><button onClick={() => void refresh()}>重新连接</button><button onClick={() => void backendRequest('/auth/logout', { method: 'POST' }).then(refresh)}>重试注销</button></main>
   if (!user) return <Navigate to="/login" replace />
   if (user.mustChangePassword && location.pathname !== '/password') return <Navigate to="/password" replace />

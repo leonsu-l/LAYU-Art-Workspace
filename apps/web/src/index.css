@@ -109,6 +109,8 @@
 }
 
 html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
   background-color: var(--md-sys-color-surface);
   scroll-behavior: smooth;
 }
@@ -122,9 +124,6 @@ body,
 
 body {
   min-width: 320px;
-  transition:
-    background-color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard),
-    color var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard);
 }
 
 #root {
@@ -359,23 +358,6 @@ samp {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--md-sys-color-outline);
   background-clip: content-box;
-}
-
-/* --------------------------- VIEW TRANSITIONS ---------------------------- */
-::view-transition-old(root) {
-  animation: md-enter-fade var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-accelerate) reverse both;
-}
-
-::view-transition-new(root) {
-  animation: md-enter-fade var(--md-sys-motion-duration-long1) var(--md-sys-motion-easing-emphasized-decelerate) both;
-}
-
-::view-transition-old(studio-page) { animation: studio-exit 260ms var(--md-sys-motion-easing-standard) both; }
-::view-transition-new(studio-page) { animation: studio-enter 300ms var(--md-sys-motion-easing-emphasized-decelerate) both; }
-@keyframes studio-exit { to { transform: translateX(calc(-100% * var(--studio-direction, 1))); opacity: 0.72; } }
-@keyframes studio-enter { from { transform: translateX(calc(100% * var(--studio-direction, 1))); opacity: 0.78; } }
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0.01ms !important; }
 }
 
 /* --------------------------- REDUCED MOTION ------------------------------ */

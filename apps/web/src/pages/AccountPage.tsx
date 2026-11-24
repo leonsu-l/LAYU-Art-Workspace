@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { useSession } from '../hooks/SessionContext'
+import { useSession } from '../hooks/useSession'
 import { backendRequest, backendErrorMessage } from '../services/backendClient'
 import { Icon } from '../components/Icon'
 import { AccountShowcase, AccountSkeleton } from '../studio/AccountView'
@@ -8,6 +8,7 @@ import { M3PrimaryTabs } from '../studio/Controls'
 import { RippleButton } from '../studio/Ripple'
 import styles from '../studio/Pages.module.css'
 
+const accountTabs = [{id: 'login', label: '登录工作台'}, {id: 'register', label: '邀请码注册'}] as const
 type Mode = 'login' | 'register' | 'password'
 function PasswordField({ name, title, current = false }: { name: string; title: string; current?: boolean }) {
   const [visible, setVisible] = useState(false)
@@ -40,7 +41,7 @@ export function LoginPage() {
     catch (e) { setError(backendErrorMessage(e)) } finally { setBusy(false) }
   }
   return <main id="main" className={styles.pageWrap}>{loading ? <AccountSkeleton authMode={mode} /> : <>
-    <div className={styles.authModeBar}><M3PrimaryTabs label="账号页面" variant="scrollable" value={mode} items={[{id: 'login', label: '登录工作台'}, {id: 'register', label: '邀请码注册'}]} onChange={switchMode} /></div>
+    <div className={styles.authModeBar}><M3PrimaryTabs label="账号页面" variant="scrollable" value={mode} items={accountTabs} onChange={switchMode} /></div>
     <AccountCard key={mode} mode={mode} title={register ? '使用邀请码创建账号' : '登录账号'}>
       <form className={styles.authForm} onSubmit={(e) => void submit(e)}>
         <label className={styles.filledField}><span>用户名（3–64 位 ASCII 字母、数字、._-）</span><input name="username" required autoComplete="username" autoCapitalize="none" spellCheck={false} /></label>

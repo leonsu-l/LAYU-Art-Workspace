@@ -44,7 +44,7 @@ function ResultImage({ image, index, size, ratio, check }: { image: { src: strin
   const [dimensions, setDimensions] = useState<{ w: number; h: number } | null>(null)
   const warning = check && dimensions ? getOutputSizeWarning(size, ratio, dimensions.w, dimensions.h) : null
   return <div><figure className={styles.artworkFigure}>
-    <ShimmerImage src={image.src} alt={`生成图片 ${index + 1}`} aspectRatio={dimensions ? `${dimensions.w} / ${dimensions.h}` : '4 / 3'} className={styles.resultOriginal}
+    <ShimmerImage src={image.src} alt={`生成图片 ${index + 1}`} aspectRatio={dimensions ? `${dimensions.w} / ${dimensions.h}` : /^\d+:\d+$/.test(ratio) ? ratio.replace(':', ' / ') : '4 / 3'} className={styles.resultOriginal}
       onDimensions={(w, h) => setDimensions({ w, h })} />
     <figcaption className={styles.artworkCaption}><span>FRAME {String(index + 1).padStart(2, '0')}</span><span>{dimensions && `${dimensions.w} × ${dimensions.h}`}</span><a href={image.src} download={image.file} aria-label={`下载原图 ${index + 1}`}><Icon name="download" size={14} /></a></figcaption>
   </figure>{warning && <p role="status" className={styles.blockerAlert}>{warning} 原图已保留。</p>}</div>

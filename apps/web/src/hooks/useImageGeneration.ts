@@ -15,7 +15,7 @@ import {
   withSubmissionLock,
   type PendingSubmission,
 } from '../services/imageGenerationService'
-import { getSessionEpoch, getSessionUserId } from '../services/sessionScope'
+import { getStudioCache, getSessionEpoch, getSessionUserId } from '../services/sessionScope'
 import { backendErrorMessage, BackendRequestError } from '../services/backendClient'
 import { createAppError, isAppError } from '@nanobanana/shared/utils/errors'
 import { validatePrompt, validateProviderConfig } from '@nanobanana/shared/utils/validation'
@@ -23,10 +23,12 @@ import { resolveExpectedAspectRatio } from '@nanobanana/shared/utils/imageModels
 import { isActiveTask, mergeTasks, reconcileTaskHistory } from '../utils/taskHistory'
 
 export function useImageGeneration() {
-  const [tasks, setTasks] = useState<GenerationTask[]>([])
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null | undefined>(undefined)
+  const [cache] = useState(getStudioCache)
+  const [tasks, setTasks] = useState<GenerationTask[]>(() => cache.get<GenerationTask[]>('tasks') ?? [])
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null | undefined>(() => cache.get<string | null>('selectedTaskId'))
   const [pendingSubmissions, setPendingSubmissions] = useState<PendingSubmission[]>([])
-  const [hasDiscovered, setHasDiscovered] = useState(false)
+  const [hasDiscovered, setHasDiscovered] = useState(() => cache.get<boolean>('hasDiscovered') ?? false)
+  const [confirmed, setConfirmed] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
@@ -42,6 +44,12 @@ export function useImageGeneration() {
   const deletingRef = useRef(false)
   const taskMutationVersion = useRef(0)
   const deletedTaskIds = useRef(new Set<string>())
+
+  useEffect(() => {
+    cache.set('tasks', tasks)
+    cache.set('selectedTaskId', selectedTaskId)
+    cache.set('hasDiscovered', hasDiscovered)
+  }, [cache, tasks, selectedTaskId, hasDiscovered])
 
   const refreshTasks = useCallback(() => setRefreshVersion((version) => version + 1), [])
 
@@ -84,6 +92,7 @@ export function useImageGeneration() {
         setTasks((previous) => reconcileTaskHistory(previous, discovered, version !== taskMutationVersion.current, deletedTaskIds.current))
         setSelectedTaskId((current) => current === undefined ? discovered[0]?.id ?? null : current)
         setHasDiscovered(true)
+        setConfirmed(true)
         for (const item of pending) {
           if (discovered.some((task) => task.id === item.id)) acknowledgeSubmission(item.id)
         }
@@ -128,7 +137,7 @@ export function useImageGeneration() {
   }, [refreshTasks])
 
   const submit = useCallback(async (prompt: string, config: ProviderConfig, referenceImages: ReferenceImage[], retry?: PendingSubmission) => {
-    if (ownerRef.current !== getSessionUserId() || submittingRef.current || deletingRef.current || (!retry && (!hasDiscovered || connectionError))) return
+    if (ownerRef.current !== getSessionUserId() || submittingRef.current || deletingRef.current || (!retry && (!confirmed || connectionError))) return
     const epoch = getSessionEpoch()
     if (!retry) {
       const validation = [validatePrompt(prompt), validateProviderConfig(config)].find((item) => !item.valid)
@@ -189,7 +198,7 @@ export function useImageGeneration() {
         refreshTasks()
       }
     }
-  }, [connectionError, hasDiscovered, refreshTasks])
+  }, [connectionError, confirmed, refreshTasks])
 
   const deleteTask = useCallback(async (id: string) => {
     if (deletingRef.current || submittingRef.current) return
@@ -245,7 +254,7 @@ export function useImageGeneration() {
     deletionError,
     deletionNotice,
     deleteTask,
-    canSubmit: hasDiscovered && !connectionError && !isSubmitting && !deletingTaskId && pendingSubmissions.length === 0,
+    canSubmit: confirmed && !connectionError && !isSubmitting && !deletingTaskId && pendingSubmissions.length === 0,
     isGenerating: isSubmitting || Boolean(selectedTask && isActiveTask(selectedTask)),
     result: isSubmitting ? null : selectedTask?.result ?? null,
     error: isSubmitting ? null : selectedTask?.error ?? null,

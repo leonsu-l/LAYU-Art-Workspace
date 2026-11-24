@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import type { Channel, ModelCatalog } from '@nanobanana/shared/types/studio'
 import type { ProviderType } from '@nanobanana/shared/types/generation'
 import { backendRequest, backendErrorMessage } from '../services/backendClient'
+import { getStudioCache } from '../services/sessionScope'
 import { useStudioResource } from '../hooks/useStudioResource'
 import { Icon } from '../components/Icon'
 import { SegmentedRail } from '../studio/Controls'
@@ -40,12 +41,12 @@ export function ChannelManager({ scope }: { scope: Channel['scope'] }) {
     {error && <p role="alert" className={styles.cautionBanner}>{error}</p>}
     <div className={styles.splitWorkspace}>
       <section className={styles.masterRail} aria-label="渠道列表"><div className={styles.masterHead}><strong>{privateScope ? '私有' : '共享'}渠道列表</strong><span>{channels.length} 个</span></div>
-        <div className={styles.channelCardStack}>{loading && !data ? <SkeletonBlock variant="field" /> : channels.length === 0 ? <p className={styles.monoMeta}>尚无{label}渠道。</p> : channels.map((c) => <RippleButton type="button" key={c.id} disabled={busy || loading} aria-pressed={active?.id === c.id}
+        <div className={styles.channelCardStack}>{loading && !data ? [0, 1].map((i) => <SkeletonBlock key={i} variant="rect" height={68} radius={16} staggerIndex={i} />) : channels.length === 0 ? <p className={styles.monoMeta}>尚无{label}渠道。</p> : channels.map((c) => <RippleButton type="button" key={c.id} disabled={busy || loading} aria-pressed={active?.id === c.id}
           className={`${styles.channelItemCard} ${active?.id === c.id ? styles.channelItemActive : ''}`} onClick={() => setSelected(c.id)}>
           <span className={styles.channelItemTop}><strong>{c.name}</strong><span className={c.enabled ? styles.statusOn : styles.statusOff}>{c.enabled ? '启用中' : '已停用'}</span></span>
           <span className={styles.channelItemMeta}><span className={styles.protoTag}>{c.provider === 'openai-compatible' ? 'OpenAI' : 'Gemini'}</span>{c.hasApiKey ? '密钥已配置（只写）' : '未设密钥'}</span><code className={styles.urlSnippet}>{c.baseUrl}</code>
         </RippleButton>)}</div></section>
-      {!data && loading ? <section className={styles.detailCard} role="status" aria-label="正在加载渠道配置"><SkeletonBlock variant="text" width="45%" /><SkeletonBlock variant="field" /><SkeletonBlock variant="field" /></section>
+      {!data && loading ? <section className={styles.detailCard} role="status" aria-label="正在加载渠道配置"><SkeletonBlock variant="text" width="45%" />{[0, 1, 2, 3].map((i) => <SkeletonBlock key={i} variant="field" staggerIndex={i} />)}<SkeletonBlock variant="button" width={96} /></section>
         : (active || selected === 'new') ? <ChannelEditor key={`${active?.id ?? 'new'}:${revision}`} channel={active} scope={scope} busy={busy || loading} setBusy={setBusy}
           onCancel={() => { setSelected(active?.id ?? null); setRevision((r) => r + 1) }} onRemove={remove}
           onSaved={(channel) => { setData((old) => ({ channels: [...(old?.channels ?? []).filter((c) => c.id !== channel.id), channel] })); setSelected(channel.id); setRevision((r) => r + 1); notify({tone: 'success', message: `已保存渠道「${channel.name}」。`}) }} />
@@ -59,20 +60,22 @@ function ChannelEditor({ channel, scope, busy, setBusy, onCancel, onSaved, onRem
 }) {
   const [provider, setProvider] = useState<ProviderType>(channel?.provider ?? 'openai-compatible')
   const [enabled, setEnabled] = useState(channel?.enabled ?? true), [modelText, setModelText] = useState(channel?.enabledModels.join('\n') ?? '')
-  const [catalog, setCatalog] = useState<ModelCatalog | null>(null), [reading, setReading] = useState(Boolean(channel)), [error, setError] = useState('')
+  const [cache] = useState(getStudioCache)
+  const catalogKey = `catalog:${channel?.id}`
+  const [catalog, setCatalog] = useState<ModelCatalog | null>(() => cache.get<ModelCatalog>(catalogKey) ?? null), [reading, setReading] = useState(Boolean(channel)), [error, setError] = useState('')
   const notify = useNotify(), id = channel?.id
   const models = [...new Set(modelText.split(/\r?\n/).map((s) => s.trim()).filter(Boolean))]
   useEffect(() => {
     if (!id) return
     const controller = new AbortController()
-    void backendRequest<ModelCatalog>(`/channels/${id}/models`, { signal: controller.signal }).then((r) => { if (!controller.signal.aborted) setCatalog(r) })
+    void backendRequest<ModelCatalog>(`/channels/${id}/models`, { signal: controller.signal }).then((r) => { if (!controller.signal.aborted) { cache.set(catalogKey, r); setCatalog(r) } })
       .catch((e) => { if (!controller.signal.aborted) setError(backendErrorMessage(e)) }).finally(() => { if (!controller.signal.aborted) setReading(false) })
     return () => controller.abort()
-  }, [id])
+  }, [id, cache, catalogKey])
   async function discover() {
     if (!id) return
     setBusy(true); setReading(true); setError('')
-    try { const next = await backendRequest<ModelCatalog>(`/channels/${id}/models/refresh`, {method: 'POST', body: '{}'}); setCatalog(next); if (!next.error) notify({message: `已刷新模型目录，共 ${next.models.length} 个模型。`}) }
+    try { const next = await backendRequest<ModelCatalog>(`/channels/${id}/models/refresh`, {method: 'POST', body: '{}'}); cache.set(catalogKey, next); setCatalog(next); if (!next.error) notify({message: `已刷新模型目录，共 ${next.models.length} 个模型。`}) }
     catch (e) { setError(backendErrorMessage(e)) } finally { setBusy(false); setReading(false) }
   }
   async function save(e: FormEvent<HTMLFormElement>) {
@@ -96,7 +99,7 @@ function ChannelEditor({ channel, scope, busy, setBusy, onCancel, onSaved, onRem
     </fieldset>
     <div className={styles.catalogBox}><div className={styles.catalogHead}><div><strong>模型目录与启用列表</strong><span>{scope === 'shared' ? '成员只能选择明确启用的模型。' : '私有渠道也可在工作台手填模型 ID。'}{catalog?.updatedAt && `最近刷新：${new Date(catalog.updatedAt).toLocaleString()}${catalog.stale ? '（缓存已过期）' : ''}`}</span></div>
       <RippleButton type="button" className={styles.tonalBtn} disabled={!channel || busy || reading} onClick={() => void discover()}><Icon name="loader" size={14} />{reading ? '正在发现…' : '发现 / 刷新模型'}</RippleButton></div>
-      {reading ? <SkeletonBlock variant="field" /> : <div className={styles.catalogGrid}>{catalog?.models.map((m) => <RippleButton type="button" key={m.id} disabled={busy} title={m.id} aria-pressed={models.includes(m.id)} className={`${styles.catalogModelChip} ${models.includes(m.id) ? styles.catalogModelChipOn : ''}`} onClick={() => setModelText((models.includes(m.id) ? models.filter((i) => i !== m.id) : [...models, m.id]).join('\n'))}><Icon name={models.includes(m.id) ? 'check' : 'plus'} size={13} />{m.name || m.id}</RippleButton>)}</div>}
+      {reading && !catalog ? <SkeletonBlock variant="field" /> : <div className={styles.catalogGrid}>{catalog?.models.map((m) => <RippleButton type="button" key={m.id} disabled={busy} title={m.id} aria-pressed={models.includes(m.id)} className={`${styles.catalogModelChip} ${models.includes(m.id) ? styles.catalogModelChipOn : ''}`} onClick={() => setModelText((models.includes(m.id) ? models.filter((i) => i !== m.id) : [...models, m.id]).join('\n'))}><Icon name={models.includes(m.id) ? 'check' : 'plus'} size={13} />{m.name || m.id}</RippleButton>)}</div>}
       {catalog?.error && <p role="alert" className={styles.cautionBanner}>刷新失败，保留上次目录：{catalog.error}</p>}
       <label className={styles.filledField}><span>手动 / 批量编辑模型 ID（每行一个）</span><textarea rows={3} disabled={busy} value={modelText} onChange={(e) => setModelText(e.target.value)} /></label>
     </div>

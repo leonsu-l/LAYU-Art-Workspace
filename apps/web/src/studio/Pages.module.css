@@ -1484,3 +1484,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.channelItemCard, .switchPill, .switchThumb, .iconCircleBtn, .cardDangerBtn {
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 180ms var(--md-sys-motion-easing-expressive-spring);
+}
+.switchPillOn .switchThumb { transform: translateX(2px); }
+.iconCircleBtn:active, .cardDangerBtn:active { transform: scale(.96); }

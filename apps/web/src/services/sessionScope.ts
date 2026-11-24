@@ -1,3 +1,6 @@
+import { StudioCache } from './studioCache.ts'
+let cache = new StudioCache()
+export function getStudioCache() { return cache }
 let userId = ''
 let epoch = 0
 const controllers = new Set<AbortController>()
@@ -8,6 +11,8 @@ export function trackRequest(controller: AbortController): () => void {
   return () => controllers.delete(controller)
 }
 export function changeSessionScope(id: string): void {
+  cache.clear()
+  cache = new StudioCache()
   epoch += 1
   userId = id
   controllers.forEach((controller) => controller.abort())

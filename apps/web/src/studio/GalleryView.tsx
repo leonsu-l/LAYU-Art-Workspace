@@ -216,7 +216,9 @@ export function GalleryView<T extends Artwork>({
     }
 
     const surfaceRect = surfaceEl.getBoundingClientRect()
-    const imgRect = measureContainImageRect(surfaceRect, imgEl, previewItem.dimensions ?? '')
+    const thumbnail = thumbRefs.current[previewItem.key]?.querySelector('img')
+    const dimensions = previewItem.dimensions || (thumbnail?.naturalWidth ? `${thumbnail.naturalWidth} × ${thumbnail.naturalHeight}` : '')
+    const imgRect = measureContainImageRect(surfaceRect, imgEl, dimensions)
 
     if (destRect && destRect.width > 0 && isRectMostlyInViewport(destRect)) {
       const closeKeyframes = buildContainerMorphKeyframes(destRect, surfaceRect, imgRect, 'close', 14)
@@ -354,7 +356,9 @@ export function GalleryView<T extends Artwork>({
 
     const origin = launchOriginRef.current?.rect ?? null
     const surfaceRect = surfaceEl.getBoundingClientRect()
-    const imgRect = measureContainImageRect(surfaceRect, imgEl, previewItem.dimensions ?? '')
+    const thumbnail = thumbRefs.current[previewItem.key]?.querySelector('img')
+    const dimensions = previewItem.dimensions || (thumbnail?.naturalWidth ? `${thumbnail.naturalWidth} × ${thumbnail.naturalHeight}` : '')
+    const imgRect = measureContainImageRect(surfaceRect, imgEl, dimensions)
 
     if (origin && origin.width > 0 && isRectMostlyInViewport(origin)) {
       const openKeyframes = buildContainerMorphKeyframes(origin, surfaceRect, imgRect, 'open', 14)
