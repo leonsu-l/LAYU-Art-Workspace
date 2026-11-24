@@ -1,14 +1,23 @@
 import type { GalleryStorageStats, ServerGalleryImage } from '@nanobanana/shared/types/generation'
-import { backendErrorMessage, backendRequest } from './backendClient'
+import { backendErrorMessage, backendRequest } from './backendClient.ts'
 export type GalleryItem = ServerGalleryImage & { source: 'server'; key: string }
-export interface GallerySnapshot { images: GalleryItem[]; browserError: string | null; serverError: string | null }
+export interface GallerySnapshot { images: GalleryItem[]; retentionDays: number | null; hasRetentionPolicy: boolean; browserError: string | null; serverError: string | null }
 export interface GalleryStorageSummary { browser: GalleryStorageStats | null; server: GalleryStorageStats | null; browserError: string | null; serverError: string | null }
-export async function loadGallery(previous: GalleryItem[] = [], signal?: AbortSignal): Promise<GallerySnapshot> {
+type GalleryResponse = { images: ServerGalleryImage[]; retentionDays: number | null }
+export function parseGalleryResponse(response: GalleryResponse): GallerySnapshot {
+  if (!Array.isArray(response.images)) throw new Error('图库响应格式错误。')
+  return {
+    images: response.images.map(image => ({ ...image, source: 'server', key: 'server:' + image.id })),
+    retentionDays: response.retentionDays, hasRetentionPolicy: true, browserError: null, serverError: null,
+  }
+}
+export async function loadGallery(previous?: Pick<GallerySnapshot, 'images' | 'retentionDays'>, signal?: AbortSignal): Promise<GallerySnapshot> {
   try {
-    const response = await backendRequest<{ images: ServerGalleryImage[] }>('/gallery', { signal })
-    if (!Array.isArray(response.images)) throw new Error('图库响应格式错误。')
-    return { images: response.images.map((image) => ({ ...image, source: 'server', key: `server:${image.id}` })), browserError: null, serverError: null }
-  } catch (e) { return { images: previous.filter((image) => image.source === 'server'), browserError: null, serverError: backendErrorMessage(e) } }
+    return parseGalleryResponse(await backendRequest<GalleryResponse>('/gallery', { signal }))
+  } catch (error) {
+    return { images: previous?.images ?? [], retentionDays: previous?.retentionDays ?? null,
+      hasRetentionPolicy: Boolean(previous), browserError: null, serverError: backendErrorMessage(error) }
+  }
 }
 export async function getGalleryStorageSummary(signal?: AbortSignal): Promise<GalleryStorageSummary> {
   try { return { browser: null, server: await backendRequest<GalleryStorageStats>('/gallery/stats', { signal }), browserError: null, serverError: null } }

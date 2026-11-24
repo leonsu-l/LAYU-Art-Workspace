@@ -79,7 +79,7 @@
 
 - **Date:** 2026-11-19
 - **Scope:** workbench (`/`), gallery (`/gallery`), and admin console (`/admin` storage & issues modules)
-- **Status:** experimental (browser-verified in Design Lab; pending user review)
+- **Status:** integrated on `feat/image-storage-ui-integration` in `apps/web/src/App.tsx` and `apps/web/src/pages/{GalleryPage,AdminStoragePanel,AdminIssuesPanel}.tsx`
 - **Context:** Backend added per-image/per-task retention expiry, independent admin storage policy & Cloudflare R2 private bucket configuration, dual-perspective bucket usage telemetry (application vs Cloudflare Analytics), and operational issue aggregation (`docs/IMAGE_STORAGE_FRONTEND_HANDOFF.md`).
 - **Decision:**
   1. **User-Side Privacy & Retention Honesty (`/` & `/gallery`)**: Never expose storage location (`local` / `R2`), bucket identity, or fallback status to regular users. Display the top-level `retentionDays` policy even on an empty gallery, render each image/task's own `retentionDays` + local `expiresAt` promise (treating missing legacy fields as permanent without recalculating from `createdAt` or current policy), immediately drop stale previews upon image 404 while prompting list re-sync, and handle HTTP 410 on task recovery by clearing local pending submission without creating a new task.

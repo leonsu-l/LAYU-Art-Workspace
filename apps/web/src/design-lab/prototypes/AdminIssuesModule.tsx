@@ -14,7 +14,7 @@ import type {
 import { formatLocalDateTime, formatRelativeAge } from '../utils/retentionFormat'
 import type { LabLoadMode } from './MultiPagePrototypes'
 import pageStyles from '../../studio/Pages.module.css'
-import styles from './AdminModules.module.css'
+import styles from '../../studio/AdminModules.module.css'
 
 const ISSUE_KIND_META: Record<
   AdminIssueKind,

@@ -27,7 +27,7 @@ import {
 } from '../utils/retentionFormat'
 import type { LabLoadMode } from './MultiPagePrototypes'
 import pageStyles from '../../studio/Pages.module.css'
-import styles from './AdminModules.module.css'
+import styles from '../../studio/AdminModules.module.css'
 
 const LOCAL_BUCKET_VALUE = '__local__'
 

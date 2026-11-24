@@ -60,41 +60,46 @@
       "id": "lab-workbench",
       "name": "Page 1: Creative Workbench Prototype (/)",
       "kind": "page",
-      "status": "experimental",
+      "status": "integrated",
       "location": "apps/web/src/design-lab/prototypes/WorkbenchPrototypes.tsx",
-      "notes": "Direction A left rail + right canvas with scenario switching (including loading skeleton), mobile nav strip, and light/dark preview."
+      "notes": "Direction A left rail + right canvas with scenario switching (including loading skeleton), mobile nav strip, and light/dark preview.",
+      "productionPath": "apps/web/src/App.tsx"
     },
     {
       "id": "lab-multi-page",
       "name": "Pages 2-5: Gallery, Channels, Account & Admin Prototypes",
       "kind": "page",
-      "status": "experimental",
+      "status": "integrated",
       "location": "apps/web/src/design-lab/prototypes/MultiPagePrototypes.tsx",
-      "notes": "Full Direction A M3 Expressive designs for /gallery (policy + per-image retention + empty policy + 404 cleanup + hover/selected fix & shimmer skeletons), /channels, /login & /password, and /admin (8 tabs including Storage & Operational Issues)."
+      "notes": "Full Direction A M3 Expressive designs for /gallery (policy + per-image retention + empty policy + 404 cleanup + hover/selected fix & shimmer skeletons), /channels, /login & /password, and /admin (8 tabs including Storage & Operational Issues).",
+      "productionPath": "apps/web/src/pages/GalleryPage.tsx"
     },
     {
       "id": "lab-admin-storage",
       "name": "Admin Storage Policy, R2 Buckets & Dual-Usage Module",
       "kind": "composition",
-      "status": "experimental",
+      "status": "integrated",
       "location": "apps/web/src/design-lab/prototypes/AdminStorageModule.tsx",
-      "notes": "Independent /api/admin/storage/settings policy, R2 bucket creation (non-auto-activating), write-only credential rotation with explicit analyticsToken:null clear, dual usage comparison with 5 Cloudflare states, and 409-vs-network deletion handling."
+      "notes": "Independent /api/admin/storage/settings policy, R2 bucket creation (non-auto-activating), write-only credential rotation with explicit analyticsToken:null clear, dual usage comparison with 5 Cloudflare states, and 409-vs-network deletion handling.",
+      "productionPath": "apps/web/src/pages/AdminStoragePanel.tsx"
     },
     {
       "id": "lab-admin-issues",
       "name": "Admin Operational Issues Log Module",
       "kind": "composition",
-      "status": "experimental",
+      "status": "integrated",
       "location": "apps/web/src/design-lab/prototypes/AdminIssuesModule.tsx",
-      "notes": "Operational issue triage with openCount badge, status filter, pagination, Unix ms local formatting, R2_FALLBACK safety reassurance, resolve action, and recurrence reopen demo."
+      "notes": "Operational issue triage with openCount badge, status filter, pagination, Unix ms local formatting, R2_FALLBACK safety reassurance, resolve action, and recurrence reopen demo.",
+      "productionPath": "apps/web/src/pages/AdminIssuesPanel.tsx"
     },
     {
       "id": "lab-retention-utils",
       "name": "Retention & Storage Validation Helpers",
       "kind": "utility",
-      "status": "experimental",
+      "status": "integrated",
       "location": "apps/web/src/design-lab/utils/retentionFormat.ts",
-      "notes": "Pure helpers for per-image/legacy retention summaries, UTC->local formatting, byte formatting, and R2 account/bucket/credential/retention validation matching backend rules."
+      "notes": "Pure helpers for per-image/legacy retention summaries, UTC->local formatting, byte formatting, and R2 account/bucket/credential/retention validation matching backend rules.",
+      "productionPath": "apps/web/src/utils/retentionFormat.ts"
     }
   ],
   "experiments": [
@@ -136,13 +141,11 @@
     "dec-009-image-retention-storage-and-issues",
     "dec-010-production-integration"
   ],
-  "openQuestions": [
-    "是否将图片有效期、R2 存储管理和问题日志原型接入生产？"
-  ],
-  "nextSuggestedAction": "在 Design Lab 评审工作台的 410 恢复、图库的有效期与 404，以及管理台的存储管理和问题日志。",
-  "updatedAt": "2026-11-20T18:04:20+08:00",
+  "openQuestions": [],
+  "nextSuggestedAction": "在已配置的测试账号验证 R2 官方统计与问题处理流程。",
+  "updatedAt": "2026-11-25",
   "productionIntegration": {
-    "branch": "feat/design-lab-ui-integration",
+    "branch": "feat/image-storage-ui-integration",
     "entry": "apps/web/src/main.tsx",
     "pages": [
       {

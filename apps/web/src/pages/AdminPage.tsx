@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type FormEvent, type ReactNode } from 'react'
 import type { AdminUser, Invite, Settings, Template, Usage } from '@nanobanana/shared/types/studio'
 import type { ProviderConfig, ProviderType } from '@nanobanana/shared/types/generation'
 import { createDefaultProviderConfig } from '@nanobanana/shared/utils/configDefaults'
@@ -7,23 +7,37 @@ import { useStudioResource } from '../hooks/useStudioResource'
 import { GenerationParamsPanel } from '../components/ConfigPanel'
 import { Icon } from '../components/Icon'
 import { M3PrimaryTabs, SegmentedRail } from '../studio/Controls'
+import { LabIcon } from '../studio/LabIcon'
 import { RippleButton } from '../studio/Ripple'
 import { SkeletonBlock } from '../studio/Skeleton'
 import { useNotify } from '../studio/useNotify'
+import type { AdminIssuesSummary } from '@nanobanana/shared/types/studio'
 import { ChannelManager } from './ChannelsPage'
 import styles from '../studio/Pages.module.css'
+
+const AdminStoragePanel = lazy(() => import('./AdminStoragePanel').then(module => ({ default: module.AdminStoragePanel })))
+const AdminIssuesPanel = lazy(() => import('./AdminIssuesPanel').then(module => ({ default: module.AdminIssuesPanel })))
 
 const sections = [
   { id: 'channels', label: '共享渠道' }, { id: 'users', label: '用户管理' }, { id: 'invites', label: '邀请码' },
   { id: 'settings', label: '额度与队列' }, { id: 'templates', label: '参数模板' }, { id: 'usage', label: '使用统计' },
+  { id: 'storage', label: '存储管理' }, { id: 'issues', label: '问题日志' },
 ] as const
 export function AdminPage() {
   const [tab, setTab] = useState<typeof sections[number]['id']>('users')
+  const summary = useStudioResource<AdminIssuesSummary>('/admin/issues/summary')
+  const openCount = summary.data?.openCount
   return <main id="main" className={styles.pageWrap}>
-    <header className={styles.pageHeader}><div className={styles.pageTitleGroup}><span className={styles.pageEyebrow}>SITE ADMINISTRATION</span><h1 className={styles.pageTitle}>站点管理台</h1><p className={styles.pageSub}>管理共享渠道、成员额度、邀请码、队列并发、参数模板与使用统计。</p></div></header>
-    <div className={styles.adminNavWrap}><M3PrimaryTabs label="站点管理模块" variant="scrollable" value={tab} items={sections} onChange={setTab} /></div>
+    <header className={styles.pageHeader}><div className={styles.pageTitleGroup}><span className={styles.pageEyebrow}>SITE ADMINISTRATION</span><h1 className={styles.pageTitle}>站点管理台</h1><p className={styles.pageSub}>管理共享渠道、成员额度、邀请码、队列并发、参数模板、使用统计、存储与问题日志。</p></div>
+      <div className={styles.pageHeaderActions}>
+        {openCount !== undefined && (openCount > 0 ? <RippleButton type="button" className={styles.dangerTonalBtn} onClick={() => setTab('issues')}><LabIcon name="bell" size={14} /><span>待处理问题 {openCount} 条</span></RippleButton> : <span className={styles.summaryPill}>问题已全部处理</span>)}
+        {summary.error && <RippleButton type="button" className={styles.tonalBtn} onClick={() => void summary.reload()}>重试问题统计</RippleButton>}
+      </div></header>
+    <div className={styles.adminNavWrap}><M3PrimaryTabs label="站点管理模块" variant="scrollable" value={tab} items={sections.map(section => ({ ...section, badge: section.id === 'issues' && openCount ? openCount : undefined }))} onChange={setTab} /></div>
     <div key={tab} className={`${styles.subPanelFade} ${styles.adminSection}`}>
-      {tab === 'channels' ? <ChannelManager scope="shared" /> : tab === 'users' ? <UsersAdmin /> : tab === 'invites' ? <InvitesAdmin /> : tab === 'settings' ? <SettingsAdmin /> : tab === 'templates' ? <TemplatesAdmin /> : <UsageAdmin />}
+      <Suspense fallback={<SkeletonBlock variant="field" />}>
+      {tab === 'channels' ? <ChannelManager scope="shared" /> : tab === 'users' ? <UsersAdmin /> : tab === 'invites' ? <InvitesAdmin /> : tab === 'settings' ? <SettingsAdmin /> : tab === 'templates' ? <TemplatesAdmin /> : tab === 'storage' ? <AdminStoragePanel /> : tab === 'issues' ? <AdminIssuesPanel openCount={openCount} reloadIssueSummary={summary.reload} /> : <UsageAdmin />}
+      </Suspense>
     </div></main>
 }
 function LoadState({ error, reload, label }: { error: string; reload: () => void; label: string }) {

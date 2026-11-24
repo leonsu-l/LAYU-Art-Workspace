@@ -93,6 +93,8 @@ export interface GenerateImageRequest {
 }
 
 export interface GeneratedImage {
+    retentionDays?: number | null
+    expiresAt?: string | null
     mimeType: string
     base64Data?: string
     url?: string
@@ -158,6 +160,8 @@ export interface TaskDeletionSummary {
 }
 
 export interface ServerGalleryImage {
+    retentionDays?: number | null
+    expiresAt?: string | null
     id: string
     createdAt: string
     provider: ProviderType

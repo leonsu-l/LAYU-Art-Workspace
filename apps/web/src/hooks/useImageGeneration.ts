@@ -35,6 +35,7 @@ export function useImageGeneration() {
   const [submissionError, setSubmissionError] = useState<AppError | null>(null)
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
   const [deletionError, setDeletionError] = useState<string | null>(null)
+  const [goneSubmissionNotice, setGoneSubmissionNotice] = useState<string | null>(null)
   const [deletionNotice, setDeletionNotice] = useState<string | null>(null)
   const [refreshVersion, setRefreshVersion] = useState(0)
   const [submissionShape, setSubmissionShape] = useState({ count: 1, ratio: '1:1' })
@@ -81,8 +82,10 @@ export function useImageGeneration() {
           } catch (error) {
             if (!isDeletedTaskError(error)) throw error
             // A durable 410 proves this accepted task was deleted, not an unknown POST.
+            if (controller.signal.aborted) return null
             deletedTaskIds.current.add(item.id)
             acknowledgeSubmission(item.id)
+            setGoneSubmissionNotice(`任务 ${item.id} 已过期或被删除（410），已清理本地记录，不会自动重发。`)
             return null
           }
         }))
@@ -177,7 +180,13 @@ export function useImageGeneration() {
       acknowledgeSubmission(task.id)
     } catch (error) {
       if (epoch !== getSessionEpoch()) return
-      if (pending && (postStarted || isDeletedTaskError(error)) && isDefiniteSubmissionRejection(error)) {
+      if (pending && isDeletedTaskError(error)) {
+        deletedTaskIds.current.add(pending.id)
+        try { acknowledgeSubmission(pending.id) } catch { /* Keep recovery blocked if storage cannot be updated. */ }
+        if (mountedRef.current) setGoneSubmissionNotice(`任务 ${pending.id} 已过期或被删除（410），已清理本地记录，不会自动重发。`)
+        return
+      }
+      if (pending && postStarted && isDefiniteSubmissionRejection(error)) {
         try { acknowledgeSubmission(pending.id) } catch { /* Keep recovery blocked if storage cannot be updated. */ }
       }
       if (mountedRef.current) {
@@ -242,6 +251,7 @@ export function useImageGeneration() {
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
   return {
+    goneSubmissionNotice, dismissGoneSubmissionNotice: () => setGoneSubmissionNotice(null),
     tasks,
     selectedTask,
     pendingSubmissions,

@@ -35,7 +35,7 @@ function cancelAnimations(list: Animation[]) {
 export function GalleryView<T extends Artwork>({
   items, selectedKeys, onSelection, onGoWorkbench, onRefresh, onDownload, onDeleteOne, onDeleteSelected,
   isRefreshing, showListSkeleton, showMediaSkeleton = false, deleting = false, error, overlayId,
-  retention, notice, onBeforePreview,
+  retention, notice, onBeforePreview, onImageError,
 }: {
   items: T[]; selectedKeys: string[]; onSelection: (keys: string[]) => void
   onGoWorkbench: () => void; onRefresh: () => void; onDownload: (item: T) => void
@@ -46,6 +46,7 @@ export function GalleryView<T extends Artwork>({
     policyLabel: string
     describe: (item: T) => { tone: 'permanent' | 'timed' | 'urgent'; shortLabel: string; detailLabel: string }
   }
+  onImageError?: (item: T) => void
   notice?: ReactNode
   onBeforePreview?: (item: T) => boolean
 }) {
@@ -503,10 +504,10 @@ export function GalleryView<T extends Artwork>({
         </div>
 
         <div className={styles.pageHeaderActions}>
-          {retention && (showListSkeleton ? <SkeletonBlock variant="pill" width={148} height={30} /> : (
+          {(retention || showListSkeleton) && (showListSkeleton ? <SkeletonBlock variant="pill" width={148} height={30} /> : (
             <span className={styles.policyPill}>
               <LabIcon name="clock" size={14} />
-              <span>新图{retention.policyLabel}</span>
+              <span>新图{retention?.policyLabel}</span>
             </span>
           ))}
           {showListSkeleton ? (
@@ -685,7 +686,7 @@ export function GalleryView<T extends Artwork>({
                   className={`${styles.galleryThumbBtn} ${previewItem?.key === item.key ? styles.galleryThumbHidden : ''}`}
                   onClick={() => openPreview(item)}
                 >
-                  <ShimmerImage
+                  <ShimmerImage onError={() => onImageError?.(item)}
                     src={item.url}
                     alt={item.prompt || `作品 ${idx + 1}`}
                     aspectRatio="4 / 3"
@@ -777,6 +778,7 @@ export function GalleryView<T extends Artwork>({
                   <img
                     ref={imgRef}
                     className={styles.lightboxImg}
+                    onError={() => { finalizeClose(); onImageError?.(previewItem) }}
                     src={previewItem.url}
                     alt={previewItem.prompt || "生成的图片"}
                     onClick={() => setHudVisible((v) => !v)}

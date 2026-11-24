@@ -67,7 +67,7 @@ function App() {
     deletionNotice,
     deleteTask,
     retrySubmission,
-    refreshTasks,
+    goneSubmissionNotice, dismissGoneSubmissionNotice, refreshTasks,
     selectTask,
   } = useImageGeneration()
   useBeforeUnloadGuard(isSubmitting, '正在提交，尚未确认后端接收。离开后请恢复同一请求，不要重复创建任务。')
@@ -131,7 +131,7 @@ function App() {
   function handleDeleteTask(task: GenerationTask) {
     if (deletingTaskId || isSubmitting || task.status === 'queued' || task.status === 'running') return
     const count = task.result?.images.length ?? 0
-    if (window.confirm(`确认删除这条任务历史${count ? `及关联的 ${count} 张图片` : ''}吗？\n该任务在图库和磁盘中的全部生成图片会一并删除，此操作无法撤销。`)) {
+    if (window.confirm(`确认删除这条任务历史${count ? `及关联的 ${count} 张图片` : ''}吗？\n该任务在图库中保存的全部生成图片会一并删除，此操作无法撤销。`)) {
       void deleteTask(task.id)
     }
   }
@@ -167,6 +167,7 @@ function App() {
           {!initialLoad && !ready && <p className={work.blockerAlert}><Icon name="settings" size={16} />{selectionHint}</p>}
           {catalog?.error && <p className={work.blockerAlert}>目录刷新失败，保留上次目录：{catalog.error}</p>}
           {catalog?.stale && <p className={work.fieldMeta}>目录缓存已过期，可由渠道管理者刷新。</p>}
+          {goneSubmissionNotice && <div role="status" className={work.recoveryAlert}><strong>原任务已过期或已删除</strong><p>{goneSubmissionNotice}</p><div className={work.recoveryActions}><RippleButton type="button" className={work.recoveryBtnPrimary} onClick={dismissGoneSubmissionNotice}>知道了</RippleButton></div></div>}
           {connectionError && <div className={work.recoveryAlert} role="alert"><p>{connectionError} · 正在重连</p><RippleButton className={work.recoveryBtnTonal} disabled={isRefreshing} onClick={refreshTasks}>刷新状态</RippleButton></div>}
           {submissionError && <p className={work.recoveryAlert} role="alert">提交提示：{submissionError.message}</p>}
           {pendingSubmissions.length > 0 && <div className={work.recoveryAlert} role="alert"><strong>有待确认的提交</strong><p>保留原提示词和参数，按原顺序重新选择参考图；恢复只会使用原请求 ID。</p>
@@ -183,7 +184,7 @@ function App() {
         </footer>
       </aside>
       <section className={work.proStage} aria-label="结果画布"><div className={work.stageCard}>
-        <ResultPanel loading={!hasDiscovered && !connectionError} isGenerating={isGenerating} isSubmitting={isSubmitting} taskStatus={selectedTask?.status} model={(isSubmitting ? activeProfile.model : selectedTask?.model) || activeProfile.model}
+        <ResultPanel onImageLoadError={refreshTasks} loading={!hasDiscovered && !connectionError} isGenerating={isGenerating} isSubmitting={isSubmitting} taskStatus={selectedTask?.status} model={(isSubmitting ? activeProfile.model : selectedTask?.model) || activeProfile.model}
           result={result} error={error} expectedImageCount={expectedImageCount} expectedAspectRatio={expectedAspectRatio} requestedSize={isSubmitting ? undefined : selectedTask?.requestedSize}
           onUseIdea={handleUseIdea} onClearResult={() => { clearResult(); notify({message: '已清空画布，可从任务胶卷重新查看。'}) }} />
         <TaskRoll tasks={tasks} selectedTask={selectedTask} loading={!hasDiscovered && !connectionError} isSubmitting={isSubmitting} isRefreshing={isRefreshing} deletingTaskId={deletingTaskId}

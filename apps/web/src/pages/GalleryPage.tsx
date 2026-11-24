@@ -3,20 +3,29 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { deleteGalleryItem, deleteGalleryItems, downloadGalleryItem, loadGallery, type GalleryItem } from '../services/galleryService'
 import { backendErrorMessage } from '../services/backendClient'
+import { Icon } from '../components/Icon'
 import { GalleryView } from '../studio/GalleryView'
+import { RippleButton } from '../studio/Ripple'
 import { useNotify } from '../studio/useNotify'
+
+import { formatRetentionPolicyText, getImageRetentionSummary } from '../utils/retentionFormat'
+import styles from '../studio/Pages.module.css'
+
+type CachedGallery = { images: GalleryItem[]; retentionDays: number | null }
+const brokenMessage = '图片加载失败，可能已过期或被删除，已移除失效预览。'
 
 export function GalleryPage() {
   const navigate = useNavigate()
   const notify = useNotify()
   const [cache] = useState(getStudioCache)
-  const [items, setItems] = useState<GalleryItem[]>(() => cache.get<GalleryItem[]>('gallery') ?? [])
+  const [gallery, setGallery] = useState(() => cache.get<CachedGallery>('galleryWithPolicy'))
+  const [brokenKeys, setBrokenKeys] = useState(new Set<string>())
   const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [initialized, setInitialized] = useState(() => Boolean(cache.get('gallery')))
+  const [initialized, setInitialized] = useState(() => Boolean(gallery))
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const previous = useRef(items)
+  const previous = useRef(gallery)
   const request = useRef<AbortController | null>(null)
   const mounted = useRef(false)
 
@@ -29,11 +38,23 @@ export function GalleryPage() {
     try {
       const snapshot = await loadGallery(previous.current, controller.signal)
       if (controller.signal.aborted) return
-      if (!snapshot.serverError) cache.set('gallery', snapshot.images)
-      previous.current = snapshot.images
-      setItems(snapshot.images)
-      setError(snapshot.serverError ? `图库刷新失败：${snapshot.serverError}` : null)
       const keys = new Set(snapshot.images.map((i) => i.key))
+      if (!snapshot.serverError && snapshot.hasRetentionPolicy) {
+        const next = { images: snapshot.images, retentionDays: snapshot.retentionDays }
+        previous.current = next
+        cache.set('galleryWithPolicy', next)
+        if (manual) {
+          setBrokenKeys(new Set())
+        } else {
+          setBrokenKeys((old) => {
+            if (!old.size) return old
+            const nextKeys = new Set([...old].filter((key) => keys.has(key)))
+            return nextKeys.size === old.size ? old : nextKeys
+          })
+        }
+        setGallery(next)
+      }
+      setError(snapshot.serverError ? `图库刷新失败：${snapshot.serverError}` : null)
       setSelected((old) => old.filter((key) => keys.has(key)))
       if (manual && !snapshot.serverError) notify({ message: '图库已刷新。' })
     } finally {
@@ -72,7 +93,16 @@ export function GalleryPage() {
     }
   }
 
-  return <main id="main"><GalleryView items={items} selectedKeys={selected} onSelection={setSelected}
+  function onImageError(item: GalleryItem) {
+    setBrokenKeys(old => new Set(old).add(item.key))
+    setSelected(old => old.filter(key => key !== item.key))
+    notify({ tone: 'warning', message: brokenMessage, actionLabel: '刷新列表', onAction: () => void refresh(true) })
+  }
+  const items = gallery?.images.filter(item => !brokenKeys.has(item.key)) ?? []
+  return <main id="main"><GalleryView items={items} onImageError={onImageError}
+    retention={gallery ? { policyLabel: formatRetentionPolicyText(gallery.retentionDays), describe: item => getImageRetentionSummary(item.retentionDays, item.expiresAt) } : undefined}
+    notice={brokenKeys.size > 0 && <div role="status" className={styles.galleryNoticeBanner}><div className={styles.galleryNoticeText}><Icon name="alert-circle" size={16} /><span>{brokenMessage}</span></div><RippleButton type="button" className={styles.tonalBtn} onClick={() => void refresh(true)}>刷新列表</RippleButton></div>}
+    selectedKeys={selected} onSelection={setSelected}
     isRefreshing={loading} showListSkeleton={!initialized && loading} deleting={deleting} error={error}
     overlayId="studio-overlay-root" onGoWorkbench={() => void navigate('/')} onRefresh={() => void refresh(true)}
     onDeleteOne={(item) => void remove([item], false)} onDeleteSelected={(list) => void remove(list, true)}

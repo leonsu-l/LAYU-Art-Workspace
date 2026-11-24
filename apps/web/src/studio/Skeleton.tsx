@@ -117,6 +117,7 @@ export function ShimmerImage({
   wrapperClassName = '',
   onClick,
   onDimensions,
+  onError,
   title,
 }: {
   src: string
@@ -128,6 +129,7 @@ export function ShimmerImage({
   iconSize?: number
   className?: string
   wrapperClassName?: string
+  onError?: () => void
   onDimensions?: (width: number, height: number) => void
   onClick?: () => void
   title?: string
@@ -173,6 +175,7 @@ export function ShimmerImage({
         }}
         onError={() => {
           setErroredSrc(src)
+          onError?.()
         }}
       />
       {erroredSrc === src && !forceSkeleton ? <span className={styles.imageError}>图片加载失败</span> : <span
