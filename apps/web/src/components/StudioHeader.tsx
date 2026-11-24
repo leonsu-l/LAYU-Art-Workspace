@@ -2,7 +2,7 @@ import { Component, createRef, useEffect, useLayoutEffect, useMemo, useRef, useS
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useSession } from '../hooks/useSession'
 import { useTheme } from '../hooks/useTheme'
-import { M3PrimaryTabs } from '../studio/Controls'
+import { M3PrimaryTabs, type PrimaryTabsSwipeController } from '../studio/Controls'
 import { useRipple } from './ui/useRipple'
 import { getSessionEpoch } from '../services/sessionScope'
 import { SkeletonBlock } from '../studio/Skeleton'
@@ -32,45 +32,87 @@ function HeaderLink({ children, className, ...props }: ComponentProps<typeof Lin
   </Link>
 }
 
+function cloneSurfaceNode(el: HTMLElement): HTMLElement {
+  const node = el.cloneNode(true) as HTMLElement
+  node.querySelectorAll('[id], [autofocus]').forEach((child) => {
+    child.removeAttribute('id')
+    child.removeAttribute('autofocus')
+  })
+  node.querySelectorAll('[name]').forEach((child) => child.removeAttribute('name'))
+  node.querySelectorAll('[data-ripple-layer]').forEach((child) => child.remove())
+  node.querySelectorAll<HTMLInputElement>('input[type=password],input[autocomplete*=password],input[type=file]').forEach((input) => {
+    input.removeAttribute('value')
+    input.value = ''
+  })
+  return node
+}
+
+interface Snapshot {
+  node: HTMLElement
+  scroll: number
+  x: number
+  direction: number
+  durationMs?: number
+  fromSwipe?: boolean
+}
+
+interface PendingSwipe extends Snapshot {
+  fromPath: string
+  toPath: string
+}
+
 interface PageFrameProps {
   path: string
   index: number
   scope: string
   slideClass: string
-  style?: CSSProperties
   children: ReactNode
+  slideRef: React.RefObject<HTMLDivElement | null>
+  surfaceRef: React.RefObject<HTMLDivElement | null>
+  pendingSwipeRef: React.RefObject<PendingSwipe | null>
   onRoute: (oldPath: string, snapshot: Snapshot | null) => void
 }
-interface Snapshot { node: HTMLElement; scroll: number; x: number; direction: number }
 
 // This lifecycle reads the outgoing outlet before React mutates its DOM.
 class PageFrame extends Component<PageFrameProps> {
-  private surface = createRef<HTMLDivElement>()
+  private localSurface = createRef<HTMLDivElement>()
+  private getSurfaceEl() {
+    return this.props.surfaceRef.current ?? this.localSurface.current
+  }
   getSnapshotBeforeUpdate(prev: PageFrameProps): Snapshot | null {
-    const el = this.surface.current
-    if (!el || prev.scope !== this.props.scope || prev.path === this.props.path ||
+    if (prev.scope !== this.props.scope || prev.path === this.props.path ||
         prev.index < 0 || this.props.index < 0 || prev.index === this.props.index) return null
-    const node = el.cloneNode(true) as HTMLElement
-    node.querySelectorAll('[id], [autofocus]').forEach((child) => {
-      child.removeAttribute('id')
-      child.removeAttribute('autofocus')
-    })
-    node.querySelectorAll('[name]').forEach((child) => child.removeAttribute('name'))
-    node.querySelectorAll('[data-ripple-layer]').forEach((child) => child.remove())
-    node.querySelectorAll<HTMLInputElement>('input[type=password],input[autocomplete*=password],input[type=file]').forEach((input) => {
-      input.removeAttribute('value')
-      input.value = ''
-    })
-    const slide = el.parentElement!
-    const x = slide.getBoundingClientRect().left - slide.parentElement!.getBoundingClientRect().left
-    return { node, x, scroll: window.scrollY, direction: Math.sign(this.props.index - prev.index) }
+    const pending = this.props.pendingSwipeRef.current
+    if (pending && pending.fromPath === prev.path && pending.toPath === this.props.path) {
+      return pending
+    }
+    const el = this.getSurfaceEl()
+    if (!el) return null
+    return {
+      node: cloneSurfaceNode(el),
+      x: 0,
+      scroll: window.scrollY,
+      direction: Math.sign(this.props.index - prev.index),
+    }
   }
   componentDidUpdate(prev: PageFrameProps, _: unknown, snapshot: Snapshot | null) {
     if (this.props.path !== prev.path) this.props.onRoute(prev.path, snapshot)
   }
   render() {
-    return <div key={this.props.path} className={this.props.slideClass} style={this.props.style}>
-      <div ref={this.surface} className={styles.surface}>{this.props.children}</div>
+    return <div
+      key={this.props.path}
+      ref={this.props.slideRef}
+      className={this.props.slideClass}
+    >
+      <div
+        ref={(el) => {
+          this.localSurface.current = el
+          this.props.surfaceRef.current = el
+        }}
+        className={styles.surface}
+      >
+        {this.props.children}
+      </div>
     </div>
   }
 }
@@ -91,7 +133,22 @@ function PagePreview({ path }: { path: string }) {
 function SnapshotView({ node, scroll = 0 }: { node: HTMLElement; scroll?: number }) {
   const host = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => { host.current?.replaceChildren(node) }, [node])
-  return <div ref={host} style={{ transform: `translate3d(0, ${-scroll}px, 0)` }} />
+  return <div ref={host} style={scroll ? { transform: `translate3d(0, ${-scroll}px, 0)` } : undefined} />
+}
+
+interface DragGesture {
+  id: number
+  startX: number
+  startY: number
+  anchorX: number
+  width: number
+  startTime: number
+  lastX: number
+  lastTime: number
+  velocityX: number
+  dx: number
+  horizontal: boolean
+  scrollY: number
 }
 
 export function StudioLayout() {
@@ -102,86 +159,288 @@ export function StudioLayout() {
   const feedback = useSnackbar()
   const items = useMemo(() => !user || user.mustChangePassword ? [] : sections.filter((s) => s.id !== '/admin' || user.role === 'ADMIN'), [user])
   const active = items.findIndex((s) => s.id === pathname)
-  const [offset, setOffset] = useState(0)
-  const gesture = useRef<{ id: number; x: number; y: number; time: number; horizontal: boolean } | null>(null)
-  const [gestureWidth, setGestureWidth] = useState(1)
+
+  const slideRef = useRef<HTMLDivElement | null>(null)
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const peekRef = useRef<HTMLDivElement | null>(null)
+  const gesture = useRef<DragGesture | null>(null)
+  const dragRaf = useRef(0)
   const suppressClick = useRef(false)
+  const pendingSwipeRef = useRef<PendingSwipe | null>(null)
+
+  const swipeListeners = useRef(new Set<(progress: number | null, targetId?: string) => void>())
+  const swipeController = useMemo<PrimaryTabsSwipeController>(() => ({
+    subscribe(listener) {
+      swipeListeners.current.add(listener)
+      return () => { swipeListeners.current.delete(listener) }
+    },
+  }), [])
+  function emitSwipe(progress: number | null, targetId?: string) {
+    swipeListeners.current.forEach((listener) => listener(progress, targetId))
+  }
 
   const scope = `${getSessionEpoch()}:${user?.id}:${resolvedTheme}:${items.map((s) => s.id).join(',')}`
   const [snapshotCache, setSnapshotCache] = useState(() => ({ scope, pages: new Map<string, HTMLElement>() }))
   if (snapshotCache.scope !== scope) setSnapshotCache({ scope, pages: new Map() })
+
   const [motion, setMotion] = useState<(Snapshot & { scope: string; path: string }) | null>(null)
-  const [settling, setSettling] = useState(0)
+  const [dragPeek, setDragPeek] = useState<{ dir: -1 | 1; scrollY: number } | null>(null)
+  const dragPeekDirRef = useRef<-1 | 0 | 1>(0)
+
   const motionTimer = useRef(0)
   const settleTimer = useRef(0)
   const clickTimer = useRef(0)
+
   useEffect(() => () => {
+    window.cancelAnimationFrame(dragRaf.current)
     window.clearTimeout(motionTimer.current)
     window.clearTimeout(settleTimer.current)
     window.clearTimeout(clickTimer.current)
   }, [])
+
+  function resetSlideStyles() {
+    const slideEl = slideRef.current
+    if (!slideEl) return
+    slideEl.style.transition = ''
+    slideEl.style.transform = ''
+    slideEl.style.willChange = ''
+  }
+
   function clearMotion() {
     window.clearTimeout(motionTimer.current)
     setMotion(null)
   }
+
+  function clearSettle() {
+    window.clearTimeout(settleTimer.current)
+    settleTimer.current = 0
+  }
+
+  function applyDragTransforms() {
+    const g = gesture.current
+    if (!g || !g.horizontal) return
+    const slideEl = slideRef.current
+    if (slideEl) {
+      slideEl.style.transition = 'none'
+      slideEl.style.willChange = 'transform'
+      slideEl.style.transform = `translate3d(${g.dx}px, 0, 0)`
+    }
+    const peekEl = peekRef.current
+    const peekDir = dragPeekDirRef.current
+    if (peekEl && peekDir) {
+      peekEl.style.transition = 'none'
+      peekEl.style.transform = `translate3d(calc(${peekDir * 100}% + ${g.dx}px), 0, 0)`
+    }
+    emitSwipe(-g.dx / g.width)
+  }
+
+  useLayoutEffect(() => {
+    if (!dragPeek || !peekRef.current) return
+    const g = gesture.current
+    const dx = g?.horizontal ? g.dx : 0
+    peekRef.current.style.transition = 'none'
+    peekRef.current.style.transform = `translate3d(calc(${dragPeek.dir * 100}% + ${dx}px), 0, 0)`
+  }, [dragPeek])
+
   function onRoute(oldPath: string, snapshot: Snapshot | null) {
-    window.clearTimeout(motionTimer.current)
-    if (snapshot) setSnapshotCache((previous) => ({ scope, pages: new Map(previous.pages).set(oldPath, snapshot.node) }))
-    const shouldAnimate = Boolean(snapshot && !matchMedia('(prefers-reduced-motion: reduce)').matches)
-    setMotion(shouldAnimate && snapshot ? { ...snapshot, scope, path: pathname } : null)
-    if (shouldAnimate) motionTimer.current = window.setTimeout(() => setMotion(null), 420)
+    window.cancelAnimationFrame(dragRaf.current)
+    clearSettle()
+    const reusedSwipe = Boolean(pendingSwipeRef.current && pendingSwipeRef.current.toPath === pathname)
+    pendingSwipeRef.current = null
     gesture.current = null
-    setOffset(0)
-    setSettling(0)
+    dragPeekDirRef.current = 0
+    setDragPeek(null)
+    if (snapshot) {
+      setSnapshotCache((previous) => ({ scope, pages: new Map(previous.pages).set(oldPath, snapshot.node) }))
+    }
+    if (!reusedSwipe) {
+      window.clearTimeout(motionTimer.current)
+      const shouldAnimate = Boolean(snapshot && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+      setMotion(shouldAnimate && snapshot ? { ...snapshot, scope, path: pathname } : null)
+      if (shouldAnimate) {
+        motionTimer.current = window.setTimeout(() => setMotion(null), (snapshot?.durationMs ?? 320) + 100)
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
+
   const transition = motion?.scope === scope && motion.path === pathname ? motion : null
-  function open(path: string) { if (path !== pathname) void navigate(path) }
+
+  function open(path: string) {
+    if (path !== pathname) void navigate(path)
+  }
+
   function start(e: PointerEvent<HTMLDivElement>) {
     suppressClick.current = false
     if (active < 0 || !e.isPrimary || (e.pointerType !== 'touch' && !matchMedia('(max-width: 760px)').matches)) return
     if ((e.target as Element).closest('input,textarea,select,option,summary,[role="dialog"],[role="listbox"],[role="tablist"],[contenteditable="true"],[data-no-swipe="true"]')) return
-    setGestureWidth(e.currentTarget.clientWidth || 1)
-    gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now(), horizontal: false }
+    const now = performance.now()
+    gesture.current = {
+      id: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      anchorX: e.clientX,
+      width: e.currentTarget.clientWidth || 1,
+      startTime: now,
+      lastX: e.clientX,
+      lastTime: now,
+      velocityX: 0,
+      dx: 0,
+      horizontal: false,
+      scrollY: window.scrollY,
+    }
   }
+
   function drag(e: PointerEvent<HTMLDivElement>) {
     const g = gesture.current
     if (!g || e.pointerId !== g.id) return
-    const dx = e.clientX - g.x, dy = e.clientY - g.y
+    const rawDx = e.clientX - g.startX
+    const rawDy = e.clientY - g.startY
     if (!g.horizontal) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return
-      if (Math.abs(dy) >= Math.abs(dx) * 0.92) { gesture.current = null; return }
+      if (Math.hypot(rawDx, rawDy) < 10) return
+      if (Math.abs(rawDy) >= Math.abs(rawDx) * 0.92) {
+        gesture.current = null
+        return
+      }
       g.horizontal = true
+      g.anchorX = e.clientX
+      g.lastX = e.clientX
+      g.lastTime = performance.now()
+      g.scrollY = window.scrollY
       clearMotion()
-      setSettling(0)
-      window.clearTimeout(settleTimer.current)
+      clearSettle()
       try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* Pointer already ended. */ }
     }
-    setOffset((dx > 0 && active === 0) || (dx < 0 && active === items.length - 1) ? dx / 4 : dx)
+
+    const now = performance.now()
+    const dt = now - g.lastTime
+    if (dt > 0) {
+      const instV = (e.clientX - g.lastX) / dt
+      g.velocityX = g.velocityX * 0.4 + instV * 0.6
+      g.lastX = e.clientX
+      g.lastTime = now
+    }
+
+    let moveX = e.clientX - g.anchorX
+    if ((moveX > 0 && active === 0) || (moveX < 0 && active === items.length - 1)) {
+      moveX *= 0.25
+    }
+    moveX = Math.max(-g.width, Math.min(g.width, moveX))
+    g.dx = moveX
+
+    const nextPeekDir: -1 | 0 | 1 = moveX < 0 ? 1 : moveX > 0 ? -1 : 0
+    if (nextPeekDir !== 0 && nextPeekDir !== dragPeekDirRef.current) {
+      const targetNeighbor = items[active + nextPeekDir]
+      if (targetNeighbor) {
+        dragPeekDirRef.current = nextPeekDir
+        setDragPeek({ dir: nextPeekDir, scrollY: g.scrollY })
+      } else if (dragPeekDirRef.current !== 0) {
+        dragPeekDirRef.current = 0
+        setDragPeek(null)
+      }
+    }
+
+    window.cancelAnimationFrame(dragRaf.current)
+    dragRaf.current = window.requestAnimationFrame(applyDragTransforms)
   }
+
   function finish(e: PointerEvent<HTMLDivElement>, cancelled = false) {
     const g = gesture.current
     if (!g || e.pointerId !== g.id) return
     gesture.current = null
+    window.cancelAnimationFrame(dragRaf.current)
     if (!g.horizontal) return
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* Capture already released. */ }
+
     suppressClick.current = true
-    const dx = e.clientX - g.x
     window.clearTimeout(clickTimer.current)
     clickTimer.current = window.setTimeout(() => { suppressClick.current = false }, 80)
-    const next = items[active + (dx < 0 ? 1 : -1)]
-    if (!cancelled && next && (Math.abs(dx) > e.currentTarget.clientWidth * 0.22 || (Math.abs(dx) > 40 && Math.abs(dx) / Math.max(16, performance.now() - g.time) > 0.32))) { open(next.id); return }
-    setSettling(-Math.sign(offset))
-    setOffset(0)
-    settleTimer.current = window.setTimeout(() => setSettling(0), 250)
+
+    const absDx = Math.abs(g.dx)
+    const dir = g.dx < 0 ? 1 : -1
+    const next = g.dx !== 0 ? items[active + dir] : undefined
+    const avgV = absDx / Math.max(16, performance.now() - g.startTime)
+    const fastV = Math.max(avgV, Math.abs(g.velocityX))
+    const shouldCommit = !cancelled && Boolean(next) && (
+      absDx > g.width * 0.22 || (absDx > 36 && fastV > 0.32 && Math.sign(g.velocityX || g.dx) === Math.sign(g.dx))
+    )
+
+    if (shouldCommit && next) {
+      const surfaceEl = surfaceRef.current
+      const remainingRatio = Math.max(0.18, Math.min(1, 1 - absDx / g.width))
+      const durationMs = Math.round(150 + 160 * remainingRatio)
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (surfaceEl) {
+        const snapshot: PendingSwipe = {
+          fromPath: pathname,
+          toPath: next.id,
+          node: cloneSurfaceNode(surfaceEl),
+          x: g.dx,
+          scroll: g.scrollY,
+          direction: dir,
+          durationMs,
+          fromSwipe: true,
+        }
+        pendingSwipeRef.current = snapshot
+        window.clearTimeout(motionTimer.current)
+        if (!reducedMotion) {
+          setMotion({ ...snapshot, scope, path: next.id })
+          motionTimer.current = window.setTimeout(() => setMotion(null), durationMs + 100)
+        } else {
+          setMotion(null)
+        }
+      }
+      emitSwipe(null, next.id)
+      void navigate(next.id, { flushSync: true })
+      return
+    }
+
+    // Smooth GPU spring-back with zero React re-render until animation completes
+    emitSwipe(null)
+    const slideEl = slideRef.current
+    if (slideEl) {
+      slideEl.style.transition = 'transform 240ms var(--md-sys-motion-easing-emphasized-decelerate)'
+      slideEl.style.transform = 'translate3d(0, 0, 0)'
+    }
+    const peekEl = peekRef.current
+    const peekDir = dragPeekDirRef.current
+    if (peekEl && peekDir) {
+      peekEl.style.transition = 'transform 240ms var(--md-sys-motion-easing-emphasized-decelerate)'
+      peekEl.style.transform = `translate3d(${peekDir * 100}%, 0, 0)`
+    }
+    clearSettle()
+    settleTimer.current = window.setTimeout(() => {
+      settleTimer.current = 0
+      dragPeekDirRef.current = 0
+      setDragPeek(null)
+      resetSlideStyles()
+    }, 250)
   }
+
   function tabs(inHeader = false) {
-    return active >= 0 && <M3PrimaryTabs label="主栏目导航" value={pathname} items={items} inHeader={inHeader}
-      swipeProgress={offset ? -offset / gestureWidth : 0} onChange={open} />
+    return active >= 0 && <M3PrimaryTabs
+      label="主栏目导航"
+      value={pathname}
+      items={items}
+      inHeader={inHeader}
+      swipeController={swipeController}
+      onChange={open}
+    />
   }
-  const peekDir = offset ? -Math.sign(offset) : settling
-  const neighbor = peekDir ? items[active + peekDir] : undefined
+
+  const showPeek = !transition && dragPeek
+  const neighbor = showPeek ? items[active + showPeek.dir] : undefined
   const peek = neighbor && snapshotCache.pages.get(neighbor.id)
+  const stageStyle = transition
+    ? ({
+        '--slide-dir': transition.direction,
+        '--start-x': `${transition.x}px`,
+        '--slide-duration': `${transition.durationMs ?? 320}ms`,
+        '--slide-enter-opacity': transition.fromSwipe ? 1 : 0.78,
+        '--slide-exit-opacity': transition.fromSwipe ? 1 : 0.72,
+      } as CSSProperties)
+    : undefined
+
   return <NotificationContext.Provider value={feedback.showSnackbar}>
     <header className={styles.header}>
       <a className={styles.skip} href="#main">跳到主要内容</a>
@@ -203,17 +462,26 @@ export function StudioLayout() {
     </header>
     <div className={`${styles.viewport} ${bar.pagerViewport}`} onPointerDown={start} onPointerMove={drag} onPointerUp={finish} onPointerCancel={(e) => finish(e, true)}
       onClickCapture={(e) => { if (suppressClick.current) { suppressClick.current = false; e.preventDefault(); e.stopPropagation() } }}>
-      <div className={bar.pagerStage} style={transition ? { '--slide-dir': transition.direction, '--start-x': `${transition.x}px` } as CSSProperties : undefined}>
+      <div className={bar.pagerStage} style={stageStyle}>
         {transition && <div key={pathname} inert aria-hidden="true" className={bar.pagerExitSlide} onAnimationEnd={(e) => { if (e.target === e.currentTarget) clearMotion() }}>
           <SnapshotView node={transition.node} scroll={transition.scroll} />
         </div>}
-        {neighbor && <div inert aria-hidden="true" className={offset ? bar.pagerPeekDragging : bar.pagerPeekSettling}
-          style={{ transform: `translate3d(calc(${peekDir * 100}% + ${offset}px), 0, 0)`, paddingTop: window.scrollY }}>
+        {showPeek && neighbor && <div ref={peekRef} inert aria-hidden="true" className={bar.pagerPeekDragging}
+          style={{ paddingTop: showPeek.scrollY }}>
           {peek ? <SnapshotView node={peek} /> : <PagePreview path={neighbor.id} />}
         </div>}
-        <PageFrame path={pathname} scope={scope} index={active} onRoute={onRoute}
-          slideClass={transition ? bar.pagerEnterSlide : offset ? bar.pagerDraggingSlide : bar.pagerIdleSlide}
-          style={offset ? { transform: `translate3d(${offset}px, 0, 0)` } : undefined}><Outlet /></PageFrame>
+        <PageFrame
+          path={pathname}
+          scope={scope}
+          index={active}
+          slideRef={slideRef}
+          surfaceRef={surfaceRef}
+          pendingSwipeRef={pendingSwipeRef}
+          onRoute={onRoute}
+          slideClass={transition ? bar.pagerEnterSlide : bar.pagerIdleSlide}
+        >
+          <Outlet />
+        </PageFrame>
       </div>
     </div>
     <div id="studio-overlay-root" />

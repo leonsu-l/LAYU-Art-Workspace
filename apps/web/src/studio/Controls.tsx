@@ -724,12 +724,17 @@ export interface PrimaryTabItem<T extends string> {
   badge?: string | number
 }
 
+export interface PrimaryTabsSwipeController {
+  subscribe: (listener: (progress: number | null, targetId?: string) => void) => () => void
+}
+
 export function M3PrimaryTabs<T extends string>({
   label,
   value,
   items,
   variant = 'fixed',
   swipeProgress = 0,
+  swipeController,
   inHeader = false,
   onChange,
 }: {
@@ -738,6 +743,7 @@ export function M3PrimaryTabs<T extends string>({
   items: readonly PrimaryTabItem<T>[]
   variant?: 'fixed' | 'scrollable'
   swipeProgress?: number
+  swipeController?: PrimaryTabsSwipeController
   inHeader?: boolean
   onChange: (id: T) => void
 }) {
@@ -747,20 +753,18 @@ export function M3PrimaryTabs<T extends string>({
   const btnRefs = useRef<Array<HTMLButtonElement | null>>([])
   const labelRefs = useRef<Array<HTMLSpanElement | null>>([])
   const hasPlacedRef = useRef(false)
+  const metricsRef = useRef<Array<{ center: number; baseWidth: number } | null>>([])
+  const itemsRef = useRef(items)
+  const valueRef = useRef(value)
+  const committedTargetRef = useRef<string | null>(null)
 
-  const syncIndicator = useCallback(() => {
+  const measureMetrics = useCallback(() => {
     const innerEl = innerRef.current
-    const indicatorEl = indicatorRef.current
-    if (!innerEl || !indicatorEl || items.length === 0) return
-
-    const activeIdx = Math.max(
-      0,
-      items.findIndex((item) => item.id === value),
-    )
+    const currentItems = itemsRef.current
+    if (!innerEl || currentItems.length === 0) return null
     const innerRect = innerEl.getBoundingClientRect()
-    if (innerRect.width === 0) return
-
-    const metrics = items.map((_, idx) => {
+    if (innerRect.width === 0) return null
+    const metrics = currentItems.map((_, idx) => {
       const targetEl = labelRefs.current[idx] ?? btnRefs.current[idx]
       if (!targetEl) return null
       const rect = targetEl.getBoundingClientRect()
@@ -768,62 +772,129 @@ export function M3PrimaryTabs<T extends string>({
       const baseWidth = Math.max(22, Math.min(rect.width * 0.74, 38))
       return { center, baseWidth }
     })
+    metricsRef.current = metrics
+    return metrics
+  }, [])
 
-    const current = metrics[activeIdx]
-    if (!current) return
+  const applyIndicatorPosition = useCallback(
+    (
+      targetValue: string,
+      progress: number,
+      forceMeasure: boolean,
+      transitionSpec?: string,
+    ) => {
+      const indicatorEl = indicatorRef.current
+      const currentItems = itemsRef.current
+      if (!indicatorEl || currentItems.length === 0) return
 
-    let center = current.center
-    let width = current.baseWidth
-    const isDragging = Math.abs(swipeProgress) > 0.001
+      const metrics =
+        forceMeasure || metricsRef.current.length !== currentItems.length
+          ? measureMetrics()
+          : metricsRef.current
+      if (!metrics) return
 
-    if (isDragging) {
-      if (swipeProgress > 0 && activeIdx < items.length - 1) {
-        const next = metrics[activeIdx + 1]
-        if (next) {
-          const t = Math.min(1, swipeProgress)
-          center = current.center + (next.center - current.center) * t
-          const targetBase = current.baseWidth + (next.baseWidth - current.baseWidth) * t
-          width = targetBase + Math.sin(t * Math.PI) * 16
+      const activeIdx = Math.max(
+        0,
+        currentItems.findIndex((item) => item.id === targetValue),
+      )
+      const current = metrics[activeIdx]
+      if (!current) return
+
+      let center = current.center
+      let width = current.baseWidth
+      const isDragging = Math.abs(progress) > 0.001
+
+      if (isDragging) {
+        if (progress > 0 && activeIdx < currentItems.length - 1) {
+          const next = metrics[activeIdx + 1]
+          if (next) {
+            const t = Math.min(1, progress)
+            center = current.center + (next.center - current.center) * t
+            const targetBase = current.baseWidth + (next.baseWidth - current.baseWidth) * t
+            width = targetBase + Math.sin(t * Math.PI) * 16
+          }
+        } else if (progress < 0 && activeIdx > 0) {
+          const prev = metrics[activeIdx - 1]
+          if (prev) {
+            const t = Math.min(1, -progress)
+            center = current.center + (prev.center - current.center) * t
+            const targetBase = current.baseWidth + (prev.baseWidth - current.baseWidth) * t
+            width = targetBase + Math.sin(t * Math.PI) * 16
+          }
+        } else {
+          // Gentle rubber-band nudge at outer boundary tabs
+          center = current.center + progress * 10
         }
-      } else if (swipeProgress < 0 && activeIdx > 0) {
-        const prev = metrics[activeIdx - 1]
-        if (prev) {
-          const t = Math.min(1, -swipeProgress)
-          center = current.center + (prev.center - current.center) * t
-          const targetBase = current.baseWidth + (prev.baseWidth - current.baseWidth) * t
-          width = targetBase + Math.sin(t * Math.PI) * 16
-        }
+        indicatorEl.style.transition = 'none'
+      } else if (!hasPlacedRef.current) {
+        indicatorEl.style.transition = 'none'
       } else {
-        // Gentle rubber-band nudge at outer boundary tabs
-        center = current.center + swipeProgress * 10
+        indicatorEl.style.transition =
+          transitionSpec ??
+          'transform 280ms var(--md-sys-motion-easing-emphasized-decelerate), width 220ms var(--md-sys-motion-easing-standard), opacity 120ms ease'
       }
-      indicatorEl.style.transition = 'none'
-    } else if (!hasPlacedRef.current) {
-      indicatorEl.style.transition = 'none'
-    } else {
-      indicatorEl.style.transition =
-        'transform 280ms var(--md-sys-motion-easing-emphasized-decelerate), width 220ms var(--md-sys-motion-easing-standard), opacity 120ms ease'
-    }
 
-    indicatorEl.style.width = `${width}px`
-    indicatorEl.style.transform = `translate3d(${center - width / 2}px, 0, 0)`
-    indicatorEl.style.opacity = '1'
+      indicatorEl.style.width = `${width}px`
+      indicatorEl.style.transform = `translate3d(${center - width / 2}px, 0, 0)`
+      indicatorEl.style.opacity = '1'
 
-    if (!hasPlacedRef.current) {
-      hasPlacedRef.current = true
-      requestAnimationFrame(() => {
-        if (indicatorRef.current) {
-          indicatorRef.current.style.transition = ''
-        }
-      })
+      if (!hasPlacedRef.current) {
+        hasPlacedRef.current = true
+        requestAnimationFrame(() => {
+          if (indicatorRef.current) {
+            indicatorRef.current.style.transition = ''
+          }
+        })
+      }
+    },
+    [measureMetrics],
+  )
+
+  const syncIndicator = useCallback(() => {
+    if (committedTargetRef.current === value && Math.abs(swipeProgress) <= 0.001) {
+      committedTargetRef.current = null
+      measureMetrics()
+      return
     }
-  }, [items, swipeProgress, value])
+    committedTargetRef.current = null
+    applyIndicatorPosition(value, swipeProgress, true)
+  }, [applyIndicatorPosition, measureMetrics, swipeProgress, value])
 
   const syncRef = useRef(syncIndicator)
   useLayoutEffect(() => {
+    itemsRef.current = items
+    valueRef.current = value
     syncRef.current = syncIndicator
     syncIndicator()
-  }, [syncIndicator])
+  }, [items, syncIndicator, value])
+
+  useEffect(() => {
+    if (!swipeController) return
+    return swipeController.subscribe((progress, targetId) => {
+      if (progress !== null) {
+        committedTargetRef.current = null
+        applyIndicatorPosition(valueRef.current, progress, false)
+        return
+      }
+      if (targetId) {
+        committedTargetRef.current = targetId
+        applyIndicatorPosition(
+          targetId,
+          0,
+          false,
+          'transform 260ms var(--md-sys-motion-easing-emphasized-decelerate), width 220ms var(--md-sys-motion-easing-standard), opacity 120ms ease',
+        )
+        return
+      }
+      committedTargetRef.current = null
+      applyIndicatorPosition(
+        valueRef.current,
+        0,
+        false,
+        'transform 240ms var(--md-sys-motion-easing-emphasized-decelerate), width 200ms var(--md-sys-motion-easing-standard), opacity 120ms ease',
+      )
+    })
+  }, [applyIndicatorPosition, swipeController])
 
   const centerActiveScrollableTab = useCallback(
     (behavior: ScrollBehavior = 'smooth') => {

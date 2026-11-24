@@ -168,7 +168,7 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  animation: m3-page-enter 320ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+  animation: m3-page-enter var(--slide-duration, 320ms) var(--md-sys-motion-easing-emphasized-decelerate) both;
   will-change: transform, opacity;
 }
 
@@ -180,7 +180,7 @@
   height: 100%;
   overflow: hidden;
   pointer-events: none;
-  animation: m3-page-exit 320ms var(--md-sys-motion-easing-emphasized-decelerate) both;
+  animation: m3-page-exit var(--slide-duration, 320ms) var(--md-sys-motion-easing-emphasized-decelerate) both;
   will-change: transform, opacity;
 }
 
@@ -207,7 +207,7 @@
 @keyframes m3-page-enter {
   from {
     transform: translate3d(calc(var(--slide-dir, 1) * 100% + var(--start-x, 0px)), 0, 0);
-    opacity: 0.78;
+    opacity: var(--slide-enter-opacity, 0.78);
   }
   to {
     transform: translate3d(0, 0, 0);
@@ -222,7 +222,7 @@
   }
   to {
     transform: translate3d(calc(var(--slide-dir, 1) * -100%), 0, 0);
-    opacity: 0.72;
+    opacity: var(--slide-exit-opacity, 0.72);
   }
 }
 
